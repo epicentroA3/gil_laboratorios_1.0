@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Mantenimiento - GIL{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-tools me-2"></i>Gestión de Mantenimiento</h2>
+            <p class="text-muted mb-0">Historial y programación de mantenimientos de equipos</p>
+        </div>
+        {% if puede_editar %}
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevoMantenimiento">
+            <i class="bi bi-plus-circle me-2"></i>Nuevo Mantenimiento
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Equipo</th>
+                            <th>Tipo</th>
+                            <th>Fecha</th>
+                            <th>Próximo</th>
+                            <th>Técnico</th>
+                            <th>Estado</th>
+                            {% if puede_editar %}<th class="text-center">Acciones</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mant in mantenimientos %}
+                        <tr>
+                            <td>
+                                <strong>{{ mant.equipo_nombre }}</strong>
+                                <br><small class="text-muted">{{ mant.codigo_interno }}</small>
+                            </td>
+                            <td>{{ mant.tipo_mantenimiento }}</td>
+                            <td>{{ mant.fecha }}</td>
+                            <td>{{ mant.proxima_fecha or 'N/A' }}</td>
+                            <td>{{ mant.tecnico or 'Sin asignar' }}</td>
+                            <td>
+                                {% if mant.estado == 'completado' %}
+                                <span class="badge bg-success">Completado</span>
+                                {% elif mant.estado == 'pendiente' %}
+                                <span class="badge bg-warning text-dark">Pendiente</span>
+                                {% elif mant.estado == 'en_proceso' %}
+                                <span class="badge bg-info">En Proceso</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ mant.estado }}</span>
+                                {% endif %}
+                            </td>
+                            {% if puede_editar %}
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-info" title="Ver"><i class="bi bi-eye"></i></button>
+                                <button class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No hay registros de mantenimiento
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

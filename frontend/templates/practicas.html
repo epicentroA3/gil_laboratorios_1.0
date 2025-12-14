@@ -1,0 +1,715 @@
+{% extends "base.html" %}
+
+{% block title %}Prácticas de Laboratorio - GIL{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h4 class="mb-1 text-white fw-bold"><i class="bi bi-journal-text me-2"></i>Prácticas de Laboratorio</h4>
+        <p class="mb-0 text-white opacity-90">Gestión de prácticas y guías de laboratorio</p>
+      </div>
+      {% if puede_editar %}
+      <button class="btn btn-light" onclick="abrirModalNuevaPractica()">
+        <i class="bi bi-plus-circle me-1"></i>Nueva Práctica
+      </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-search me-1"></i>Buscar</label>
+        <input type="text" class="form-control" id="filtroBusqueda" placeholder="Código, nombre..." onkeyup="filtrarPracticas()">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-tag me-1"></i>Estado</label>
+        <select class="form-select" id="filtroEstado" onchange="filtrarPracticas()">
+          <option value="">Todos</option>
+          <option value="programada">Programada</option>
+          <option value="en_curso">En Curso</option>
+          <option value="completada">Completada</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-building me-1"></i>Laboratorio</label>
+        <select class="form-select" id="filtroLaboratorio" onchange="filtrarPracticas()">
+          <option value="">Todos</option>
+          {% for lab in laboratorios %}
+          <option value="{{ lab.id }}">{{ lab.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-mortarboard me-1"></i>Programa</label>
+        <select class="form-select" id="filtroPrograma" onchange="filtrarPracticas()">
+          <option value="">Todos</option>
+          {% for prog in programas %}
+          <option value="{{ prog.id }}">{{ prog.nombre_programa }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1">&nbsp;</label>
+        <button class="btn btn-outline-secondary w-100" onclick="limpiarFiltros()">
+          Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabla de Prácticas -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header border-0" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+    <h6 class="mb-0 text-white fw-bold"><i class="bi bi-list-ul me-2"></i>Lista de Prácticas <span id="contadorPracticas" class="badge bg-light text-dark ms-2"></span></h6>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="tablaPracticas">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th><i class="bi bi-code me-1"></i>Código</th>
+            <th><i class="bi bi-journal-text me-1"></i>Nombre</th>
+            <th><i class="bi bi-building me-1"></i>Laboratorio</th>
+            <th><i class="bi bi-mortarboard me-1"></i>Programa</th>
+            <th><i class="bi bi-calendar me-1"></i>Fecha</th>
+            <th>Estado</th>
+            {% if puede_editar %}<th>Acciones</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody id="tbodyPracticas">
+          {% for practica in practicas %}
+          <tr data-id="{{ practica.id }}" 
+              data-estado="{{ practica.estado }}"
+              data-laboratorio="{{ practica.id_laboratorio }}"
+              data-programa="{{ practica.id_programa }}"
+              data-busqueda="{{ practica.codigo|lower }} {{ practica.nombre|lower }}">
+            <td class="text-muted small">{{ practica.id }}</td>
+            <td><code class="fw-semibold">{{ practica.codigo }}</code></td>
+            <td>
+              <span class="fw-semibold" style="color: #2d6a4f;">{{ practica.nombre }}</span>
+              {% if practica.instructor_nombre %}
+              <br><small class="text-muted"><i class="bi bi-person me-1"></i>{{ practica.instructor_nombre }}</small>
+              {% endif %}
+            </td>
+            <td><span class="badge bg-info">{{ practica.laboratorio_nombre or 'Sin asignar' }}</span></td>
+            <td><small>{{ practica.nombre_programa or '-' }}</small></td>
+            <td>
+              <small>{{ practica.fecha_formato or '-' }}</small>
+              {% if practica.duracion_horas %}
+              <br><span class="badge bg-secondary">{{ practica.duracion_horas }}h</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if practica.estado == 'programada' %}
+              <span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);">
+                <i class="bi bi-calendar-check me-1"></i>Programada
+              </span>
+              {% elif practica.estado == 'en_curso' %}
+              <span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <i class="bi bi-play-circle me-1"></i>En Curso
+              </span>
+              {% elif practica.estado == 'completada' %}
+              <span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+                <i class="bi bi-check-circle me-1"></i>Completada
+              </span>
+              {% else %}
+              <span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                <i class="bi bi-x-circle me-1"></i>Cancelada
+              </span>
+              {% endif %}
+            </td>
+            {% if puede_editar %}
+            <td>
+              <div class="btn-group btn-group-sm border rounded" role="group">
+                <button class="btn btn-outline-primary border-0" onclick="verPractica({{ practica.id }})" title="Ver Detalle">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-outline-warning border-0 border-start" onclick="editarPractica({{ practica.id }})" title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-danger border-0 border-start" onclick="eliminarPractica({{ practica.id }})" title="Eliminar">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% else %}
+          <tr id="filaVacia">
+            <td colspan="8" class="text-center py-4 text-muted">
+              <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+              No hay prácticas registradas
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <!-- Paginación -->
+    <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center py-3">
+      <div class="d-flex align-items-center gap-2">
+        <label class="small text-muted mb-0">Mostrar:</label>
+        <select class="form-select form-select-sm" id="itemsPorPagina" style="width:auto" onchange="cambiarItemsPorPagina()">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <span class="small text-muted">por página</span>
+      </div>
+      <nav>
+        <ul class="pagination pagination-sm mb-0" id="paginacion"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nueva/Editar Práctica -->
+<div class="modal fade" id="modalPractica" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header module-header" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); border-radius: 0;">
+                <h5 class="modal-title text-white" id="modalPracticaTitulo">
+                    <i class="bi bi-journal-plus me-2"></i>Nueva Práctica
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formPractica">
+                    <input type="hidden" id="practicaId" name="practica_id">
+                    <div id="errorGeneralPractica" class="alert alert-danger d-none mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="codigoPractica" class="form-label">Código <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="codigoPractica" name="codigo" 
+                                   placeholder="Ej: PRA-QUI-001" oninput="validarCampoPractica('codigo')">
+                            <div class="text-danger small mt-1 d-none" id="errorCodigoPractica"></div>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="nombrePractica" class="form-label">Nombre <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nombrePractica" name="nombre" 
+                                   placeholder="Nombre de la práctica" oninput="validarCampoPractica('nombre')">
+                            <div class="text-danger small mt-1 d-none" id="errorNombrePractica"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="programaPractica" class="form-label">Programa <span class="text-danger">*</span></label>
+                            <select class="form-select" id="programaPractica" name="id_programa" onchange="validarCampoPractica('programa')">
+                                <option value="">Seleccionar programa...</option>
+                                {% for prog in programas %}
+                                <option value="{{ prog.id }}">{{ prog.nombre_programa }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="text-danger small mt-1 d-none" id="errorProgramaPractica"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="laboratorioPractica" class="form-label">Laboratorio <span class="text-danger">*</span></label>
+                            <select class="form-select" id="laboratorioPractica" name="id_laboratorio" onchange="validarCampoPractica('laboratorio')">
+                                <option value="">Seleccionar laboratorio...</option>
+                                {% for lab in laboratorios %}
+                                <option value="{{ lab.id }}">{{ lab.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="text-danger small mt-1 d-none" id="errorLaboratorioPractica"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="instructorPractica" class="form-label">Instructor <span class="text-danger">*</span></label>
+                            <select class="form-select" id="instructorPractica" name="id_instructor" onchange="validarCampoPractica('instructor')">
+                                <option value="">Seleccionar instructor...</option>
+                                {% for inst in instructores %}
+                                <option value="{{ inst.id }}">{{ inst.nombre_completo }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="text-danger small mt-1 d-none" id="errorInstructorPractica"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="fechaPractica" class="form-label">Fecha y Hora <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control" id="fechaPractica" name="fecha" onchange="validarCampoPractica('fecha')">
+                            <div class="text-danger small mt-1 d-none" id="errorFechaPractica"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="duracionPractica" class="form-label">Duración (horas)</label>
+                            <input type="number" class="form-control" id="duracionPractica" name="duracion_horas" 
+                                   step="0.5" min="0.5" max="12" placeholder="2">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="estudiantesPractica" class="form-label">Nº Estudiantes</label>
+                            <input type="number" class="form-control" id="estudiantesPractica" name="numero_estudiantes" 
+                                   min="1" max="100" placeholder="20">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="estadoPractica" class="form-label">Estado</label>
+                            <select class="form-select" id="estadoPractica" name="estado">
+                                <option value="programada">Programada</option>
+                                <option value="en_curso">En Curso</option>
+                                <option value="completada">Completada</option>
+                                <option value="cancelada">Cancelada</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="objetivosPractica" class="form-label">Objetivos</label>
+                            <textarea class="form-control" id="objetivosPractica" name="objetivos" rows="2" placeholder="Objetivos de la práctica..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="equiposPractica" class="form-label">Equipos Requeridos</label>
+                            <textarea class="form-control" id="equiposPractica" name="equipos_requeridos" rows="2" placeholder="Lista de equipos..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="materialesPractica" class="form-label">Materiales Requeridos</label>
+                            <textarea class="form-control" id="materialesPractica" name="materiales_requeridos" rows="2" placeholder="Lista de materiales..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label for="descripcionPractica" class="form-label">Descripción de Actividades</label>
+                            <textarea class="form-control" id="descripcionPractica" name="descripcion_actividades" rows="3" placeholder="Descripción detallada..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label for="observacionesPractica" class="form-label">Observaciones</label>
+                            <textarea class="form-control" id="observacionesPractica" name="observaciones" rows="2" placeholder="Observaciones adicionales..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="guardarPractica()">
+                    <i class="bi bi-check-lg me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Práctica -->
+<div class="modal fade" id="modalVerPractica" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); border-radius: 0;">
+                <h5 class="modal-title text-white"><i class="bi bi-journal-text me-2"></i>Detalle de la Práctica</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detallePracticaContent">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let modalPractica, modalVerPractica;
+let todasLasFilas = [];
+let filasFiltradas = [];
+let paginaActual = 1;
+let itemsPorPagina = 10;
+
+// Reglas de validación (mismas que el backend)
+const REGLAS_PRACTICA = {
+    codigo: { min: 3, max: 30, requerido: true },
+    nombre: { min: 5, max: 200, requerido: true },
+    programa: { requerido: true },
+    laboratorio: { requerido: true },
+    instructor: { requerido: true },
+    fecha: { requerido: true }
+};
+
+let timeoutCodigoPractica = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    modalPractica = new bootstrap.Modal(document.getElementById('modalPractica'));
+    modalVerPractica = new bootstrap.Modal(document.getElementById('modalVerPractica'));
+    
+    const tbody = document.getElementById('tbodyPracticas');
+    todasLasFilas = Array.from(tbody.querySelectorAll('tr[data-id]'));
+    filasFiltradas = [...todasLasFilas];
+    
+    actualizarPaginacion();
+});
+
+// Validación híbrida para prácticas
+function validarCampoPractica(campo) {
+    const mapeo = {
+        'codigo': { input: 'codigoPractica', error: 'errorCodigoPractica' },
+        'nombre': { input: 'nombrePractica', error: 'errorNombrePractica' },
+        'programa': { input: 'programaPractica', error: 'errorProgramaPractica' },
+        'laboratorio': { input: 'laboratorioPractica', error: 'errorLaboratorioPractica' },
+        'instructor': { input: 'instructorPractica', error: 'errorInstructorPractica' },
+        'fecha': { input: 'fechaPractica', error: 'errorFechaPractica' }
+    };
+    
+    const config = mapeo[campo];
+    if (!config) return;
+    
+    const inputEl = document.getElementById(config.input);
+    const errorEl = document.getElementById(config.error);
+    const valor = inputEl.value.trim();
+    const practicaId = document.getElementById('practicaId').value;
+    let error = '';
+    
+    switch(campo) {
+        case 'codigo':
+            if (!valor) {
+                error = 'El código es requerido';
+            } else if (valor.length < REGLAS_PRACTICA.codigo.min || valor.length > REGLAS_PRACTICA.codigo.max) {
+                error = `El código debe tener entre ${REGLAS_PRACTICA.codigo.min} y ${REGLAS_PRACTICA.codigo.max} caracteres`;
+            } else {
+                if (timeoutCodigoPractica) clearTimeout(timeoutCodigoPractica);
+                timeoutCodigoPractica = setTimeout(() => {
+                    const url = practicaId 
+                        ? `/api/practicas/validar?codigo=${encodeURIComponent(valor)}&excluir_id=${practicaId}`
+                        : `/api/practicas/validar?codigo=${encodeURIComponent(valor)}`;
+                    fetch(url)
+                        .then(r => r.json())
+                        .then(result => {
+                            if (result.existe) {
+                                errorEl.textContent = 'Ya existe una práctica con ese código';
+                                errorEl.classList.remove('d-none');
+                                inputEl.classList.add('is-invalid');
+                                inputEl.classList.remove('is-valid');
+                            }
+                        });
+                }, 400);
+            }
+            break;
+        case 'nombre':
+            if (!valor) {
+                error = 'El nombre es requerido';
+            } else if (valor.length < REGLAS_PRACTICA.nombre.min || valor.length > REGLAS_PRACTICA.nombre.max) {
+                error = `El nombre debe tener entre ${REGLAS_PRACTICA.nombre.min} y ${REGLAS_PRACTICA.nombre.max} caracteres`;
+            }
+            break;
+        case 'programa':
+            if (!valor) error = 'El programa es requerido';
+            break;
+        case 'laboratorio':
+            if (!valor) error = 'El laboratorio es requerido';
+            break;
+        case 'instructor':
+            if (!valor) error = 'El instructor es requerido';
+            break;
+        case 'fecha':
+            if (!valor) error = 'La fecha es requerida';
+            break;
+    }
+    
+    if (error) {
+        errorEl.textContent = error;
+        errorEl.classList.remove('d-none');
+        inputEl.classList.add('is-invalid');
+        inputEl.classList.remove('is-valid');
+    } else {
+        errorEl.textContent = '';
+        errorEl.classList.add('d-none');
+        inputEl.classList.remove('is-invalid');
+        if (valor) inputEl.classList.add('is-valid');
+    }
+}
+
+function limpiarErroresPractica() {
+    ['errorGeneralPractica', 'errorCodigoPractica', 'errorNombrePractica', 'errorProgramaPractica', 
+     'errorLaboratorioPractica', 'errorInstructorPractica', 'errorFechaPractica'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.add('d-none'); el.textContent = ''; }
+    });
+    ['codigoPractica', 'nombrePractica', 'programaPractica', 'laboratorioPractica', 
+     'instructorPractica', 'fechaPractica'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.remove('is-invalid'); el.classList.remove('is-valid'); }
+    });
+}
+
+function mostrarErroresPractica(errores) {
+    limpiarErroresPractica();
+    const mapeo = {
+        'codigo': { error: 'errorCodigoPractica', input: 'codigoPractica' },
+        'nombre': { error: 'errorNombrePractica', input: 'nombrePractica' },
+        'programa': { error: 'errorProgramaPractica', input: 'programaPractica' },
+        'laboratorio': { error: 'errorLaboratorioPractica', input: 'laboratorioPractica' },
+        'instructor': { error: 'errorInstructorPractica', input: 'instructorPractica' },
+        'fecha': { error: 'errorFechaPractica', input: 'fechaPractica' }
+    };
+    
+    for (const [campo, mensaje] of Object.entries(errores)) {
+        if (mapeo[campo]) {
+            const errorEl = document.getElementById(mapeo[campo].error);
+            const inputEl = document.getElementById(mapeo[campo].input);
+            if (errorEl) {
+                errorEl.textContent = mensaje;
+                errorEl.classList.remove('d-none');
+            }
+            if (inputEl) inputEl.classList.add('is-invalid');
+        } else {
+            document.getElementById('errorGeneralPractica').textContent = mensaje;
+            document.getElementById('errorGeneralPractica').classList.remove('d-none');
+        }
+    }
+}
+
+function filtrarPracticas() {
+    const busqueda = document.getElementById('filtroBusqueda').value.toLowerCase().trim();
+    const estado = document.getElementById('filtroEstado').value;
+    const laboratorio = document.getElementById('filtroLaboratorio').value;
+    const programa = document.getElementById('filtroPrograma').value;
+    
+    filasFiltradas = todasLasFilas.filter(fila => {
+        const matchBusqueda = !busqueda || fila.dataset.busqueda.includes(busqueda);
+        const matchEstado = !estado || fila.dataset.estado === estado;
+        const matchLab = !laboratorio || fila.dataset.laboratorio === laboratorio;
+        const matchProg = !programa || fila.dataset.programa === programa;
+        return matchBusqueda && matchEstado && matchLab && matchProg;
+    });
+    
+    paginaActual = 1;
+    actualizarPaginacion();
+}
+
+function limpiarFiltros() {
+    document.getElementById('filtroBusqueda').value = '';
+    document.getElementById('filtroEstado').value = '';
+    document.getElementById('filtroLaboratorio').value = '';
+    document.getElementById('filtroPrograma').value = '';
+    filasFiltradas = [...todasLasFilas];
+    paginaActual = 1;
+    actualizarPaginacion();
+}
+
+function cambiarItemsPorPagina() {
+    itemsPorPagina = parseInt(document.getElementById('itemsPorPagina').value);
+    paginaActual = 1;
+    actualizarPaginacion();
+}
+
+function actualizarPaginacion() {
+    const totalPaginas = Math.ceil(filasFiltradas.length / itemsPorPagina);
+    const inicio = (paginaActual - 1) * itemsPorPagina;
+    const fin = inicio + itemsPorPagina;
+    
+    todasLasFilas.forEach(fila => fila.style.display = 'none');
+    filasFiltradas.slice(inicio, fin).forEach(fila => fila.style.display = '');
+    
+    const contador = document.getElementById('contadorPracticas');
+    if (contador) contador.textContent = `${filasFiltradas.length} de ${todasLasFilas.length}`;
+    
+    const filaVacia = document.getElementById('filaVacia');
+    if (filaVacia) filaVacia.style.display = filasFiltradas.length === 0 ? '' : 'none';
+    
+    generarPaginacion(totalPaginas);
+}
+
+function generarPaginacion(totalPaginas) {
+    const paginacion = document.getElementById('paginacion');
+    paginacion.innerHTML = '';
+    if (totalPaginas <= 1) return;
+    
+    const liPrev = document.createElement('li');
+    liPrev.className = `page-item ${paginaActual === 1 ? 'disabled' : ''}`;
+    liPrev.innerHTML = `<a class="page-link" href="#" onclick="irAPagina(${paginaActual - 1}); return false;">«</a>`;
+    paginacion.appendChild(liPrev);
+    
+    for (let i = Math.max(1, paginaActual - 2); i <= Math.min(totalPaginas, paginaActual + 2); i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === paginaActual ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#" onclick="irAPagina(${i}); return false;">${i}</a>`;
+        paginacion.appendChild(li);
+    }
+    
+    const liNext = document.createElement('li');
+    liNext.className = `page-item ${paginaActual === totalPaginas ? 'disabled' : ''}`;
+    liNext.innerHTML = `<a class="page-link" href="#" onclick="irAPagina(${paginaActual + 1}); return false;">»</a>`;
+    paginacion.appendChild(liNext);
+}
+
+function irAPagina(num) {
+    const totalPaginas = Math.ceil(filasFiltradas.length / itemsPorPagina);
+    if (num < 1 || num > totalPaginas) return;
+    paginaActual = num;
+    actualizarPaginacion();
+}
+
+function abrirModalNuevaPractica() {
+    document.getElementById('formPractica').reset();
+    document.getElementById('practicaId').value = '';
+    limpiarErroresPractica();
+    document.getElementById('modalPracticaTitulo').innerHTML = '<i class="bi bi-journal-plus me-2"></i>Nueva Práctica';
+    modalPractica.show();
+}
+
+async function editarPractica(practicaId) {
+    try {
+        const response = await fetch(`/api/practicas/${practicaId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const p = data.practica;
+            document.getElementById('practicaId').value = p.id;
+            document.getElementById('codigoPractica').value = p.codigo;
+            document.getElementById('nombrePractica').value = p.nombre;
+            document.getElementById('programaPractica').value = p.id_programa;
+            document.getElementById('laboratorioPractica').value = p.id_laboratorio;
+            document.getElementById('instructorPractica').value = p.id_instructor;
+            document.getElementById('fechaPractica').value = p.fecha_input || '';
+            document.getElementById('duracionPractica').value = p.duracion_horas || '';
+            document.getElementById('estudiantesPractica').value = p.numero_estudiantes || '';
+            document.getElementById('estadoPractica').value = p.estado;
+            document.getElementById('objetivosPractica').value = p.objetivos || '';
+            document.getElementById('equiposPractica').value = p.equipos_requeridos || '';
+            document.getElementById('materialesPractica').value = p.materiales_requeridos || '';
+            document.getElementById('descripcionPractica').value = p.descripcion_actividades || '';
+            document.getElementById('observacionesPractica').value = p.observaciones || '';
+            
+            limpiarErroresPractica();
+            document.getElementById('modalPracticaTitulo').innerHTML = '<i class="bi bi-pencil me-2"></i>Editar Práctica';
+            modalPractica.show();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cargar la práctica');
+    }
+}
+
+async function guardarPractica() {
+    limpiarErroresPractica();
+    
+    const practicaId = document.getElementById('practicaId').value;
+    const datos = {
+        codigo: document.getElementById('codigoPractica').value.trim(),
+        nombre: document.getElementById('nombrePractica').value.trim(),
+        id_programa: document.getElementById('programaPractica').value,
+        id_laboratorio: document.getElementById('laboratorioPractica').value,
+        id_instructor: document.getElementById('instructorPractica').value,
+        fecha: document.getElementById('fechaPractica').value,
+        duracion_horas: document.getElementById('duracionPractica').value,
+        numero_estudiantes: document.getElementById('estudiantesPractica').value,
+        estado: document.getElementById('estadoPractica').value,
+        objetivos: document.getElementById('objetivosPractica').value,
+        equipos_requeridos: document.getElementById('equiposPractica').value,
+        materiales_requeridos: document.getElementById('materialesPractica').value,
+        descripcion_actividades: document.getElementById('descripcionPractica').value,
+        observaciones: document.getElementById('observacionesPractica').value
+    };
+    
+    try {
+        const url = practicaId ? `/api/practicas/${practicaId}` : '/api/practicas';
+        const method = practicaId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datos)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ Práctica guardada exitosamente');
+            modalPractica.hide();
+            location.reload();
+        } else if (data.errores) {
+            mostrarErroresPractica(data.errores);
+        } else {
+            document.getElementById('errorGeneralPractica').textContent = data.message || 'Error desconocido';
+            document.getElementById('errorGeneralPractica').classList.remove('d-none');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('errorGeneralPractica').textContent = 'Error de conexión';
+        document.getElementById('errorGeneralPractica').classList.remove('d-none');
+    }
+}
+
+async function verPractica(practicaId) {
+    try {
+        const response = await fetch(`/api/practicas/${practicaId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const p = data.practica;
+            const estadoBadge = {
+                'programada': '<span class="badge bg-info">Programada</span>',
+                'en_curso': '<span class="badge bg-warning">En Curso</span>',
+                'completada': '<span class="badge bg-success">Completada</span>',
+                'cancelada': '<span class="badge bg-secondary">Cancelada</span>'
+            };
+            
+            document.getElementById('detallePracticaContent').innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Código:</dt>
+                            <dd class="col-sm-8"><code>${p.codigo}</code></dd>
+                            <dt class="col-sm-4">Nombre:</dt>
+                            <dd class="col-sm-8"><strong>${p.nombre}</strong></dd>
+                            <dt class="col-sm-4">Programa:</dt>
+                            <dd class="col-sm-8">${p.nombre_programa || '-'}</dd>
+                            <dt class="col-sm-4">Laboratorio:</dt>
+                            <dd class="col-sm-8">${p.laboratorio_nombre || '-'}</dd>
+                            <dt class="col-sm-4">Instructor:</dt>
+                            <dd class="col-sm-8">${p.instructor_nombre || '-'}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Fecha:</dt>
+                            <dd class="col-sm-8">${p.fecha_formato || '-'}</dd>
+                            <dt class="col-sm-4">Duración:</dt>
+                            <dd class="col-sm-8">${p.duracion_horas || 0} horas</dd>
+                            <dt class="col-sm-4">Estudiantes:</dt>
+                            <dd class="col-sm-8">${p.numero_estudiantes || '-'}</dd>
+                            <dt class="col-sm-4">Estado:</dt>
+                            <dd class="col-sm-8">${estadoBadge[p.estado] || p.estado}</dd>
+                        </dl>
+                    </div>
+                </div>
+                ${p.objetivos ? `<hr><h6>Objetivos</h6><p>${p.objetivos}</p>` : ''}
+                ${p.descripcion_actividades ? `<h6>Descripción de Actividades</h6><p>${p.descripcion_actividades}</p>` : ''}
+                <div class="row">
+                    ${p.equipos_requeridos ? `<div class="col-md-6"><h6>Equipos Requeridos</h6><p class="small">${p.equipos_requeridos}</p></div>` : ''}
+                    ${p.materiales_requeridos ? `<div class="col-md-6"><h6>Materiales Requeridos</h6><p class="small">${p.materiales_requeridos}</p></div>` : ''}
+                </div>
+                ${p.observaciones ? `<h6>Observaciones</h6><p class="small text-muted">${p.observaciones}</p>` : ''}
+            `;
+            modalVerPractica.show();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cargar la práctica');
+    }
+}
+
+async function eliminarPractica(practicaId) {
+    if (!confirm('¿Está seguro de eliminar esta práctica? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/practicas/${practicaId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ Práctica eliminada exitosamente');
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al eliminar la práctica');
+    }
+}
+</script>
+{% endblock %}

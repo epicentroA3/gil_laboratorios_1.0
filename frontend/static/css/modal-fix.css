@@ -1,0 +1,58 @@
+/* ===========================================
+   MODAL-FIX.CSS - Correcciones para modales Bootstrap
+   Centro Minero SENA
+   =========================================== */
+
+/* Fix para backdrop de modales */
+.modal-backdrop {
+  z-index: 1040 !important;
+}
+
+.modal {
+  z-index: 1050 !important;
+}
+
+/* Evitar scroll del body cuando modal está abierto */
+body.modal-open {
+  overflow: hidden;
+  padding-right: 0 !important;
+}
+
+/* Fix para modales anidados */
+.modal-backdrop + .modal-backdrop {
+  display: none;
+}
+
+/* Mejorar transiciones */
+.modal.fade .modal-dialog {
+  transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+  transform: none;
+}
+
+/* Fix para modales con scroll largo */
+.modal-dialog-scrollable {
+  max-height: calc(100% - 3.5rem);
+}
+
+.modal-dialog-scrollable .modal-content {
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.modal-dialog-scrollable .modal-body {
+  overflow-y: auto;
+}
+
+/* Asegurar que los modales no se corten */
+.modal-dialog {
+  margin: 1.75rem auto;
+}
+
+@media (max-width: 575.98px) {
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+}

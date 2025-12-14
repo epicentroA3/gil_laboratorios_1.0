@@ -1,0 +1,670 @@
+{% extends "base.html" %}
+
+{% block title %}Programas de Formación - GIL{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h4 class="mb-1 text-white fw-bold"><i class="bi bi-mortarboard me-2"></i>Programas de Formación</h4>
+        <p class="mb-0 text-white opacity-90">Gestión de programas académicos del SENA</p>
+      </div>
+      {% if puede_editar %}
+      <button class="btn btn-light" onclick="abrirModalNuevoPrograma()">
+        <i class="bi bi-plus-circle me-1"></i>Nuevo Programa
+      </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-search me-1"></i>Buscar</label>
+        <input type="text" class="form-control" id="filtroBusqueda" placeholder="Código, nombre o descripción..." onkeyup="filtrarProgramas()">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-tag me-1"></i>Tipo</label>
+        <select class="form-select" id="filtroTipo" onchange="filtrarProgramas()">
+          <option value="">Todos los tipos</option>
+          <option value="tecnologo">Tecnólogo</option>
+          <option value="tecnico">Técnico</option>
+          <option value="complementaria">Complementaria</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-toggle-on me-1"></i>Estado</label>
+        <select class="form-select" id="filtroEstado" onchange="filtrarProgramas()">
+          <option value="">Todos</option>
+          <option value="activo">Activos</option>
+          <option value="inactivo">Inactivos</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1">&nbsp;</label>
+        <button class="btn btn-outline-secondary w-100" onclick="limpiarFiltros()">
+          <i class="bi bi-x-circle me-1"></i>Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabla de Programas -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header border-0" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+    <h6 class="mb-0 text-white fw-bold"><i class="bi bi-list-ul me-2"></i>Lista de Programas <span id="contadorProgramas" class="badge bg-light text-dark ms-2"></span></h6>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="tablaProgramas">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th><i class="bi bi-code me-1"></i>Código</th>
+            <th><i class="bi bi-mortarboard me-1"></i>Nombre</th>
+            <th><i class="bi bi-tag me-1"></i>Tipo</th>
+            <th><i class="bi bi-clock me-1"></i>Duración</th>
+            <th>Estado</th>
+            {% if puede_editar %}<th>Acciones</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody id="tbodyProgramas">
+          {% for programa in programas %}
+          <tr data-id="{{ programa.id }}" 
+              data-tipo="{{ programa.tipo_programa }}" 
+              data-estado="{{ programa.estado }}"
+              data-busqueda="{{ programa.codigo_programa|lower }} {{ programa.nombre_programa|lower }} {{ programa.descripcion|lower if programa.descripcion else '' }}">
+            <td class="text-muted small">{{ programa.id }}</td>
+            <td><code class="fw-semibold">{{ programa.codigo_programa }}</code></td>
+            <td>
+              <span class="fw-semibold" style="color: #2d6a4f;">{{ programa.nombre_programa }}</span>
+              {% if programa.descripcion %}
+              <br><small class="text-muted">{{ programa.descripcion[:60] }}{% if programa.descripcion|length > 60 %}...{% endif %}</small>
+              {% endif %}
+            </td>
+            <td>
+              {% if programa.tipo_programa == 'tecnologo' %}
+              <span class="badge rounded-pill" style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);">Tecnólogo</span>
+              {% elif programa.tipo_programa == 'tecnico' %}
+              <span class="badge rounded-pill" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">Técnico</span>
+              {% else %}
+              <span class="badge rounded-pill" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">Complementaria</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #00b894 0%, #009b7d 100%);">{{ programa.duracion_meses or 0 }}</span>
+              <small class="text-muted">meses</small>
+            </td>
+            <td>
+              {% if programa.estado == 'activo' %}
+              <span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+                <i class="bi bi-check-circle me-1"></i>Sí
+              </span>
+              {% else %}
+              <span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                <i class="bi bi-x-circle me-1"></i>No
+              </span>
+              {% endif %}
+            </td>
+            {% if puede_editar %}
+            <td>
+              <div class="btn-group btn-group-sm border rounded" role="group">
+                <button class="btn btn-outline-primary border-0" onclick="verPrograma({{ programa.id }})" title="Ver Detalle">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-outline-warning border-0 border-start" onclick="editarPrograma({{ programa.id }})" title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-{{ 'danger' if programa.estado == 'activo' else 'success' }} border-0 border-start" onclick="toggleEstadoPrograma({{ programa.id }}, '{{ 'inactivo' if programa.estado == 'activo' else 'activo' }}')" title="{{ 'Desactivar' if programa.estado == 'activo' else 'Activar' }}">
+                  <i class="bi bi-{{ 'x-circle' if programa.estado == 'activo' else 'check-circle' }}"></i>
+                </button>
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% else %}
+          <tr id="filaVacia">
+            <td colspan="7" class="text-center py-4 text-muted">
+              <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+              No hay programas registrados
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <!-- Paginación -->
+    <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center py-3">
+      <div class="d-flex align-items-center gap-2">
+        <label class="small text-muted mb-0">Mostrar:</label>
+        <select class="form-select form-select-sm" id="itemsPorPagina" style="width:auto" onchange="cambiarItemsPorPagina()">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <span class="small text-muted">por página</span>
+      </div>
+      <nav>
+        <ul class="pagination pagination-sm mb-0" id="paginacion"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nuevo/Editar Programa -->
+<div class="modal fade" id="modalPrograma" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalProgramaTitulo">
+                    <i class="bi bi-mortarboard me-2"></i>Nuevo Programa
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formPrograma">
+                    <input type="hidden" id="programaId" name="programa_id">
+                    <div id="errorGeneralPrograma" class="alert alert-danger d-none mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="codigoPrograma" class="form-label">Código <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="codigoPrograma" name="codigo_programa" 
+                                   placeholder="Ej: TEC-MIN-001" oninput="validarCampoPrograma('codigo')">
+                            <div class="text-danger small mt-1 d-none" id="errorCodigoPrograma"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="tipoPrograma" class="form-label">Tipo <span class="text-danger">*</span></label>
+                            <select class="form-select" id="tipoPrograma" name="tipo_programa" onchange="validarCampoPrograma('tipo')">
+                                <option value="">Seleccionar...</option>
+                                <option value="tecnologo">Tecnólogo</option>
+                                <option value="tecnico">Técnico</option>
+                                <option value="complementaria">Complementaria</option>
+                            </select>
+                            <div class="text-danger small mt-1 d-none" id="errorTipoPrograma"></div>
+                        </div>
+                        <div class="col-12">
+                            <label for="nombrePrograma" class="form-label">Nombre del Programa <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nombrePrograma" name="nombre_programa" 
+                                   placeholder="Nombre completo del programa" oninput="validarCampoPrograma('nombre')">
+                            <div class="text-danger small mt-1 d-none" id="errorNombrePrograma"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="duracionPrograma" class="form-label">Duración (meses)</label>
+                            <input type="number" class="form-control" id="duracionPrograma" name="duracion_meses" 
+                                   placeholder="Ej: 24" oninput="validarCampoPrograma('duracion')">
+                            <div class="text-danger small mt-1 d-none" id="errorDuracionPrograma"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="estadoPrograma" class="form-label">Estado</label>
+                            <select class="form-select" id="estadoPrograma" name="estado">
+                                <option value="activo">Activo</option>
+                                <option value="inactivo">Inactivo</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="descripcionPrograma" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="descripcionPrograma" name="descripcion" 
+                                      rows="3" maxlength="1000" placeholder="Descripción del programa..."></textarea>
+                            <div class="form-text">Máximo 1000 caracteres</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="guardarPrograma()">
+                    <i class="bi bi-check-lg me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Programa -->
+<div class="modal fade" id="modalVerPrograma" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-mortarboard me-2"></i>Detalle del Programa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Código:</dt>
+                    <dd class="col-sm-8"><code id="verCodigo"></code></dd>
+                    
+                    <dt class="col-sm-4">Nombre:</dt>
+                    <dd class="col-sm-8"><strong id="verNombre"></strong></dd>
+                    
+                    <dt class="col-sm-4">Tipo:</dt>
+                    <dd class="col-sm-8"><span id="verTipo"></span></dd>
+                    
+                    <dt class="col-sm-4">Duración:</dt>
+                    <dd class="col-sm-8"><span id="verDuracion"></span></dd>
+                    
+                    <dt class="col-sm-4">Estado:</dt>
+                    <dd class="col-sm-8"><span id="verEstado"></span></dd>
+                    
+                    <dt class="col-sm-4">Descripción:</dt>
+                    <dd class="col-sm-8"><span id="verDescripcion"></span></dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let modalPrograma, modalVerPrograma;
+let todasLasFilas = [];
+let filasFiltradas = [];
+let paginaActual = 1;
+let itemsPorPagina = 10;
+
+// Reglas de validación (mismas que el backend)
+const REGLAS_PROG = {
+    codigo: { min: 3, max: 20, requerido: true },
+    nombre: { min: 5, max: 200, requerido: true },
+    tipo: { requerido: true, opciones: ['tecnologo', 'tecnico', 'complementaria'] },
+    duracion: { min: 1, max: 60 }
+};
+
+let timeoutCodigoPrograma = null;
+
+// Validación híbrida para programas
+function validarCampoPrograma(campo) {
+    const mapeo = {
+        'codigo': { input: 'codigoPrograma', error: 'errorCodigoPrograma' },
+        'tipo': { input: 'tipoPrograma', error: 'errorTipoPrograma' },
+        'nombre': { input: 'nombrePrograma', error: 'errorNombrePrograma' },
+        'duracion': { input: 'duracionPrograma', error: 'errorDuracionPrograma' }
+    };
+    
+    const config = mapeo[campo];
+    if (!config) return;
+    
+    const inputEl = document.getElementById(config.input);
+    const errorEl = document.getElementById(config.error);
+    const valor = inputEl.value.trim();
+    const programaId = document.getElementById('programaId').value;
+    let error = '';
+    
+    // Validación instantánea en frontend
+    switch(campo) {
+        case 'codigo':
+            if (!valor) {
+                error = 'El código es requerido';
+            } else if (valor.length < REGLAS_PROG.codigo.min || valor.length > REGLAS_PROG.codigo.max) {
+                error = `El código debe tener entre ${REGLAS_PROG.codigo.min} y ${REGLAS_PROG.codigo.max} caracteres`;
+            } else {
+                // Verificar código único en backend
+                if (timeoutCodigoPrograma) clearTimeout(timeoutCodigoPrograma);
+                timeoutCodigoPrograma = setTimeout(() => {
+                    const url = programaId 
+                        ? `/api/programas/validar?codigo=${encodeURIComponent(valor)}&excluir_id=${programaId}`
+                        : `/api/programas/validar?codigo=${encodeURIComponent(valor)}`;
+                    fetch(url)
+                        .then(r => r.json())
+                        .then(result => {
+                            if (result.existe) {
+                                errorEl.textContent = 'Ya existe un programa con ese código';
+                                errorEl.classList.remove('d-none');
+                                inputEl.classList.add('is-invalid');
+                                inputEl.classList.remove('is-valid');
+                            }
+                        });
+                }, 400);
+            }
+            break;
+        case 'tipo':
+            if (!valor) {
+                error = 'El tipo es requerido';
+            }
+            break;
+        case 'nombre':
+            if (!valor) {
+                error = 'El nombre es requerido';
+            } else if (valor.length < REGLAS_PROG.nombre.min || valor.length > REGLAS_PROG.nombre.max) {
+                error = `El nombre debe tener entre ${REGLAS_PROG.nombre.min} y ${REGLAS_PROG.nombre.max} caracteres`;
+            }
+            break;
+        case 'duracion':
+            if (valor) {
+                const dur = parseInt(valor);
+                if (isNaN(dur) || dur < REGLAS_PROG.duracion.min || dur > REGLAS_PROG.duracion.max) {
+                    error = `La duración debe estar entre ${REGLAS_PROG.duracion.min} y ${REGLAS_PROG.duracion.max} meses`;
+                }
+            }
+            break;
+    }
+    
+    // Mostrar/ocultar error
+    if (error) {
+        errorEl.textContent = error;
+        errorEl.classList.remove('d-none');
+        inputEl.classList.add('is-invalid');
+        inputEl.classList.remove('is-valid');
+    } else {
+        errorEl.textContent = '';
+        errorEl.classList.add('d-none');
+        inputEl.classList.remove('is-invalid');
+        if (valor) inputEl.classList.add('is-valid');
+    }
+}
+
+function limpiarErroresPrograma() {
+    ['errorGeneralPrograma', 'errorCodigoPrograma', 'errorTipoPrograma', 'errorNombrePrograma', 'errorDuracionPrograma'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.add('d-none'); el.textContent = ''; }
+    });
+    ['codigoPrograma', 'tipoPrograma', 'nombrePrograma', 'duracionPrograma'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.remove('is-invalid'); el.classList.remove('is-valid'); }
+    });
+}
+
+function mostrarErroresPrograma(errores) {
+    limpiarErroresPrograma();
+    const mapeo = {
+        'codigo': { error: 'errorCodigoPrograma', input: 'codigoPrograma' },
+        'nombre': { error: 'errorNombrePrograma', input: 'nombrePrograma' },
+        'tipo': { error: 'errorTipoPrograma', input: 'tipoPrograma' },
+        'duracion': { error: 'errorDuracionPrograma', input: 'duracionPrograma' }
+    };
+    
+    for (const [campo, mensaje] of Object.entries(errores)) {
+        if (mapeo[campo]) {
+            const errorEl = document.getElementById(mapeo[campo].error);
+            const inputEl = document.getElementById(mapeo[campo].input);
+            if (errorEl) {
+                errorEl.textContent = mensaje;
+                errorEl.classList.remove('d-none');
+            }
+            if (inputEl) inputEl.classList.add('is-invalid');
+        } else {
+            document.getElementById('errorGeneralPrograma').textContent = mensaje;
+            document.getElementById('errorGeneralPrograma').classList.remove('d-none');
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    modalPrograma = new bootstrap.Modal(document.getElementById('modalPrograma'));
+    modalVerPrograma = new bootstrap.Modal(document.getElementById('modalVerPrograma'));
+    
+    // Guardar todas las filas originales
+    const tbody = document.getElementById('tbodyProgramas');
+    todasLasFilas = Array.from(tbody.querySelectorAll('tr[data-id]'));
+    filasFiltradas = [...todasLasFilas];
+    
+    // Inicializar paginación
+    actualizarPaginacion();
+});
+
+function filtrarProgramas() {
+    const busqueda = document.getElementById('filtroBusqueda').value.toLowerCase().trim();
+    const tipo = document.getElementById('filtroTipo').value;
+    const estado = document.getElementById('filtroEstado').value;
+    
+    filasFiltradas = todasLasFilas.filter(fila => {
+        const matchBusqueda = !busqueda || fila.dataset.busqueda.includes(busqueda);
+        const matchTipo = !tipo || fila.dataset.tipo === tipo;
+        const matchEstado = !estado || fila.dataset.estado === estado;
+        return matchBusqueda && matchTipo && matchEstado;
+    });
+    
+    paginaActual = 1;
+    actualizarPaginacion();
+}
+
+function limpiarFiltros() {
+    document.getElementById('filtroBusqueda').value = '';
+    document.getElementById('filtroTipo').value = '';
+    document.getElementById('filtroEstado').value = '';
+    filasFiltradas = [...todasLasFilas];
+    paginaActual = 1;
+    actualizarPaginacion();
+}
+
+function cambiarItemsPorPagina() {
+    itemsPorPagina = parseInt(document.getElementById('itemsPorPagina').value);
+    paginaActual = 1;
+    actualizarPaginacion();
+}
+
+function actualizarPaginacion() {
+    const tbody = document.getElementById('tbodyProgramas');
+    const totalPaginas = Math.ceil(filasFiltradas.length / itemsPorPagina);
+    const inicio = (paginaActual - 1) * itemsPorPagina;
+    const fin = inicio + itemsPorPagina;
+    
+    // Ocultar todas las filas
+    todasLasFilas.forEach(fila => fila.style.display = 'none');
+    
+    // Mostrar filas de la página actual
+    const filasVisibles = filasFiltradas.slice(inicio, fin);
+    filasVisibles.forEach(fila => fila.style.display = '');
+    
+    // Actualizar contador
+    const contador = document.getElementById('contadorProgramas');
+    if (contador) {
+        contador.textContent = `${filasFiltradas.length} de ${todasLasFilas.length}`;
+    }
+    
+    // Mostrar mensaje si no hay resultados
+    const filaVacia = document.getElementById('filaVacia');
+    if (filaVacia) {
+        filaVacia.style.display = filasFiltradas.length === 0 ? '' : 'none';
+    }
+    
+    // Generar paginación
+    generarPaginacion(totalPaginas);
+}
+
+function generarPaginacion(totalPaginas) {
+    const paginacion = document.getElementById('paginacion');
+    paginacion.innerHTML = '';
+    
+    if (totalPaginas <= 1) return;
+    
+    // Botón anterior
+    const liPrev = document.createElement('li');
+    liPrev.className = `page-item ${paginaActual === 1 ? 'disabled' : ''}`;
+    liPrev.innerHTML = `<a class="page-link" href="#" onclick="irAPagina(${paginaActual - 1}); return false;">«</a>`;
+    paginacion.appendChild(liPrev);
+    
+    // Páginas
+    let inicio = Math.max(1, paginaActual - 2);
+    let fin = Math.min(totalPaginas, paginaActual + 2);
+    
+    if (inicio > 1) {
+        paginacion.appendChild(crearItemPagina(1));
+        if (inicio > 2) {
+            const liDots = document.createElement('li');
+            liDots.className = 'page-item disabled';
+            liDots.innerHTML = '<span class="page-link">...</span>';
+            paginacion.appendChild(liDots);
+        }
+    }
+    
+    for (let i = inicio; i <= fin; i++) {
+        paginacion.appendChild(crearItemPagina(i));
+    }
+    
+    if (fin < totalPaginas) {
+        if (fin < totalPaginas - 1) {
+            const liDots = document.createElement('li');
+            liDots.className = 'page-item disabled';
+            liDots.innerHTML = '<span class="page-link">...</span>';
+            paginacion.appendChild(liDots);
+        }
+        paginacion.appendChild(crearItemPagina(totalPaginas));
+    }
+    
+    // Botón siguiente
+    const liNext = document.createElement('li');
+    liNext.className = `page-item ${paginaActual === totalPaginas ? 'disabled' : ''}`;
+    liNext.innerHTML = `<a class="page-link" href="#" onclick="irAPagina(${paginaActual + 1}); return false;">»</a>`;
+    paginacion.appendChild(liNext);
+}
+
+function crearItemPagina(num) {
+    const li = document.createElement('li');
+    li.className = `page-item ${num === paginaActual ? 'active' : ''}`;
+    li.innerHTML = `<a class="page-link" href="#" onclick="irAPagina(${num}); return false;">${num}</a>`;
+    return li;
+}
+
+function irAPagina(num) {
+    const totalPaginas = Math.ceil(filasFiltradas.length / itemsPorPagina);
+    if (num < 1 || num > totalPaginas) return;
+    paginaActual = num;
+    actualizarPaginacion();
+}
+
+function abrirModalNuevoPrograma() {
+    document.getElementById('formPrograma').reset();
+    document.getElementById('programaId').value = '';
+    document.getElementById('modalProgramaTitulo').innerHTML = '<i class="bi bi-mortarboard me-2"></i>Nuevo Programa';
+    document.querySelector('#modalPrograma .modal-header').className = 'modal-header bg-success text-white';
+    modalPrograma.show();
+}
+
+async function editarPrograma(programaId) {
+    try {
+        const response = await fetch(`/api/programas/${programaId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const p = data.programa;
+            document.getElementById('programaId').value = p.id;
+            document.getElementById('codigoPrograma').value = p.codigo_programa;
+            document.getElementById('nombrePrograma').value = p.nombre_programa;
+            document.getElementById('tipoPrograma').value = p.tipo_programa;
+            document.getElementById('duracionPrograma').value = p.duracion_meses || '';
+            document.getElementById('estadoPrograma').value = p.estado;
+            document.getElementById('descripcionPrograma').value = p.descripcion || '';
+            
+            document.getElementById('modalProgramaTitulo').innerHTML = '<i class="bi bi-pencil me-2"></i>Editar Programa';
+            document.querySelector('#modalPrograma .modal-header').className = 'modal-header bg-primary text-white';
+            modalPrograma.show();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cargar el programa');
+    }
+}
+
+async function guardarPrograma() {
+    limpiarErroresPrograma();
+    
+    const programaId = document.getElementById('programaId').value;
+    const codigo = document.getElementById('codigoPrograma').value.trim();
+    const nombre = document.getElementById('nombrePrograma').value.trim();
+    const tipo = document.getElementById('tipoPrograma').value;
+    const duracion = document.getElementById('duracionPrograma').value;
+    const estado = document.getElementById('estadoPrograma').value;
+    const descripcion = document.getElementById('descripcionPrograma').value.trim();
+    
+    const datos = {
+        codigo_programa: codigo,
+        nombre_programa: nombre,
+        tipo_programa: tipo,
+        duracion_meses: duracion ? parseInt(duracion) : null,
+        estado: estado,
+        descripcion: descripcion
+    };
+    
+    try {
+        const url = programaId ? `/api/programas/${programaId}` : '/api/programas';
+        const method = programaId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datos)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ Programa guardado exitosamente');
+            modalPrograma.hide();
+            location.reload();
+        } else if (data.errores) {
+            mostrarErroresPrograma(data.errores);
+        } else {
+            document.getElementById('errorGeneralPrograma').textContent = data.message || 'Error desconocido';
+            document.getElementById('errorGeneralPrograma').classList.remove('d-none');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('errorGeneralPrograma').textContent = 'Error de conexión';
+        document.getElementById('errorGeneralPrograma').classList.remove('d-none');
+    }
+}
+
+async function verPrograma(programaId) {
+    try {
+        const response = await fetch(`/api/programas/${programaId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const p = data.programa;
+            document.getElementById('verCodigo').textContent = p.codigo_programa;
+            document.getElementById('verNombre').textContent = p.nombre_programa;
+            
+            const tipoLabels = { tecnologo: 'Tecnólogo', tecnico: 'Técnico', complementaria: 'Complementaria' };
+            document.getElementById('verTipo').innerHTML = `<span class="badge bg-primary">${tipoLabels[p.tipo_programa] || p.tipo_programa}</span>`;
+            
+            document.getElementById('verDuracion').textContent = (p.duracion_meses || 0) + ' meses';
+            document.getElementById('verEstado').innerHTML = p.estado === 'activo' 
+                ? '<span class="badge bg-success">Activo</span>' 
+                : '<span class="badge bg-danger">Inactivo</span>';
+            document.getElementById('verDescripcion').textContent = p.descripcion || 'Sin descripción';
+            
+            modalVerPrograma.show();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cargar el programa');
+    }
+}
+
+async function toggleEstadoPrograma(programaId, nuevoEstado) {
+    if (!confirm(`¿Está seguro de ${nuevoEstado === 'activo' ? 'activar' : 'desactivar'} este programa?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/programas/${programaId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: nuevoEstado })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cambiar estado del programa');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+# Entorno virtual
+venv/
+env/
+.venv/
+.env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Archivos de entorno
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Modelos grandes (se regeneran)
+models/reconocimiento/*.h5
+models/reconocimiento/caracteristicas_referencia.json
+models/nlu_model.joblib
+
+# Uploads de usuarios (opcional, depende si quieres incluirlos)
+# uploads/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos temporales
+*.tmp
+*.temp
+*.bak
+
+# Node modules (si usas npm)
+node_modules/
+
+# Jupyter
+.ipynb_checkpoints/

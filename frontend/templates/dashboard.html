@@ -1,0 +1,695 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Centro Minero SENA{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos específicos del dashboard (los generales están en dashboard.css) */
+    .weather-widget {
+        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .time-widget {
+        background: linear-gradient(135deg, #FF9800 0%, #e17055 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+    }
+
+    @media (max-width: 768px) {
+        .stats-number {
+            font-size: 2rem;
+        }
+        
+        .chart-container {
+            padding: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">¡Bienvenido, {{ user.user_name }}!</h2>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-calendar-event me-2"></i>
+                        Hoy es <span id="currentDate"></span>
+                    </p>
+                </div>
+                <div class="text-end">
+                    <button class="btn btn-sena" onclick="refreshDashboard()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>
+                        Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="bi bi-gear"></i>
+                </div>
+                <h3 class="stats-number" id="equiposDisponibles">{{ stats.equipos_estado.disponible or 0 }}</h3>
+                <p class="stats-label">Equipos Disponibles</p>
+                <small class="opacity-75">
+                    Total: {{ (stats.equipos_estado.disponible or 0) + (stats.equipos_estado.en_uso or 0) + (stats.equipos_estado.mantenimiento or 0) + (stats.equipos_estado.fuera_servicio or 0) }}
+                </small>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">
+                <div class="stats-icon">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <h3 class="stats-number" id="inventarioCritico">{{ stats.inventario_critico or 0 }}</h3>
+                <p class="stats-label">Items Críticos</p>
+                <small class="opacity-75">Requieren reposición</small>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+                <div class="stats-icon">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+                <h3 class="stats-number" id="reservasActivas">{{ stats.reservas_activas or 0 }}</h3>
+                <p class="stats-label">Reservas Activas</p>
+                <small class="opacity-75">En uso actualmente</small>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);">
+                <div class="stats-icon">
+                    <i class="bi bi-people"></i>
+                </div>
+                <h3 class="stats-number" id="usuariosActivos">{{ stats.usuarios_activos_hoy or 0 }}</h3>
+                <p class="stats-label">Usuarios Activos Hoy</p>
+                <small class="opacity-75">{{ stats.comandos_hoy or 0 }} comandos de voz</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Row -->
+    <div class="row">
+        <!-- Equipment Status Chart -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="chart-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear me-2"></i>
+                        Estado de Equipos
+                    </h5>
+                    <small class="text-muted">Tiempo real</small>
+                </div>
+                <div style="position: relative; height: 300px;">
+                    <canvas id="equipmentChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Usage Statistics -->
+            <div class="chart-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>
+                        Uso de Laboratorio - Últimos 7 días
+                    </h5>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary active" data-period="7">7d</button>
+                        <button class="btn btn-outline-secondary" data-period="30">30d</button>
+                    </div>
+                </div>
+                <div style="position: relative; height: 250px;">
+                    <canvas id="usageChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-xl-4 col-lg-5">
+            <!-- Quick Actions -->
+            <div class="quick-actions mb-4">
+                <h5 class="mb-3">
+                    <i class="bi bi-lightning me-2"></i>
+                    Acciones Rápidas
+                </h5>
+                <a href="{{ url_for('reservas') }}" class="quick-action-btn">
+                    <i class="bi bi-plus-circle"></i>
+                    <div>
+                        <strong>Nueva Reserva</strong>
+                        <br><small class="text-muted">Reservar equipo</small>
+                    </div>
+                </a>
+                <a href="{{ url_for('inventario') }}" class="quick-action-btn">
+                    <i class="bi bi-box-seam"></i>
+                    <div>
+                        <strong>Consultar Inventario</strong>
+                        <br><small class="text-muted">Ver materiales disponibles</small>
+                    </div>
+                </a>
+                <a href="{{ url_for('equipos') }}" class="quick-action-btn">
+                    <i class="bi bi-search"></i>
+                    <div>
+                        <strong>Buscar Equipo</strong>
+                        <br><small class="text-muted">Estado y ubicación</small>
+                    </div>
+                </a>
+                {% if user.user_level >= 2 %}
+                <a href="{{ url_for('reportes') }}" class="quick-action-btn">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <div>
+                        <strong>Generar Reporte</strong>
+                        <br><small class="text-muted">Análisis y estadísticas</small>
+                    </div>
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Time and Weather Widget -->
+            <div class="row mb-4">
+                <div class="col-6">
+                    <div class="time-widget">
+                        <h6 class="mb-1">Hora Actual</h6>
+                        <h4 id="currentTime" class="mb-0">--:--</h4>
+                        <small id="timeZone">COT</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="weather-widget">
+                        <h6 class="mb-1">Sogamoso</h6>
+                        <h4 class="mb-0">
+                            <i class="bi bi-sun"></i> 18°C
+                        </h4>
+                        <small>Soleado</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Equipment Status Summary -->
+            <div class="quick-actions mb-4">
+                <h5 class="mb-3">
+                    <i class="bi bi-list-check me-2"></i>
+                    Equipos por Estado
+                </h5>
+                <div class="equipment-status">
+                    <div class="d-flex align-items-center">
+                        <span class="status-dot status-disponible"></span>
+                        <span>Disponibles</span>
+                    </div>
+                    <strong>{{ stats.equipos_estado.disponible or 0 }}</strong>
+                </div>
+                <div class="equipment-status">
+                    <div class="d-flex align-items-center">
+                        <span class="status-dot status-en-uso"></span>
+                        <span>En Uso</span>
+                    </div>
+                    <strong>{{ stats.equipos_estado.en_uso or 0 }}</strong>
+                </div>
+                <div class="equipment-status">
+                    <div class="d-flex align-items-center">
+                        <span class="status-dot status-mantenimiento"></span>
+                        <span>Mantenimiento</span>
+                    </div>
+                    <strong>{{ stats.equipos_estado.mantenimiento or 0 }}</strong>
+                </div>
+                <div class="equipment-status">
+                    <div class="d-flex align-items-center">
+                        <span class="status-dot status-fuera-servicio"></span>
+                        <span>Fuera de Servicio</span>
+                    </div>
+                    <strong>{{ stats.equipos_estado.fuera_servicio or 0 }}</strong>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="quick-actions">
+                <h5 class="mb-3">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Actividad Reciente
+                </h5>
+                <div id="recentActivity">
+                    <div class="activity-item">
+                        <div class="activity-icon activity-success">
+                            <i class="bi bi-check"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>Equipo Liberado</strong>
+                            <br><small class="text-muted">Microscopio óptico - Hace 15 min</small>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon activity-info">
+                            <i class="bi bi-calendar"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>Nueva Reserva</strong>
+                            <br><small class="text-muted">Balanza analítica - Juan Pérez</small>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon activity-warning">
+                            <i class="bi bi-exclamation"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>Stock Bajo</strong>
+                            <br><small class="text-muted">Reactivos químicos</small>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon activity-info">
+                            <i class="bi bi-mic"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>Comando de Voz</strong>
+                            <br><small class="text-muted">"Estado de equipos" - Hace 1 hora</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize charts and real-time updates
+    let equipmentChart, usageChart;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeCharts();
+        updateDateTime();
+        loadRecentActivity();
+        
+        // Update time every second
+        setInterval(updateDateTime, 1000);
+        
+        // Update dashboard data every 30 seconds
+        setInterval(refreshDashboard, 30000);
+    });
+
+    function initializeCharts() {
+        // Verificar que Chart.js esté disponible
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js no está cargado');
+            return;
+        }
+
+        // Equipment Status Pie Chart
+        const equipmentCanvas = document.getElementById('equipmentChart');
+        if (equipmentCanvas) {
+            const equipmentCtx = equipmentCanvas.getContext('2d');
+            const equipmentData = {
+                labels: ['Disponibles', 'En Uso', 'Mantenimiento', 'Fuera de Servicio'],
+                datasets: [{
+                    data: [
+                        {{ stats.equipos_estado.disponible|default(20) }},
+                        {{ stats.equipos_estado.en_uso|default(0) }},
+                        {{ stats.equipos_estado.mantenimiento|default(0) }},
+                        {{ stats.equipos_estado.fuera_servicio|default(0) }}
+                    ],
+                    backgroundColor: [
+                        '#28a745',
+                        '#ffc107',
+                        '#fd7e14',
+                        '#dc3545'
+                    ],
+                    borderWidth: 0
+                }]
+            };
+
+            equipmentChart = new Chart(equipmentCtx, {
+                type: 'doughnut',
+                data: equipmentData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Usage Line Chart
+        const usageCanvas = document.getElementById('usageChart');
+        if (!usageCanvas) return;
+        const usageCtx = usageCanvas.getContext('2d');
+        const usageData = {
+            labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+            datasets: [{
+                label: 'Comandos de Voz',
+                data: [12, 19, 15, 22, 18, 8, 5],
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Reservas',
+                data: [8, 12, 10, 15, 13, 6, 3],
+                borderColor: '#2d5a31',
+                backgroundColor: 'rgba(45, 90, 49, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        };
+
+        usageChart = new Chart(usageCtx, {
+            type: 'line',
+            data: usageData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateDateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('es-CO', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        const dateString = now.toLocaleDateString('es-CO', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        
+        document.getElementById('currentTime').textContent = timeString;
+        document.getElementById('currentDate').textContent = dateString;
+    }
+
+    function refreshDashboard() {
+        // Show loading state
+        const refreshBtn = document.querySelector('button[onclick="refreshDashboard()"]');
+        const originalHTML = refreshBtn.innerHTML;
+        refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Actualizando...';
+        refreshBtn.disabled = true;
+
+        // Fetch updated data
+        fetch('/api/estadisticas', {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.estadisticas) {
+                updateDashboardStats(data.estadisticas);
+                updateCharts(data.estadisticas);
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing dashboard:', error);
+            showToast('Error al actualizar el dashboard', 'error');
+        })
+        .finally(() => {
+            refreshBtn.innerHTML = originalHTML;
+            refreshBtn.disabled = false;
+        });
+    }
+
+    function updateDashboardStats(stats) {
+        // Update stat cards
+        const equiposDisponibles = stats.equipos_estado?.disponible || 0;
+        const inventarioCritico = stats.inventario_critico || 0;
+        const reservasActivas = stats.reservas_activas || 0;
+        const usuariosActivos = stats.usuarios_activos_hoy || 0;
+
+        animateValue('equiposDisponibles', equiposDisponibles);
+        animateValue('inventarioCritico', inventarioCritico);
+        animateValue('reservasActivas', reservasActivas);
+        animateValue('usuariosActivos', usuariosActivos);
+    }
+
+    function animateValue(elementId, newValue) {
+        const element = document.getElementById(elementId);
+        const currentValue = parseInt(element.textContent) || 0;
+        const increment = newValue > currentValue ? 1 : -1;
+        const stepTime = Math.abs(Math.floor(300 / (newValue - currentValue)));
+        
+        if (currentValue === newValue) return;
+        
+        const timer = setInterval(() => {
+            currentValue += increment;
+            element.textContent = currentValue;
+            if (currentValue === newValue) {
+                clearInterval(timer);
+            }
+        }, stepTime);
+    }
+
+    function updateCharts(stats) {
+        // Update equipment chart
+        if (equipmentChart && stats.equipos_estado) {
+            equipmentChart.data.datasets[0].data = [
+                stats.equipos_estado.disponible || 0,
+                stats.equipos_estado.en_uso || 0,
+                stats.equipos_estado.mantenimiento || 0,
+                stats.equipos_estado.fuera_servicio || 0
+            ];
+            equipmentChart.update();
+        }
+
+        // Update usage chart with new data if available
+        if (usageChart && stats.uso_por_programa) {
+            // This would be updated with real data from the API
+            usageChart.update();
+        }
+    }
+
+    function loadRecentActivity() {
+        // Simulate loading recent activity
+        const activities = [
+            {
+                type: 'success',
+                icon: 'check',
+                title: 'Equipo Liberado',
+                detail: 'Microscopio óptico - Hace 15 min',
+                time: new Date(Date.now() - 15 * 60 * 1000)
+            },
+            {
+                type: 'info',
+                icon: 'calendar',
+                title: 'Nueva Reserva',
+                detail: 'Balanza analítica - Juan Pérez',
+                time: new Date(Date.now() - 30 * 60 * 1000)
+            },
+            {
+                type: 'warning',
+                icon: 'exclamation',
+                title: 'Stock Bajo',
+                detail: 'Reactivos químicos',
+                time: new Date(Date.now() - 45 * 60 * 1000)
+            },
+            {
+                type: 'info',
+                icon: 'mic',
+                title: 'Comando de Voz',
+                detail: '"Estado de equipos" - Hace 1 hora',
+                time: new Date(Date.now() - 60 * 60 * 1000)
+            }
+        ];
+
+        updateActivityFeed(activities);
+    }
+
+    function updateActivityFeed(activities) {
+        const container = document.getElementById('recentActivity');
+        container.innerHTML = '';
+
+        activities.forEach(activity => {
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            
+            const timeAgo = getTimeAgo(activity.time);
+            
+            item.innerHTML = `
+                <div class="activity-icon activity-${activity.type}">
+                    <i class="bi bi-${activity.icon}"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <strong>${activity.title}</strong>
+                    <br><small class="text-muted">${activity.detail}</small>
+                </div>
+            `;
+            
+            container.appendChild(item);
+        });
+    }
+
+    function getTimeAgo(date) {
+        const now = new Date();
+        const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+        
+        if (diffInMinutes < 1) return 'Hace un momento';
+        if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
+        
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `Hace ${diffInHours} hora${diffInHours > 1 ? 's' : ''}`;
+        
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `Hace ${diffInDays} día${diffInDays > 1 ? 's' : ''}`;
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            <i class="bi bi-${type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+
+    // Period selector for usage chart
+    document.querySelectorAll('[data-period]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Remove active class from all buttons
+            document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            const period = this.dataset.period;
+            updateUsageChart(period);
+        });
+    });
+
+    function updateUsageChart(period) {
+        // Simulate loading data for different periods
+        let labels, data1, data2;
+        
+        if (period === '7') {
+            labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+            data1 = [12, 19, 15, 22, 18, 8, 5];
+            data2 = [8, 12, 10, 15, 13, 6, 3];
+        } else {
+            labels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
+            data1 = [85, 92, 78, 88];
+            data2 = [65, 75, 68, 72];
+        }
+        
+        usageChart.data.labels = labels;
+        usageChart.data.datasets[0].data = data1;
+        usageChart.data.datasets[1].data = data2;
+        usageChart.update();
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey) {
+            switch(e.key) {
+                case 'r':
+                    e.preventDefault();
+                    refreshDashboard();
+                    break;
+                case 'n':
+                    e.preventDefault();
+                    window.location.href = '{{ url_for("reservas") }}';
+                    break;
+                case 'i':
+                    e.preventDefault();
+                    window.location.href = '{{ url_for("inventario") }}';
+                    break;
+                case 'e':
+                    e.preventDefault();
+                    window.location.href = '{{ url_for("equipos") }}';
+                    break;
+            }
+        }
+    });
+
+    // Real-time notifications (WebSocket simulation)
+    function simulateRealTimeUpdates() {
+        setInterval(() => {
+            // Simulate random updates
+            if (Math.random() > 0.8) {
+                const notifications = [
+                    { type: 'success', message: 'Nuevo equipo disponible' },
+                    { type: 'warning', message: 'Stock bajo detectado' },
+                    { type: 'info', message: 'Nueva reserva creada' }
+                ];
+                
+                const notification = notifications[Math.floor(Math.random() * notifications.length)];
+                showToast(notification.message, notification.type);
+            }
+        }, 30000); // Every 30 seconds
+    }
+
+    // Start real-time updates
+    simulateRealTimeUpdates();
+
+    // Voice command integration
+    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+        // Voice commands for dashboard
+        document.addEventListener('voiceCommand', function(e) {
+            const command = e.detail.command.toLowerCase();
+            
+            if (command.includes('actualizar') || command.includes('refresh')) {
+                refreshDashboard();
+                showToast('Dashboard actualizado por comando de voz', 'success');
+            } else if (command.includes('reserva')) {
+                window.location.href = '{{ url_for("reservas") }}';
+            } else if (command.includes('inventario')) {
+                window.location.href = '{{ url_for("inventario") }}';
+            } else if (command.includes('equipos')) {
+                window.location.href = '{{ url_for("equipos") }}';
+            }
+        });
+    }
+</script>
+{% endblock %}

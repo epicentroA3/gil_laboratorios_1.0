@@ -1,0 +1,7 @@
+{
+  "num_clases": 2,
+  "umbral_confianza": 0.85,
+  "fecha_entrenamiento": "2025-12-14T08:42:04.764793",
+  "epochs": 10,
+  "total_imagenes": 10
+}

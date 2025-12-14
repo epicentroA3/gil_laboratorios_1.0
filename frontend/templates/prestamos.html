@@ -1,0 +1,979 @@
+{% extends 'base.html' %}
+{% set title = 'Préstamos de Equipos' %}
+
+{% block extra_css %}
+<style>
+/* Botones de acción estilo cuadrado con borde */
+.btn-action {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
+    margin: 0 3px;
+    transition: all 0.2s ease;
+}
+.btn-action:hover {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
+}
+.btn-action i {
+    font-size: 16px;
+}
+/* Colores de iconos */
+.btn-action .text-primary { color: #3b82f6 !important; }
+.btn-action .text-success { color: #f59e0b !important; }
+.btn-action .text-danger { color: #ef4444 !important; }
+.btn-action .text-info { color: #06b6d4 !important; }
+.btn-action .text-warning { color: #f59e0b !important; }
+/* Tabla compacta */
+#tablaPrestamos th {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    padding: 12px 8px;
+    white-space: nowrap;
+}
+#tablaPrestamos td {
+    padding: 12px 8px;
+    vertical-align: middle;
+}
+#tablaPrestamos tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+}
+#tablaPrestamos tbody tr:hover {
+    background-color: #f9fafb;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div>
+        {% if solo_propios %}
+        <h4 class="mb-1 text-white fw-bold"><i class="bi bi-box-arrow-right me-2"></i>Mis Préstamos</h4>
+        <p class="mb-0 text-white opacity-90">Historial de préstamos de equipos solicitados por usted</p>
+        {% else %}
+        <h4 class="mb-1 text-white fw-bold"><i class="bi bi-box-arrow-right me-2"></i>Gestión de Préstamos</h4>
+        <p class="mb-0 text-white opacity-90">Sistema digital de préstamos de equipos de laboratorio</p>
+        {% endif %}
+      </div>
+      <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#modalNuevoPrestamo" style="box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        <i class="bi bi-plus-circle me-1"></i>Solicitar Préstamo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Estadísticas Rápidas -->
+<div class="row mb-4">
+  <div class="col-md-3 col-6 mb-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center">
+        <div class="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" 
+             style="width: 50px; height: 50px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);">
+          <i class="bi bi-hourglass-split text-white fs-5"></i>
+        </div>
+        <h4 class="mb-0 fw-bold" id="statPendientes">0</h4>
+        <small class="text-muted">Pendientes</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-6 mb-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center">
+        <div class="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" 
+             style="width: 50px; height: 50px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+          <i class="bi bi-check-circle text-white fs-5"></i>
+        </div>
+        <h4 class="mb-0 fw-bold" id="statAprobados">0</h4>
+        <small class="text-muted">Aprobados</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-6 mb-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center">
+        <div class="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" 
+             style="width: 50px; height: 50px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+          <i class="bi bi-arrow-left-right text-white fs-5"></i>
+        </div>
+        <h4 class="mb-0 fw-bold" id="statActivos">0</h4>
+        <small class="text-muted">Activos</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-6 mb-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center">
+        <div class="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" 
+             style="width: 50px; height: 50px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+          <i class="bi bi-archive text-white fs-5"></i>
+        </div>
+        <h4 class="mb-0 fw-bold" id="statDevueltos">0</h4>
+        <small class="text-muted">Devueltos</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros estilo programas -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-search me-1"></i>Buscar</label>
+        <input id="filtroBusqueda" type="text" class="form-control" placeholder="Código, equipo o solicitante...">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-laptop me-1"></i>Equipo</label>
+        <select id="filtroEquipo" class="form-select">
+          <option value="">Todos los equipos</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-flag me-1"></i>Estado</label>
+        <select id="filtroEstado" class="form-select">
+          <option value="">Todos</option>
+          <option value="solicitado">Solicitado</option>
+          <option value="aprobado">Aprobado</option>
+          <option value="activo">Activo</option>
+          <option value="devuelto">Devuelto</option>
+          <option value="rechazado">Rechazado</option>
+          <option value="vencido">Vencido</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-outline-secondary w-100" id="btnLimpiar">
+          <i class="bi bi-arrow-clockwise me-1"></i>Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabla de Préstamos estilo programas -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header py-3" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+    <div class="d-flex justify-content-between align-items-center">
+      <h6 class="mb-0 text-white fw-bold">
+        <i class="bi bi-list-ul me-2"></i>Lista de Préstamos
+        <span class="badge bg-light text-dark ms-2" id="totalPrestamos">0</span>
+      </h6>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="tablaPrestamos">
+        <thead style="background-color: #f8f9fa;">
+          <tr>
+            <th class="ps-3" style="width: 40px;">ID</th>
+            <th style="width: 130px;"><i class="bi bi-upc me-1"></i>CÓDIGO</th>
+            <th style="width: {% if solo_propios %}35%{% else %}30%{% endif %};"><i class="bi bi-laptop me-1"></i>EQUIPO</th>
+            {% if not solo_propios %}
+            <th style="width: 20%;"><i class="bi bi-person me-1"></i>SOLICITANTE</th>
+            {% endif %}
+            <th style="width: 120px;"><i class="bi bi-calendar me-1"></i>DEVOLUCIÓN</th>
+            <th style="width: 100px;">ESTADO</th>
+            <th class="text-center" style="width: 120px;">ACCIONES</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyPrestamos">
+          <tr>
+            <td colspan="7" class="text-center text-muted py-4">
+              <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+              Cargando préstamos...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Paginación -->
+    <div class="card-footer bg-white border-top-0 py-2">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+          <span class="me-2 small text-muted">Mostrar:</span>
+          <select id="itemsPorPagina" class="form-select form-select-sm" style="width: 70px;">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+          <span class="ms-2 small text-muted">por página</span>
+        </div>
+        <nav>
+          <ul class="pagination pagination-sm mb-0" id="paginacion"></ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nuevo Préstamo -->
+<div class="modal fade" id="modalNuevoPrestamo" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+        <h5 class="modal-title text-white fw-bold"><i class="bi bi-plus-circle me-2"></i>Solicitar Préstamo</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="formNuevoPrestamo">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="color: #2d6a4f;">
+                <i class="bi bi-laptop me-1"></i>Equipo *
+              </label>
+              <select id="equipoId" class="form-select" required>
+                <option value="">-- Seleccione un equipo --</option>
+              </select>
+              <div class="invalid-feedback" id="errorEquipo"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="color: #2d6a4f;">
+                <i class="bi bi-calendar-check me-1"></i>Fecha de Préstamo
+              </label>
+              <input type="datetime-local" id="fechaPrestamo" class="form-control">
+              <small class="text-muted">Dejar vacío para usar fecha actual</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="color: #2d6a4f;">
+                <i class="bi bi-calendar-x me-1"></i>Fecha de Devolución *
+              </label>
+              <input type="datetime-local" id="fechaDevolucion" class="form-control" required>
+              <div class="invalid-feedback" id="errorFechaDevolucion"></div>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="color: #2d6a4f;">
+                <i class="bi bi-card-text me-1"></i>Propósito del Préstamo *
+              </label>
+              <textarea id="proposito" class="form-control" rows="3" 
+                        placeholder="Describa el propósito del préstamo (mínimo 10 caracteres)..." 
+                        required minlength="10"></textarea>
+              <div class="invalid-feedback" id="errorProposito"></div>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="color: #2d6a4f;">
+                <i class="bi bi-chat-text me-1"></i>Observaciones
+              </label>
+              <textarea id="observaciones" class="form-control" rows="2" 
+                        placeholder="Observaciones adicionales (opcional)..."></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn" data-bs-dismiss="modal" 
+                style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white;">
+          <i class="bi bi-x-circle me-1"></i>Cancelar
+        </button>
+        <button type="button" class="btn" id="btnCrearPrestamo" 
+                style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+          <i class="bi bi-check-circle me-1"></i>Solicitar Préstamo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Rechazar Préstamo -->
+<div class="modal fade" id="modalRechazar" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+        <h5 class="modal-title text-white fw-bold"><i class="bi bi-x-circle me-2"></i>Rechazar Préstamo</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <input type="hidden" id="rechazarPrestamoId">
+        <div class="alert alert-warning mb-3">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          <strong>Atención:</strong> Debe especificar un motivo de rechazo.
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: #2d6a4f;">
+            <i class="bi bi-chat-text me-1"></i>Motivo del rechazo *
+          </label>
+          <textarea id="motivoRechazo" class="form-control" rows="4" 
+                    placeholder="Explique el motivo del rechazo..." required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn" data-bs-dismiss="modal" 
+                style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white;">
+          <i class="bi bi-arrow-left me-1"></i>Cancelar
+        </button>
+        <button type="button" class="btn" id="btnConfirmarRechazo" 
+                style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
+          <i class="bi bi-x-circle me-1"></i>Confirmar Rechazo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Devolver Préstamo -->
+<div class="modal fade" id="modalDevolver" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+        <h5 class="modal-title text-white fw-bold"><i class="bi bi-box-arrow-in-left me-2"></i>Registrar Devolución</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <input type="hidden" id="devolverPrestamoId">
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: #2d6a4f;">
+            <i class="bi bi-star me-1"></i>Calificación del estado del equipo
+          </label>
+          <select id="calificacionDevolucion" class="form-select">
+            <option value="">-- Seleccione --</option>
+            <option value="excelente">Excelente</option>
+            <option value="bueno">Bueno</option>
+            <option value="regular">Regular</option>
+            <option value="malo">Malo</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: #2d6a4f;">
+            <i class="bi bi-chat-text me-1"></i>Observaciones de devolución
+          </label>
+          <textarea id="observacionesDevolucion" class="form-control" rows="3" 
+                    placeholder="Observaciones sobre el estado del equipo..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn" data-bs-dismiss="modal" 
+                style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white;">
+          <i class="bi bi-arrow-left me-1"></i>Cancelar
+        </button>
+        <button type="button" class="btn" id="btnConfirmarDevolucion" 
+                style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white;">
+          <i class="bi bi-check-circle me-1"></i>Confirmar Devolución
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ver Detalle -->
+<div class="modal fade" id="modalDetalle" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+        <h5 class="modal-title text-white fw-bold"><i class="bi bi-info-circle me-2"></i>Detalle del Préstamo</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4" id="detalleContenido">
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let todosLosPrestamos = [];
+let paginaActual = 1;
+let itemsPorPagina = 10;
+let debounceTimers = {};
+
+// Reglas de validación (mismas que backend)
+const REGLAS_PRESTAMO = {
+    proposito: { min: 10, max: 500, requerido: true },
+    fecha_devolucion: { requerido: true }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    cargarEquiposParaFiltro();
+    cargarEquiposDisponibles();
+    cargarPrestamos();
+    cargarEstadisticas();
+    
+    const ahora = new Date();
+    ahora.setMinutes(ahora.getMinutes() - ahora.getTimezoneOffset());
+    document.getElementById('fechaDevolucion').min = ahora.toISOString().slice(0, 16);
+    
+    // Filtros en tiempo real
+    document.getElementById('filtroBusqueda').addEventListener('input', filtrarPrestamos);
+    document.getElementById('filtroEquipo').addEventListener('change', filtrarPrestamos);
+    document.getElementById('filtroEstado').addEventListener('change', filtrarPrestamos);
+    document.getElementById('itemsPorPagina').addEventListener('change', function() {
+        itemsPorPagina = parseInt(this.value);
+        paginaActual = 1;
+        renderizarPrestamos();
+    });
+    
+    // Validación en tiempo real del formulario
+    document.getElementById('equipoId').addEventListener('change', () => validarCampoPrestamo('equipo'));
+    document.getElementById('proposito').addEventListener('input', () => validarCampoPrestamo('proposito'));
+    document.getElementById('fechaDevolucion').addEventListener('change', () => validarCampoPrestamo('fecha_devolucion'));
+});
+
+// Funciones de validación híbrida
+function limpiarErroresPrestamo() {
+    ['equipoId', 'proposito', 'fechaDevolucion'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('is-invalid', 'is-valid');
+    });
+    ['errorEquipo', 'errorProposito', 'errorFechaDevolucion'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '';
+    });
+}
+
+function mostrarErrorPrestamo(campo, mensaje) {
+    const mapeo = {
+        'equipo': { input: 'equipoId', error: 'errorEquipo' },
+        'proposito': { input: 'proposito', error: 'errorProposito' },
+        'fecha_devolucion': { input: 'fechaDevolucion', error: 'errorFechaDevolucion' }
+    };
+    const config = mapeo[campo];
+    if (config) {
+        const inputEl = document.getElementById(config.input);
+        const errorEl = document.getElementById(config.error);
+        if (inputEl) {
+            inputEl.classList.remove('is-valid');
+            inputEl.classList.add('is-invalid');
+        }
+        if (errorEl) errorEl.textContent = mensaje;
+    }
+}
+
+function mostrarValidoPrestamo(campo) {
+    const mapeo = {
+        'equipo': { input: 'equipoId', error: 'errorEquipo' },
+        'proposito': { input: 'proposito', error: 'errorProposito' },
+        'fecha_devolucion': { input: 'fechaDevolucion', error: 'errorFechaDevolucion' }
+    };
+    const config = mapeo[campo];
+    if (config) {
+        const inputEl = document.getElementById(config.input);
+        const errorEl = document.getElementById(config.error);
+        if (inputEl) {
+            inputEl.classList.remove('is-invalid');
+            inputEl.classList.add('is-valid');
+        }
+        if (errorEl) errorEl.textContent = '';
+    }
+}
+
+async function validarCampoPrestamo(campo) {
+    clearTimeout(debounceTimers[campo]);
+    
+    debounceTimers[campo] = setTimeout(async () => {
+        let valor = '';
+        
+        if (campo === 'equipo') {
+            valor = document.getElementById('equipoId').value;
+        } else if (campo === 'proposito') {
+            valor = document.getElementById('proposito').value.trim();
+            // Validación frontend instantánea
+            if (!valor) {
+                mostrarErrorPrestamo('proposito', 'El propósito es requerido');
+                return;
+            }
+            if (valor.length < REGLAS_PRESTAMO.proposito.min) {
+                mostrarErrorPrestamo('proposito', `Mínimo ${REGLAS_PRESTAMO.proposito.min} caracteres (actual: ${valor.length})`);
+                return;
+            }
+        } else if (campo === 'fecha_devolucion') {
+            valor = document.getElementById('fechaDevolucion').value;
+            if (!valor) {
+                mostrarErrorPrestamo('fecha_devolucion', 'La fecha de devolución es requerida');
+                return;
+            }
+            // Validar que sea fecha futura
+            if (new Date(valor) <= new Date()) {
+                mostrarErrorPrestamo('fecha_devolucion', 'La fecha debe ser posterior a la actual');
+                return;
+            }
+        }
+        
+        // Validación backend para equipo (verificar disponibilidad)
+        if (campo === 'equipo' && valor) {
+            try {
+                const res = await fetch(`/api/prestamos/validar?campo=${campo}&valor=${encodeURIComponent(valor)}`);
+                const data = await res.json();
+                if (data.errores && data.errores[campo]) {
+                    mostrarErrorPrestamo(campo, data.errores[campo]);
+                } else {
+                    mostrarValidoPrestamo(campo);
+                }
+            } catch (e) {
+                console.error('Error validando:', e);
+            }
+        } else if (valor) {
+            mostrarValidoPrestamo(campo);
+        }
+    }, campo === 'equipo' ? 400 : 200);
+}
+
+async function cargarEquiposParaFiltro() {
+    try {
+        const res = await fetch('/api/equipos');
+        const data = await res.json();
+        
+        const select = document.getElementById('filtroEquipo');
+        select.innerHTML = '<option value="">Todos los equipos</option>';
+        
+        if (data.success && data.equipos) {
+            data.equipos.forEach(equipo => {
+                const option = document.createElement('option');
+                option.value = equipo.id;
+                option.textContent = `${equipo.nombre} (${equipo.codigo_interno})`;
+                select.appendChild(option);
+            });
+        }
+    } catch (e) {
+        console.error('Error cargando equipos para filtro:', e);
+    }
+}
+
+async function cargarEquiposDisponibles() {
+    try {
+        const res = await fetch('/api/equipos?estado=disponible');
+        const data = await res.json();
+        
+        const select = document.getElementById('equipoId');
+        select.innerHTML = '<option value="">-- Seleccione un equipo --</option>';
+        
+        if (data.success && data.equipos) {
+            data.equipos.forEach(equipo => {
+                const option = document.createElement('option');
+                option.value = equipo.id;
+                option.textContent = `${equipo.nombre} (${equipo.codigo_interno}) - ${equipo.laboratorio_nombre || 'Sin laboratorio'}`;
+                select.appendChild(option);
+            });
+        }
+    } catch (e) {
+        console.error('Error cargando equipos:', e);
+    }
+}
+
+async function cargarPrestamos() {
+    const tbody = document.getElementById('tbodyPrestamos');
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div>Cargando...</td></tr>`;
+    
+    try {
+        const soloPropios = {{ 'true' if solo_propios else 'false' }};
+        const url = soloPropios ? '/api/prestamos?solo_propios=true' : '/api/prestamos';
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (!data.success) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">
+                <i class="bi bi-exclamation-circle me-2"></i>${data.message}</td></tr>`;
+            return;
+        }
+        
+        todosLosPrestamos = data.prestamos || [];
+        renderizarPrestamos();
+        
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">
+            <i class="bi bi-exclamation-circle me-2"></i>Error: ${e.message}</td></tr>`;
+    }
+}
+
+function filtrarPrestamos() {
+    paginaActual = 1;
+    renderizarPrestamos();
+}
+
+function renderizarPrestamos() {
+    const tbody = document.getElementById('tbodyPrestamos');
+    const busqueda = document.getElementById('filtroBusqueda').value.toLowerCase().trim();
+    const equipoId = document.getElementById('filtroEquipo').value;
+    const estado = document.getElementById('filtroEstado').value;
+    
+    // Filtrar
+    let filtrados = todosLosPrestamos.filter(p => {
+        const matchBusqueda = !busqueda || 
+            (p.codigo && p.codigo.toLowerCase().includes(busqueda)) ||
+            (p.equipo_nombre && p.equipo_nombre.toLowerCase().includes(busqueda)) ||
+            (p.solicitante_nombre && p.solicitante_nombre.toLowerCase().includes(busqueda));
+        const matchEquipo = !equipoId || p.id_equipo == equipoId;
+        const matchEstado = !estado || p.estado === estado;
+        return matchBusqueda && matchEquipo && matchEstado;
+    });
+    
+    // Actualizar contador
+    document.getElementById('totalPrestamos').textContent = `${filtrados.length} de ${todosLosPrestamos.length}`;
+    
+    if (filtrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-1 d-block mb-2"></i>No hay préstamos registrados</td></tr>`;
+        document.getElementById('paginacion').innerHTML = '';
+        return;
+    }
+    
+    // Paginar
+    const totalPaginas = Math.ceil(filtrados.length / itemsPorPagina);
+    const inicio = (paginaActual - 1) * itemsPorPagina;
+    const paginados = filtrados.slice(inicio, inicio + itemsPorPagina);
+    
+    tbody.innerHTML = '';
+    const soloPropios = {{ 'true' if solo_propios else 'false' }};
+    paginados.forEach((p, idx) => {
+        const tr = document.createElement('tr');
+        tr.dataset.id = p.id;
+        let rowHtml = `
+            <td class="ps-3 text-muted">${inicio + idx + 1}</td>
+            <td><span class="text-success fw-medium">${p.codigo}</span></td>
+            <td>
+                <div class="fw-semibold">${p.equipo_nombre || '-'}</div>
+                <small class="text-muted">${p.equipo_codigo || ''}</small>
+            </td>`;
+        if (!soloPropios) {
+            rowHtml += `<td><div>${p.solicitante_nombre || '-'}</div></td>`;
+        }
+        rowHtml += `
+            <td>${p.fecha_devolucion_programada || '-'}</td>
+            <td>${getBadgeEstado(p.estado)}</td>
+            <td class="text-center">${getAcciones(p)}</td>
+        `;
+        tr.innerHTML = rowHtml;
+        tbody.appendChild(tr);
+    });
+    
+    renderizarPaginacion(totalPaginas);
+    agregarEventListeners();
+}
+
+function renderizarPaginacion(totalPaginas) {
+    const paginacion = document.getElementById('paginacion');
+    if (totalPaginas <= 1) {
+        paginacion.innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    html += `<li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="cambiarPagina(${paginaActual - 1}); return false;">&laquo;</a></li>`;
+    
+    for (let i = 1; i <= totalPaginas; i++) {
+        if (i === 1 || i === totalPaginas || (i >= paginaActual - 1 && i <= paginaActual + 1)) {
+            html += `<li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="cambiarPagina(${i}); return false;">${i}</a></li>`;
+        } else if (i === paginaActual - 2 || i === paginaActual + 2) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+    
+    html += `<li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="cambiarPagina(${paginaActual + 1}); return false;">&raquo;</a></li>`;
+    
+    paginacion.innerHTML = html;
+}
+
+function cambiarPagina(pagina) {
+    paginaActual = pagina;
+    renderizarPrestamos();
+}
+
+async function cargarEstadisticas() {
+    try {
+        const soloPropios = {{ 'true' if solo_propios else 'false' }};
+        const url = soloPropios ? '/api/prestamos/estadisticas?solo_propios=true' : '/api/prestamos/estadisticas';
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (data.success && data.estadisticas) {
+            const stats = data.estadisticas.por_estado || {};
+            document.getElementById('statPendientes').textContent = stats.solicitado || 0;
+            document.getElementById('statAprobados').textContent = stats.aprobado || 0;
+            document.getElementById('statActivos').textContent = stats.activo || 0;
+            document.getElementById('statDevueltos').textContent = stats.devuelto || 0;
+        }
+    } catch (e) {
+        console.error('Error cargando estadísticas:', e);
+    }
+}
+
+function getBadgeEstado(estado) {
+    const badges = {
+        'solicitado': '<span class="badge rounded-pill" style="background-color: #f59e0b;">Solicitado</span>',
+        'aprobado': '<span class="badge rounded-pill" style="background-color: #10b981;">Aprobado</span>',
+        'activo': '<span class="badge rounded-pill" style="background-color: #3b82f6;">Activo</span>',
+        'devuelto': '<span class="badge rounded-pill" style="background-color: #6b7280;">Devuelto</span>',
+        'rechazado': '<span class="badge rounded-pill" style="background-color: #ef4444;">Rechazado</span>',
+        'vencido': '<span class="badge rounded-pill" style="background-color: #7c3aed;">Vencido</span>'
+    };
+    return badges[estado] || `<span class="badge rounded-pill bg-secondary">${estado}</span>`;
+}
+
+function getAcciones(prestamo) {
+    const userLevel = {{ user.user_level|default(1) }};
+    const userId = {{ user.user_id|default(0) }};
+    const puedeEditar = {{ 'true' if puede_editar else 'false' }};
+    let acciones = '';
+    
+    // Botón ver (ojo azul) - siempre visible
+    acciones += `<button class="btn btn-sm btn-action btnVerDetalle" title="Ver detalle">
+        <i class="bi bi-eye" style="color: #3b82f6;"></i></button>`;
+    
+    // Botones según estado - solo si puede editar
+    if (puedeEditar) {
+        if (prestamo.estado === 'solicitado' && userLevel >= 3) {
+            // Aprobar (check verde) y Rechazar (X rojo)
+            acciones += `<button class="btn btn-sm btn-action btnAprobar" title="Aprobar solicitud">
+                <i class="bi bi-check-lg" style="color: #10b981;"></i></button>`;
+            acciones += `<button class="btn btn-sm btn-action btnRechazar" title="Rechazar solicitud">
+                <i class="bi bi-x-lg" style="color: #ef4444;"></i></button>`;
+        } else if (prestamo.estado === 'aprobado' && userLevel >= 3) {
+            // Entregar equipo (caja saliendo) y Cancelar (X rojo)
+            acciones += `<button class="btn btn-sm btn-action btnActivar" title="Entregar equipo">
+                <i class="bi bi-box-arrow-right" style="color: #f59e0b;"></i></button>`;
+            acciones += `<button class="btn btn-sm btn-action btnRechazar" title="Cancelar préstamo">
+                <i class="bi bi-x-lg" style="color: #ef4444;"></i></button>`;
+        } else if (prestamo.estado === 'activo') {
+            // Devolver equipo (caja entrando)
+            acciones += `<button class="btn btn-sm btn-action btnDevolver" title="Registrar devolución">
+                <i class="bi bi-box-arrow-in-left" style="color: #3b82f6;"></i></button>`;
+        }
+    }
+    // Estados finales (devuelto, rechazado, vencido) - solo botón ver
+    
+    return acciones;
+}
+
+function agregarEventListeners() {
+    document.querySelectorAll('.btnVerDetalle').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.closest('tr').dataset.id;
+            await verDetallePrestamo(id);
+        });
+    });
+    
+    document.querySelectorAll('.btnAprobar').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.closest('tr').dataset.id;
+            if (confirm('¿Aprobar este préstamo?')) {
+                await accionPrestamo(id, 'aprobar');
+            }
+        });
+    });
+    
+    document.querySelectorAll('.btnRechazar').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.closest('tr').dataset.id;
+            document.getElementById('rechazarPrestamoId').value = id;
+            document.getElementById('motivoRechazo').value = '';
+            new bootstrap.Modal(document.getElementById('modalRechazar')).show();
+        });
+    });
+    
+    document.querySelectorAll('.btnActivar').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.closest('tr').dataset.id;
+            if (confirm('¿Entregar el equipo y activar el préstamo?')) {
+                await accionPrestamo(id, 'activar');
+            }
+        });
+    });
+    
+    document.querySelectorAll('.btnDevolver').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.closest('tr').dataset.id;
+            document.getElementById('devolverPrestamoId').value = id;
+            document.getElementById('calificacionDevolucion').value = '';
+            document.getElementById('observacionesDevolucion').value = '';
+            new bootstrap.Modal(document.getElementById('modalDevolver')).show();
+        });
+    });
+    
+    document.querySelectorAll('.btnCancelar').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.closest('tr').dataset.id;
+            if (confirm('¿Cancelar este préstamo?')) {
+                await accionPrestamo(id, 'cancelar');
+            }
+        });
+    });
+}
+
+async function verDetallePrestamo(id) {
+    try {
+        const res = await fetch(`/api/prestamos/${id}`);
+        const data = await res.json();
+        
+        if (!data.success) {
+            alert('Error: ' + data.message);
+            return;
+        }
+        
+        const p = data.prestamo;
+        document.getElementById('detalleContenido').innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="fw-bold text-muted mb-3">Información del Préstamo</h6>
+                    <p><strong>Código:</strong> ${p.codigo}</p>
+                    <p><strong>Estado:</strong> ${getBadgeEstado(p.estado)}</p>
+                    <p><strong>Fecha Solicitud:</strong> ${p.fecha_solicitud || '-'}</p>
+                    <p><strong>Fecha Préstamo:</strong> ${p.fecha_prestamo || '-'}</p>
+                    <p><strong>Devolución Programada:</strong> ${p.fecha_devolucion_programada || '-'}</p>
+                    <p><strong>Devolución Real:</strong> ${p.fecha_devolucion_real || '-'}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold text-muted mb-3">Equipo y Usuario</h6>
+                    <p><strong>Equipo:</strong> ${p.equipo_nombre}</p>
+                    <p><strong>Código Equipo:</strong> ${p.equipo_codigo}</p>
+                    <p><strong>Marca/Modelo:</strong> ${p.equipo_marca || ''} ${p.equipo_modelo || ''}</p>
+                    <p><strong>Solicitante:</strong> ${p.solicitante_nombre}</p>
+                    <p><strong>Documento:</strong> ${p.solicitante_documento || '-'}</p>
+                    <p><strong>Autorizador:</strong> ${p.autorizador_nombre || '-'}</p>
+                </div>
+                <div class="col-12 mt-3">
+                    <h6 class="fw-bold text-muted mb-3">Detalles</h6>
+                    <p><strong>Propósito:</strong> ${p.proposito || '-'}</p>
+                    <p><strong>Observaciones:</strong> ${p.observaciones || '-'}</p>
+                    ${p.observaciones_devolucion ? `<p><strong>Obs. Devolución:</strong> ${p.observaciones_devolucion}</p>` : ''}
+                    ${p.calificacion_devolucion ? `<p><strong>Calificación:</strong> ${p.calificacion_devolucion}</p>` : ''}
+                </div>
+            </div>
+        `;
+        new bootstrap.Modal(document.getElementById('modalDetalle')).show();
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+async function accionPrestamo(id, accion, datos = {}) {
+    try {
+        const res = await fetch(`/api/prestamos/${id}/${accion}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(datos)
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            alert(data.message);
+            cargarPrestamos();
+            cargarEstadisticas();
+            cargarEquiposDisponibles();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+document.getElementById('btnCrearPrestamo').addEventListener('click', async function() {
+    const equipoId = document.getElementById('equipoId').value;
+    const fechaPrestamo = document.getElementById('fechaPrestamo').value;
+    const fechaDevolucion = document.getElementById('fechaDevolucion').value;
+    const proposito = document.getElementById('proposito').value.trim();
+    const observaciones = document.getElementById('observaciones').value.trim();
+    
+    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    
+    let hayErrores = false;
+    
+    if (!equipoId) {
+        document.getElementById('equipoId').classList.add('is-invalid');
+        document.getElementById('errorEquipo').textContent = 'Seleccione un equipo';
+        hayErrores = true;
+    }
+    
+    if (!fechaDevolucion) {
+        document.getElementById('fechaDevolucion').classList.add('is-invalid');
+        document.getElementById('errorFechaDevolucion').textContent = 'La fecha de devolución es requerida';
+        hayErrores = true;
+    }
+    
+    if (!proposito || proposito.length < 10) {
+        document.getElementById('proposito').classList.add('is-invalid');
+        document.getElementById('errorProposito').textContent = 'El propósito debe tener al menos 10 caracteres';
+        hayErrores = true;
+    }
+    
+    if (hayErrores) return;
+    
+    try {
+        const res = await fetch('/api/prestamos', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id_equipo: parseInt(equipoId),
+                fecha: fechaPrestamo || null,
+                fecha_devolucion_programada: fechaDevolucion,
+                proposito: proposito,
+                observaciones: observaciones
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            alert(`Préstamo solicitado exitosamente.\nCódigo: ${data.codigo}`);
+            bootstrap.Modal.getInstance(document.getElementById('modalNuevoPrestamo')).hide();
+            document.getElementById('formNuevoPrestamo').reset();
+            cargarPrestamos();
+            cargarEstadisticas();
+            cargarEquiposDisponibles();
+        } else if (data.errores) {
+            Object.keys(data.errores).forEach(campo => {
+                const el = document.getElementById(campo === 'equipo' ? 'equipoId' : 
+                           campo === 'fecha_devolucion' ? 'fechaDevolucion' : campo);
+                if (el) {
+                    el.classList.add('is-invalid');
+                    const errorEl = document.getElementById('error' + campo.charAt(0).toUpperCase() + campo.slice(1));
+                    if (errorEl) errorEl.textContent = data.errores[campo];
+                }
+            });
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+});
+
+document.getElementById('btnConfirmarRechazo').addEventListener('click', async function() {
+    const id = document.getElementById('rechazarPrestamoId').value;
+    const motivo = document.getElementById('motivoRechazo').value.trim();
+    
+    if (!motivo) {
+        alert('Debe especificar un motivo de rechazo');
+        return;
+    }
+    
+    bootstrap.Modal.getInstance(document.getElementById('modalRechazar')).hide();
+    await accionPrestamo(id, 'rechazar', { motivo: motivo });
+});
+
+document.getElementById('btnConfirmarDevolucion').addEventListener('click', async function() {
+    const id = document.getElementById('devolverPrestamoId').value;
+    const calificacion = document.getElementById('calificacionDevolucion').value;
+    const observaciones = document.getElementById('observacionesDevolucion').value.trim();
+    
+    bootstrap.Modal.getInstance(document.getElementById('modalDevolver')).hide();
+    await accionPrestamo(id, 'devolver', { 
+        calificacion: calificacion || null,
+        observaciones: observaciones 
+    });
+});
+
+document.getElementById('btnLimpiar').addEventListener('click', function() {
+    document.getElementById('filtroEstado').value = '';
+    document.getElementById('filtroBusqueda').value = '';
+    document.getElementById('filtroEquipo').value = '';
+    paginaActual = 1;
+    renderizarPrestamos();
+});
+</script>
+
+{% endblock %}

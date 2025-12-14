@@ -1,0 +1,1130 @@
+{% extends 'base.html' %}
+{% set title = 'Entrenamiento Visual IA' %}
+{% block content %}
+
+<!-- Header -->
+<div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+  <div class="card-body p-4">
+    <div>
+      <h4 class="mb-1 text-white fw-bold"><i class="bi bi-robot me-2"></i>Entrenamiento Visual IA</h4>
+      <p class="mb-0 text-white opacity-90">Entrena la IA para reconocer equipos e items por cámara</p>
+    </div>
+  </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #00b894 0%, #009b7d 100%);">
+      <div class="card-body p-3 text-center">
+        <div class="mb-2">
+          <div class="d-inline-block rounded-3 p-2" style="background: rgba(255,255,255,0.2);">
+            <i class="bi bi-cpu fs-3 text-white"></i>
+          </div>
+        </div>
+        <div class="h2 text-white fw-bold mb-1" id="statsEquipos">0</div>
+        <div class="small text-white opacity-90">Equipos Entrenados</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+      <div class="card-body p-3 text-center">
+        <div class="mb-2">
+          <div class="d-inline-block rounded-3 p-2" style="background: rgba(255,255,255,0.2);">
+            <i class="bi bi-box-seam fs-3 text-white"></i>
+          </div>
+        </div>
+        <div class="h2 text-white fw-bold mb-1" id="statsItems">0</div>
+        <div class="small text-white opacity-90">Items Entrenados</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);">
+      <div class="card-body p-3 text-center">
+        <div class="mb-2">
+          <div class="d-inline-block rounded-3 p-2" style="background: rgba(255,255,255,0.2);">
+            <i class="bi bi-images fs-3 text-white"></i>
+          </div>
+        </div>
+        <div class="h2 text-white fw-bold mb-1" id="statsImagenes">0</div>
+        <div class="small text-white opacity-90">Total Imágenes</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">
+      <div class="card-body p-3 text-center">
+        <div class="mb-2">
+          <div class="d-inline-block rounded-3 p-2" style="background: rgba(255,255,255,0.2);">
+            <i class="bi bi-diagram-3 fs-3 text-white"></i>
+          </div>
+        </div>
+        <div class="h2 text-white fw-bold mb-1" id="statsCaracteristicas">0</div>
+        <div class="small text-white opacity-90">Características</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Botones de Acción Principal -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <button class="btn w-100 py-3" data-bs-toggle="modal" data-bs-target="#modalEntrenar" style="background: linear-gradient(135deg, #00b894 0%, #009b7d 100%); color: white; border: none; box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);">
+      <i class="bi bi-plus-circle fs-4 d-block mb-1"></i>
+      <span class="fw-bold">Agregar Imágenes de Entrenamiento</span>
+    </button>
+  </div>
+  <div class="col-md-4">
+    <button class="btn w-100 py-3" id="btnEntrenarModelo" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none; box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);">
+      <i class="bi bi-cpu fs-4 d-block mb-1"></i>
+      <span class="fw-bold">Entrenar Modelo IA</span>
+    </button>
+  </div>
+  <div class="col-md-4">
+    <button class="btn w-100 py-3" data-bs-toggle="modal" data-bs-target="#modalEquiposEntrenados" style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; border: none; box-shadow: 0 4px 15px rgba(8, 145, 178, 0.3);">
+      <i class="bi bi-list-check fs-4 d-block mb-1"></i>
+      <span class="fw-bold">Ver Equipos con Imágenes</span>
+    </button>
+  </div>
+</div>
+
+<!-- Sección de Reconocimiento -->
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-0" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+        <h5 class="mb-0 text-white fw-bold"><i class="bi bi-search me-2"></i>Probar Reconocimiento</h5>
+      </div>
+      <div class="card-body p-4">
+        <!-- Tabs para elegir método de reconocimiento -->
+        <ul class="nav nav-tabs mb-3" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-rec-camara" data-bs-toggle="tab" data-bs-target="#panel-rec-camara" type="button">
+              <i class="bi bi-camera-video me-1"></i>Cámara
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-rec-archivo" data-bs-toggle="tab" data-bs-target="#panel-rec-archivo" type="button">
+              <i class="bi bi-upload me-1"></i>Subir Imagen
+            </button>
+          </li>
+        </ul>
+        
+        <div class="tab-content">
+          <!-- Panel Cámara para Reconocimiento -->
+          <div class="tab-pane fade show active" id="panel-rec-camara" role="tabpanel">
+            <div class="mb-3">
+              <div class="ratio ratio-16x9 bg-dark rounded overflow-hidden">
+                <video id="testVideo" autoplay playsinline muted class="w-100 h-100"></video>
+              </div>
+            </div>
+            <div class="d-flex gap-2 mb-3">
+              <button class="btn" id="btnIniciarCamara" style="background: linear-gradient(135deg, #00b894 0%, #009b7d 100%); color: white; border: none;">
+                <i class="bi bi-camera-video me-1"></i>Iniciar Cámara
+              </button>
+              <button class="btn" id="btnReconocer" disabled style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; border: none;">
+                <i class="bi bi-eye me-1"></i>Reconocer
+              </button>
+            </div>
+          </div>
+          
+          <!-- Panel Subir Archivo para Reconocimiento -->
+          <div class="tab-pane fade" id="panel-rec-archivo" role="tabpanel">
+            <div class="mb-3">
+              <label class="form-label fw-semibold" style="color: #2d6a4f;">
+                <i class="bi bi-image me-1"></i>Seleccionar imagen para reconocer
+              </label>
+              <input type="file" id="inputImagenReconocer" class="form-control" accept="image/*">
+              <small class="text-muted">Sube una imagen del equipo que deseas identificar</small>
+            </div>
+            <div id="previewReconocer" class="d-none mb-3 text-center">
+              <img id="imgPreviewReconocer" class="img-fluid rounded border" style="max-height: 200px;">
+            </div>
+            <button class="btn w-100" id="btnReconocerArchivo" disabled style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; border: none;">
+              <i class="bi bi-eye me-1"></i>Reconocer Imagen
+            </button>
+          </div>
+        </div>
+        
+        <div id="resultadoReconocimiento" class="alert alert-light d-none mt-3">
+          <!-- Resultado del reconocimiento -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header border-0" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+        <h5 class="mb-0 text-white fw-bold"><i class="bi bi-cpu me-2"></i>Detalles del Equipo</h5>
+      </div>
+      <div class="card-body p-4">
+        <div id="detallesEquipo" class="text-center text-muted">
+          <i class="bi bi-camera display-1 mb-3" style="color: #40916c;"></i>
+          <p>Usa la cámara o sube una imagen para reconocer un equipo</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Entrenar IA -->
+<div class="modal fade" id="modalEntrenar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+        <h5 class="modal-title text-white fw-bold"><i class="bi bi-robot me-2"></i>Entrenar IA</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label fw-semibold" style="color: #2d6a4f;"><i class="bi bi-tag me-1"></i>Tipo de Item</label>
+              <select id="tipoItem" class="form-select">
+                <option value="">Seleccionar...</option>
+                <option value="equipo">Equipo</option>
+                <option value="item">Item de Inventario</option>
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label fw-semibold" style="color: #2d6a4f;"><i class="bi bi-box me-1"></i>Seleccionar Item</label>
+              <select id="selectItem" class="form-select" disabled>
+                <option value="">Primero selecciona el tipo...</option>
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label fw-semibold" style="color: #2d6a4f;"><i class="bi bi-arrows-angle-expand me-1"></i>Ángulo de Vista</label>
+              <select id="anguloVista" class="form-select">
+                <option value="frontal">Frontal</option>
+                <option value="lateral_izquierda">Lateral Izquierda</option>
+                <option value="lateral_derecha">Lateral Derecha</option>
+                <option value="superior">Superior</option>
+                <option value="inferior">Inferior</option>
+                <option value="trasera">Trasera</option>
+                <option value="detalle">Detalle</option>
+                <option value="perspectiva">Perspectiva</option>
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label fw-semibold" style="color: #2d6a4f;"><i class="bi bi-chat-text me-1"></i>Descripción</label>
+              <input id="descripcionEntrenamiento" class="form-control" placeholder="Ej: Vista frontal con buena iluminación">
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <!-- Tabs para elegir método -->
+            <ul class="nav nav-tabs mb-3" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-camara" data-bs-toggle="tab" data-bs-target="#panel-camara" type="button">
+                  <i class="bi bi-camera-video me-1"></i>Cámara
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-archivo" data-bs-toggle="tab" data-bs-target="#panel-archivo" type="button">
+                  <i class="bi bi-upload me-1"></i>Subir Archivo
+                </button>
+              </li>
+            </ul>
+            
+            <div class="tab-content">
+              <!-- Panel Cámara -->
+              <div class="tab-pane fade show active" id="panel-camara" role="tabpanel">
+                <div class="mb-3">
+                  <div class="ratio ratio-4x3 bg-dark rounded overflow-hidden" style="box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                    <video id="trainVideo" autoplay playsinline muted class="w-100 h-100"></video>
+                  </div>
+                </div>
+                <div class="d-flex gap-2 mb-3">
+                  <button class="btn" id="btnIniciarCamaraTrain" style="background: linear-gradient(135deg, #00b894 0%, #009b7d 100%); color: white; border: none;">
+                    <i class="bi bi-camera-video me-1"></i>Iniciar
+                  </button>
+                  <button class="btn" id="btnCapturarTrain" disabled style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none;">
+                    <i class="bi bi-camera me-1"></i>Capturar
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Panel Subir Archivo -->
+              <div class="tab-pane fade" id="panel-archivo" role="tabpanel">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold" style="color: #2d6a4f;">
+                    <i class="bi bi-image me-1"></i>Seleccionar imagen del equipo
+                  </label>
+                  <input type="file" id="inputImagenArchivo" class="form-control" accept="image/*">
+                  <small class="text-muted">Formatos: JPG, PNG, WEBP. Tamaño recomendado: 640x480 o mayor.</small>
+                </div>
+                <div id="previewArchivo" class="d-none mb-3">
+                  <img id="imgPreviewArchivo" class="img-fluid rounded border" style="max-height: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                </div>
+              </div>
+            </div>
+            
+            <!-- Imagen capturada/seleccionada -->
+            <div id="imagenCapturada" class="d-none">
+              <div class="alert alert-success py-2">
+                <i class="bi bi-check-circle me-1"></i>Imagen lista para entrenar
+              </div>
+              <img id="imgCapturada" class="img-fluid rounded border" style="max-height: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button class="btn" data-bs-dismiss="modal" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; border: none;">
+          <i class="bi bi-x-circle me-1"></i>Cancelar
+        </button>
+        <button class="btn" id="btnGuardarEntrenamiento" disabled style="background: linear-gradient(135deg, #00b894 0%, #009b7d 100%); color: white; border: none; box-shadow: 0 4px 12px rgba(0, 184, 148, 0.3);">
+          <i class="bi bi-robot me-1"></i>Entrenar IA
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<canvas id="canvas" class="d-none"></canvas>
+
+<!-- Modal: Ver Equipos con Imágenes -->
+<div class="modal fade" id="modalEquiposEntrenados" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0" style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);">
+        <h5 class="modal-title text-white fw-bold"><i class="bi bi-list-check me-2"></i>Equipos con Imágenes de Entrenamiento</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div id="listaEquiposEntrenados">
+          <div class="text-center text-muted py-4">
+            <i class="bi bi-hourglass-split fs-1"></i>
+            <p>Cargando equipos...</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button class="btn" data-bs-dismiss="modal" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; border: none;">
+          <i class="bi bi-x-circle me-1"></i>Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Variables globales
+let testStream = null;
+let trainStream = null;
+let capturedImageData = null;
+
+// Elementos DOM
+const testVideo = document.getElementById('testVideo');
+const trainVideo = document.getElementById('trainVideo');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Cargar estadísticas al inicio
+loadStats();
+loadEquiposEntrenados();
+
+// Iniciar cámara de prueba
+document.getElementById('btnIniciarCamara').addEventListener('click', async () => {
+  try {
+    if (testStream) {
+      testStream.getTracks().forEach(track => track.stop());
+      testStream = null;
+      document.getElementById('btnIniciarCamara').innerHTML = '<i class="bi bi-camera-video me-1"></i>Iniciar Cámara';
+      document.getElementById('btnReconocer').disabled = true;
+      return;
+    }
+    
+    testStream = await navigator.mediaDevices.getUserMedia({ 
+      video: { width: { ideal: 640 }, height: { ideal: 480 } } 
+    });
+    testVideo.srcObject = testStream;
+    
+    document.getElementById('btnIniciarCamara').innerHTML = '<i class="bi bi-camera-video-off me-1"></i>Detener Cámara';
+    document.getElementById('btnReconocer').disabled = false;
+  } catch (error) {
+    alert('Error accediendo a la cámara: ' + error.message);
+  }
+});
+
+// Reconocer item
+document.getElementById('btnReconocer').addEventListener('click', async () => {
+  if (!testStream) return;
+  
+  // Capturar imagen
+  canvas.width = testVideo.videoWidth;
+  canvas.height = testVideo.videoHeight;
+  ctx.drawImage(testVideo, 0, 0);
+  const imageData = canvas.toDataURL('image/jpeg', 0.8);
+  
+  // Mostrar estado de reconocimiento
+  const resultado = document.getElementById('resultadoReconocimiento');
+  resultado.className = 'alert alert-warning';
+  resultado.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Reconociendo...';
+  resultado.classList.remove('d-none');
+  
+  try {
+    const response = await fetch('/api/reconocimiento/identificar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imagen: imageData, top_n: 5 })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.resultados && data.resultados.length > 0) {
+      const mejor = data.mejor_match;
+      const exitoso = mejor.exitoso;
+      
+      resultado.className = exitoso ? 'alert alert-success' : 'alert alert-warning';
+      resultado.innerHTML = `
+        <div class="d-flex align-items-center">
+          <i class="bi bi-${exitoso ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+          <div>
+            <strong>${exitoso ? '¡Reconocido!' : 'Posible coincidencia'}</strong> Equipo: ${mejor.nombre_objeto}
+            <br><small>Código: ${mejor.codigo_equipo} | Confianza: ${mejor.confianza_porcentaje}</small>
+          </div>
+        </div>
+      `;
+      
+      // Mostrar todos los resultados
+      mostrarResultadosReconocimiento(data.resultados);
+    } else if (data.accion_requerida === 'entrenar') {
+      resultado.className = 'alert alert-warning';
+      resultado.innerHTML = `
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        ${data.error || 'No hay modelo entrenado. Primero agregue imágenes y entrene el modelo.'}
+      `;
+    } else {
+      resultado.className = 'alert alert-info';
+      resultado.innerHTML = `
+        <i class="bi bi-question-circle me-2"></i>
+        No se encontraron coincidencias. ${data.error || ''}
+      `;
+      
+      document.getElementById('detallesEquipo').innerHTML = `
+        <div class="text-center text-muted py-3">
+          <i class="bi bi-x-circle display-1 mb-3" style="color: #dc3545;"></i>
+          <p class="fw-bold">Equipo no reconocido</p>
+          <small>Entrena la IA con más imágenes de este equipo</small>
+        </div>
+      `;
+    }
+  } catch (error) {
+    resultado.className = 'alert alert-danger';
+    resultado.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>Error: ${error.message}`;
+  }
+});
+
+// Cargar estadísticas desde /api/reconocimiento/estadisticas
+async function loadStats() {
+  try {
+    const response = await fetch('/api/reconocimiento/estadisticas');
+    const data = await response.json();
+    
+    if (data.success && data.estadisticas) {
+      const stats = data.estadisticas;
+      document.getElementById('statsEquipos').textContent = stats.equipos?.entrenables || 0;
+      document.getElementById('statsItems').textContent = stats.equipos?.con_imagen || 0;
+      document.getElementById('statsImagenes').textContent = stats.equipos?.imagenes_entrenamiento || 0;
+      document.getElementById('statsCaracteristicas').textContent = stats.reconocimientos?.total || 0;
+    }
+  } catch (error) {
+    console.error('Error cargando estadísticas:', error);
+    document.getElementById('statsEquipos').textContent = '0';
+    document.getElementById('statsItems').textContent = '0';
+    document.getElementById('statsImagenes').textContent = '0';
+    document.getElementById('statsCaracteristicas').textContent = '0';
+  }
+}
+
+// Cargar lista de equipos entrenados
+async function loadEquiposEntrenados() {
+  try {
+    const response = await fetch('/api/reconocimiento/equipos-entrenados');
+    const data = await response.json();
+    console.log('Equipos entrenados:', data);
+    
+    const container = document.getElementById('listaEquiposEntrenados');
+    
+    if (data.success && data.equipos && data.equipos.length > 0) {
+      let html = '<div class="table-responsive"><table class="table table-hover">';
+      html += '<thead><tr><th>Código</th><th>Nombre</th><th>Imágenes</th><th>Estado</th></tr></thead><tbody>';
+      
+      data.equipos.forEach(eq => {
+        const cantidadImgs = eq.cantidad_imagenes || 0;
+        const listo = cantidadImgs >= 5;
+        const listoClass = listo ? 'bg-success' : 'bg-warning';
+        const listoText = listo ? 'Listo' : `Faltan ${5 - cantidadImgs}`;
+        html += `
+          <tr>
+            <td><code>${eq.codigo_equipo || eq.codigo_interno || 'N/A'}</code></td>
+            <td>${eq.nombre_objeto || eq.nombre || 'Sin nombre'}</td>
+            <td><span class="badge bg-info">${cantidadImgs} imgs</span></td>
+            <td><span class="badge ${listoClass}">${listoText}</span></td>
+          </tr>
+        `;
+      });
+      
+      html += '</tbody></table></div>';
+      html += `<div class="alert alert-info mt-3"><i class="bi bi-info-circle me-2"></i>Se necesitan mínimo 5 imágenes por equipo para entrenar.</div>`;
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = `
+        <div class="text-center text-muted py-4">
+          <i class="bi bi-inbox fs-1"></i>
+          <p class="mt-2">No hay equipos con imágenes de entrenamiento</p>
+          <small>Use el botón "Agregar Imágenes" para comenzar</small>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Error cargando equipos:', error);
+    document.getElementById('listaEquiposEntrenados').innerHTML = `
+      <div class="alert alert-danger">Error cargando equipos: ${error.message}</div>
+    `;
+  }
+}
+
+// Manejar subida de archivo de imagen
+document.getElementById('inputImagenArchivo').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  // Validar tipo de archivo
+  if (!file.type.startsWith('image/')) {
+    alert('Por favor seleccione un archivo de imagen válido');
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    capturedImageData = event.target.result;
+    
+    // Mostrar preview
+    document.getElementById('imgPreviewArchivo').src = capturedImageData;
+    document.getElementById('previewArchivo').classList.remove('d-none');
+    
+    // Mostrar imagen capturada
+    document.getElementById('imgCapturada').src = capturedImageData;
+    document.getElementById('imagenCapturada').classList.remove('d-none');
+    document.getElementById('btnGuardarEntrenamiento').disabled = false;
+  };
+  reader.readAsDataURL(file);
+});
+
+// Entrenar modelo
+document.getElementById('btnEntrenarModelo').addEventListener('click', async () => {
+  if (!confirm('¿Iniciar entrenamiento del modelo?\n\nEsto puede tomar varios minutos dependiendo de la cantidad de imágenes.')) {
+    return;
+  }
+  
+  const btn = document.getElementById('btnEntrenarModelo');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Entrenando...';
+  btn.disabled = true;
+  
+  try {
+    const response = await fetch('/api/reconocimiento/entrenar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert(`¡Entrenamiento completado!\n\n✓ Clases entrenadas: ${data.clases_entrenadas}\n✓ Total imágenes: ${data.total_imagenes}\n✓ Precisión: ${data.precision || 'N/A'}`);
+      loadStats();
+    } else {
+      alert('Error: ' + (data.error || 'Error desconocido'));
+    }
+  } catch (error) {
+    alert('Error de conexión: ' + error.message);
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+});
+
+// Cargar equipos al abrir modal
+document.getElementById('modalEquiposEntrenados').addEventListener('show.bs.modal', () => {
+  loadEquiposEntrenados();
+});
+
+// Variable para imagen de reconocimiento desde archivo
+let imagenReconocerData = null;
+
+// Manejar subida de archivo para reconocimiento
+document.getElementById('inputImagenReconocer').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  if (!file.type.startsWith('image/')) {
+    alert('Por favor seleccione un archivo de imagen válido');
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    imagenReconocerData = event.target.result;
+    
+    // Mostrar preview
+    document.getElementById('imgPreviewReconocer').src = imagenReconocerData;
+    document.getElementById('previewReconocer').classList.remove('d-none');
+    document.getElementById('btnReconocerArchivo').disabled = false;
+  };
+  reader.readAsDataURL(file);
+});
+
+// Reconocer desde archivo
+document.getElementById('btnReconocerArchivo').addEventListener('click', async () => {
+  if (!imagenReconocerData) {
+    alert('Primero seleccione una imagen');
+    return;
+  }
+  
+  const btn = document.getElementById('btnReconocerArchivo');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Reconociendo...';
+  btn.disabled = true;
+  
+  const resultado = document.getElementById('resultadoReconocimiento');
+  resultado.className = 'alert alert-warning mt-3';
+  resultado.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Reconociendo...';
+  resultado.classList.remove('d-none');
+  
+  try {
+    const response = await fetch('/api/reconocimiento/identificar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imagen: imagenReconocerData, top_n: 5 })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.resultados && data.resultados.length > 0) {
+      const mejor = data.mejor_match;
+      const exitoso = mejor.exitoso;
+      
+      resultado.className = exitoso ? 'alert alert-success mt-3' : 'alert alert-warning mt-3';
+      resultado.innerHTML = `
+        <div class="d-flex align-items-center">
+          <i class="bi bi-${exitoso ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+          <div>
+            <strong>${exitoso ? '¡Reconocido!' : 'Posible coincidencia'}</strong> Equipo: ${mejor.nombre_objeto}
+            <br><small>Código: ${mejor.codigo_equipo} | Confianza: ${mejor.confianza_porcentaje}</small>
+          </div>
+        </div>
+      `;
+      
+      mostrarResultadosReconocimiento(data.resultados);
+    } else if (data.accion_requerida === 'entrenar') {
+      resultado.className = 'alert alert-warning mt-3';
+      resultado.innerHTML = `
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        ${data.error || 'No hay modelo entrenado. Primero agregue imágenes y entrene el modelo.'}
+      `;
+    } else {
+      resultado.className = 'alert alert-info mt-3';
+      resultado.innerHTML = `
+        <i class="bi bi-question-circle me-2"></i>
+        No se encontraron coincidencias. ${data.error || ''}
+      `;
+      
+      document.getElementById('detallesEquipo').innerHTML = `
+        <div class="text-center text-muted py-3">
+          <i class="bi bi-x-circle display-1 mb-3" style="color: #dc3545;"></i>
+          <p class="fw-bold">Equipo no reconocido</p>
+          <small>Entrena la IA con más imágenes de este equipo</small>
+        </div>
+      `;
+    }
+  } catch (error) {
+    resultado.className = 'alert alert-danger mt-3';
+    resultado.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>Error: ${error.message}`;
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+});
+
+// Mostrar resultados de reconocimiento con detalles completos del equipo
+function mostrarResultadosReconocimiento(resultados) {
+  const detallesDiv = document.getElementById('detallesEquipo');
+  
+  if (!resultados || resultados.length === 0) {
+    detallesDiv.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-question-circle display-1 mb-3" style="color: #6c757d;"></i>
+        <p>No se encontraron coincidencias</p>
+      </div>
+    `;
+    return;
+  }
+  
+  const mejor = resultados[0];
+  const eq = mejor.detalles_equipo || {};
+  const esExitoso = mejor.exitoso || mejor.confianza >= 0.85;
+  const confianzaPct = mejor.confianza_porcentaje || `${(mejor.confianza * 100).toFixed(1)}%`;
+  
+  // Función para formatear moneda
+  const formatMoney = (val) => val ? `$${val.toLocaleString('es-CO')}` : 'N/A';
+  
+  // Función para formatear fecha
+  const formatDate = (val) => val ? new Date(val).toLocaleDateString('es-CO') : 'N/A';
+  
+  let html = `
+    <div class="text-start" style="max-height: 500px; overflow-y: auto;">
+      <!-- Resultado Principal -->
+      <div class="card mb-3 border-0" style="background: linear-gradient(135deg, ${esExitoso ? '#d1fae5' : '#fef3c7'} 0%, ${esExitoso ? '#a7f3d0' : '#fde68a'} 100%);">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h5 class="mb-1 fw-bold" style="color: ${esExitoso ? '#065f46' : '#92400e'};">
+                <i class="bi bi-${esExitoso ? 'check-circle-fill' : 'exclamation-triangle-fill'} me-2"></i>
+                ${eq.nombre || mejor.nombre_objeto}
+              </h5>
+              <p class="mb-0">
+                <span class="badge" style="background: ${esExitoso ? '#059669' : '#d97706'}; color: white;">
+                  ${esExitoso ? '✓ Identificado' : '⚠ Posible coincidencia'}
+                </span>
+                ${eq.imagen_url ? `<img src="${eq.imagen_url}" class="ms-2 rounded" style="height: 40px; width: 40px; object-fit: cover;">` : ''}
+              </p>
+            </div>
+            <div class="text-end">
+              <div class="display-6 fw-bold" style="color: ${esExitoso ? '#059669' : '#d97706'};">${confianzaPct}</div>
+              <small class="text-muted">Confianza</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Información General -->
+      <div class="card border-0 shadow-sm mb-2">
+        <div class="card-header py-2" style="background: #2d6a4f; color: white;">
+          <small class="fw-bold"><i class="bi bi-info-circle me-1"></i>Información General</small>
+        </div>
+        <div class="card-body p-2">
+          <div class="row g-1">
+            <div class="col-6">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Código Interno</small>
+                <code class="fw-bold">${eq.codigo_interno || mejor.codigo_equipo}</code>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Categoría</small>
+                <span class="badge bg-info">${eq.categoria || mejor.categoria || 'General'}</span>
+              </div>
+            </div>
+            ${eq.marca ? `
+            <div class="col-6">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Marca</small>
+                <strong>${eq.marca}</strong>
+              </div>
+            </div>` : ''}
+            ${eq.modelo ? `
+            <div class="col-6">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Modelo</small>
+                <strong>${eq.modelo}</strong>
+              </div>
+            </div>` : ''}
+            ${eq.numero_serie ? `
+            <div class="col-12">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Número de Serie</small>
+                <code>${eq.numero_serie}</code>
+              </div>
+            </div>` : ''}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Estado y Ubicación -->
+      <div class="card border-0 shadow-sm mb-2">
+        <div class="card-header py-2" style="background: #059669; color: white;">
+          <small class="fw-bold"><i class="bi bi-geo-alt me-1"></i>Estado y Ubicación</small>
+        </div>
+        <div class="card-body p-2">
+          <div class="row g-1">
+            <div class="col-6">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Estado</small>
+                <span class="badge bg-${eq.estado === 'disponible' ? 'success' : eq.estado === 'prestado' ? 'warning' : 'secondary'}">${eq.estado || 'N/A'}</span>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Estado Físico</small>
+                <span class="badge bg-${eq.estado_fisico === 'excelente' ? 'success' : eq.estado_fisico === 'bueno' ? 'info' : 'warning'}">${eq.estado_fisico || 'N/A'}</span>
+              </div>
+            </div>
+            ${eq.laboratorio ? `
+            <div class="col-12">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Laboratorio</small>
+                <i class="bi bi-building me-1"></i><strong>${eq.laboratorio}</strong>
+                ${eq.laboratorio_ubicacion ? `<small class="text-muted ms-1">(${eq.laboratorio_ubicacion})</small>` : ''}
+              </div>
+            </div>` : ''}
+            ${eq.ubicacion_especifica ? `
+            <div class="col-12">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Ubicación Específica</small>
+                <i class="bi bi-geo-alt me-1"></i>${eq.ubicacion_especifica}
+              </div>
+            </div>` : ''}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Información Financiera -->
+      <div class="card border-0 shadow-sm mb-2">
+        <div class="card-header py-2" style="background: #0891b2; color: white;">
+          <small class="fw-bold"><i class="bi bi-currency-dollar me-1"></i>Información de Adquisición</small>
+        </div>
+        <div class="card-body p-2">
+          <div class="row g-1">
+            ${eq.valor_adquisicion ? `
+            <div class="col-6">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Valor</small>
+                <strong class="text-success">${formatMoney(eq.valor_adquisicion)}</strong>
+              </div>
+            </div>` : ''}
+            ${eq.fecha_adquisicion ? `
+            <div class="col-6">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Fecha Adquisición</small>
+                <i class="bi bi-calendar me-1"></i>${formatDate(eq.fecha_adquisicion)}
+              </div>
+            </div>` : ''}
+            ${eq.proveedor ? `
+            <div class="col-12">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Proveedor</small>
+                <i class="bi bi-shop me-1"></i>${eq.proveedor}
+              </div>
+            </div>` : ''}
+            ${eq.garantia_meses ? `
+            <div class="col-6">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Garantía</small>
+                <i class="bi bi-shield-check me-1"></i>${eq.garantia_meses} meses
+              </div>
+            </div>` : ''}
+            ${eq.vida_util_anos ? `
+            <div class="col-6">
+              <div class="p-2 rounded" style="background: #f8f9fa;">
+                <small class="text-muted d-block">Vida Útil</small>
+                <i class="bi bi-clock-history me-1"></i>${eq.vida_util_anos} años
+              </div>
+            </div>` : ''}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Descripción y Especificaciones -->
+      ${eq.descripcion || eq.especificaciones_tecnicas || eq.observaciones ? `
+      <div class="card border-0 shadow-sm mb-2">
+        <div class="card-header py-2" style="background: #6b7280; color: white;">
+          <small class="fw-bold"><i class="bi bi-file-text me-1"></i>Descripción y Especificaciones</small>
+        </div>
+        <div class="card-body p-2">
+          ${eq.descripcion ? `
+          <div class="p-2 rounded mb-1" style="background: #f8f9fa;">
+            <small class="text-muted d-block">Descripción</small>
+            <span>${eq.descripcion}</span>
+          </div>` : ''}
+          ${eq.especificaciones_tecnicas ? `
+          <div class="p-2 rounded mb-1" style="background: #f8f9fa;">
+            <small class="text-muted d-block">Especificaciones Técnicas</small>
+            <span class="small">${eq.especificaciones_tecnicas}</span>
+          </div>` : ''}
+          ${eq.observaciones ? `
+          <div class="p-2 rounded" style="background: #fff3cd;">
+            <small class="text-muted d-block">Observaciones</small>
+            <span class="small"><i class="bi bi-exclamation-circle me-1"></i>${eq.observaciones}</span>
+          </div>` : ''}
+        </div>
+      </div>` : ''}
+      
+      ${resultados.length > 1 ? `
+      <!-- Otras coincidencias -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header py-2 bg-secondary text-white">
+          <small class="fw-bold"><i class="bi bi-list me-1"></i>Otras posibles coincidencias</small>
+        </div>
+        <div class="card-body p-2">
+          ${resultados.slice(1, 4).map(r => `
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+              <span class="small">${r.nombre_objeto} <code class="ms-1">${r.codigo_equipo}</code></span>
+              <span class="badge bg-secondary">${r.confianza_porcentaje || (r.confianza * 100).toFixed(1) + '%'}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>` : ''}
+      
+      <div class="mt-2 pt-2 border-top text-center">
+        <small class="text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          Umbral: ≥85% | Registrado: ${eq.fecha_registro ? formatDate(eq.fecha_registro) : 'N/A'}
+        </small>
+      </div>
+    </div>
+  `;
+  
+  detallesDiv.innerHTML = html;
+}
+
+// Mostrar detalles del item
+function mostrarDetalles(details) {
+  if (!details) return;
+  
+  const detallesDiv = document.getElementById('detallesEquipo');
+  
+  if (details.tipo_item === 'equipo') {
+    let especificacionesHtml = '';
+    if (details.especificaciones && Object.keys(details.especificaciones).length > 0) {
+      especificacionesHtml = '<tr><td colspan="2"><strong>Especificaciones:</strong><ul class="mb-0 mt-1">';
+      for (const [key, value] of Object.entries(details.especificaciones)) {
+        especificacionesHtml += `<li><small>${key}: ${value}</small></li>`;
+      }
+      especificacionesHtml += '</ul></td></tr>';
+    }
+    
+    // Debug: ver qué datos llegan
+
+    detallesDiv.innerHTML = `
+      <div class="text-start">
+        <h6 class="text-primary mb-3"><i class="bi bi-gear me-2"></i>Equipo Reconocido</h6>
+        <table class="table table-sm table-bordered">
+          <tr><td><strong>ID:</strong></td><td><code>${details.id}</code></td></tr>
+          ${details.equipo_id ? `<tr><td><strong>Código:</strong></td><td><code>${details.equipo_id}</code></td></tr>` : ''}
+          <tr><td><strong>Nombre:</strong></td><td>${details.nombre}</td></tr>
+          <tr><td><strong>Tipo:</strong></td><td><span class="badge bg-info">${details.tipo || details.categoria}</span></td></tr>
+          <tr><td><strong>Estado:</strong></td><td>
+            <span class="badge bg-${details.estado === 'disponible' ? 'success' : 'warning'}">${details.estado}</span>
+          </td></tr>
+          ${details.descripcion ? `<tr><td><strong>Descripción:</strong></td><td>${details.descripcion}</td></tr>` : ''}
+          <tr><td><strong>Laboratorio:</strong></td><td><i class="bi bi-building me-1"></i>${details.laboratorio_nombre || 'No especificado'}${details.laboratorio_ubicacion ? ` <small class="text-muted">(${details.laboratorio_ubicacion})</small>` : ''}</td></tr>
+          <tr><td><strong>Ubicación Específica:</strong></td><td><i class="bi bi-geo-alt me-1"></i>${details.ubicacion || 'No especificada'}</td></tr>
+          ${details.fecha_registro ? `<tr><td><strong>Fecha Registro:</strong></td><td><small>${details.fecha_registro}</small></td></tr>` : ''}
+          ${especificacionesHtml}
+        </table>
+        ${details.from_cache ? '<small class="text-muted"><i class="bi bi-info-circle"></i> Datos del entrenamiento</small>' : '<small class="text-success"><i class="bi bi-check-circle"></i> Datos actualizados de la BD</small>'}
+      </div>
+    `;
+  } else {
+    // Debug: ver qué datos llegan
+
+    detallesDiv.innerHTML = `
+      <div class="text-start">
+        <h6 class="text-success mb-3"><i class="bi bi-box me-2"></i>Item de Inventario</h6>
+        <table class="table table-sm table-bordered">
+          <tr><td><strong>ID:</strong></td><td><code>${details.id}</code></td></tr>
+          <tr><td><strong>Nombre:</strong></td><td>${details.nombre}</td></tr>
+          <tr><td><strong>Categoría:</strong></td><td><span class="badge bg-secondary">${details.categoria}</span></td></tr>
+          ${details.descripcion ? `<tr><td><strong>Descripción:</strong></td><td>${details.descripcion}</td></tr>` : ''}
+          <tr><td><strong>Cantidad:</strong></td><td>${details.cantidad_actual || details.cantidad || 0} ${details.unidad || ''}</td></tr>
+          ${details.cantidad_minima ? `<tr><td><strong>Mínimo:</strong></td><td>${details.cantidad_minima} ${details.unidad || ''}</td></tr>` : ''}
+          <tr><td><strong>Laboratorio:</strong></td><td><i class="bi bi-building me-1"></i>${details.laboratorio_nombre || 'No especificado'}${details.laboratorio_ubicacion ? ` <small class="text-muted">(${details.laboratorio_ubicacion})</small>` : ''}</td></tr>
+          <tr><td><strong>Ubicación Específica:</strong></td><td><i class="bi bi-geo-alt me-1"></i>${details.ubicacion || 'No especificada'}</td></tr>
+          ${details.fecha_registro ? `<tr><td><strong>Fecha Registro:</strong></td><td><small>${details.fecha_registro}</small></td></tr>` : ''}
+        </table>
+        ${details.from_cache ? '<small class="text-muted"><i class="bi bi-info-circle"></i> Datos del entrenamiento</small>' : '<small class="text-success"><i class="bi bi-check-circle"></i> Datos actualizados de la BD</small>'}
+      </div>
+    `;
+  }
+}
+
+// === ENTRENAMIENTO ===
+
+// Cambio de tipo de item
+document.getElementById('tipoItem').addEventListener('change', async (e) => {
+  const tipo = e.target.value;
+  const selectItem = document.getElementById('selectItem');
+  
+  if (!tipo) {
+    selectItem.disabled = true;
+    selectItem.innerHTML = '<option value="">Primero selecciona el tipo...</option>';
+    return;
+  }
+  
+  selectItem.disabled = false;
+  selectItem.innerHTML = '<option value="">Cargando...</option>';
+  
+  try {
+    let endpoint = tipo === 'equipo' ? '/api/equipos' : '/api/inventario';
+    
+    // Obtener JWT del localStorage si existe
+    const token = localStorage.getItem('jwt');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = 'Bearer ' + token;
+    }
+    
+    const response = await fetch(endpoint, { headers });
+    
+    if (!response.ok) {
+      throw new Error('Error al cargar items');
+    }
+    
+    const data = await response.json();
+    
+    let items = tipo === 'equipo' ? data.equipos : data.inventario;
+    
+    if (!items || items.length === 0) {
+      selectItem.innerHTML = '<option value="">No hay items disponibles</option>';
+      return;
+    }
+    
+    selectItem.innerHTML = '<option value="">Seleccionar...</option>';
+    items.forEach(item => {
+      const option = document.createElement('option');
+      option.value = item.id;
+      option.textContent = `${item.id} - ${item.nombre}`;
+      selectItem.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error cargando items:', error);
+    selectItem.innerHTML = '<option value="">Error cargando items</option>';
+    
+    // Mostrar mensaje de ayuda
+    alert('Error cargando items. Asegúrate de:\n1. Haber iniciado sesión en la API\n2. Tener equipos/items registrados');
+  }
+});
+
+// Iniciar cámara de entrenamiento
+document.getElementById('btnIniciarCamaraTrain').addEventListener('click', async () => {
+  try {
+    if (trainStream) {
+      trainStream.getTracks().forEach(track => track.stop());
+      trainStream = null;
+      document.getElementById('btnIniciarCamaraTrain').innerHTML = '<i class="bi bi-camera-video me-1"></i>Iniciar';
+      document.getElementById('btnCapturarTrain').disabled = true;
+      return;
+    }
+    
+    trainStream = await navigator.mediaDevices.getUserMedia({ 
+      video: { width: { ideal: 640 }, height: { ideal: 480 } } 
+    });
+    trainVideo.srcObject = trainStream;
+    
+    document.getElementById('btnIniciarCamaraTrain').innerHTML = '<i class="bi bi-camera-video-off me-1"></i>Detener';
+    document.getElementById('btnCapturarTrain').disabled = false;
+  } catch (error) {
+    alert('Error accediendo a la cámara: ' + error.message);
+  }
+});
+
+// Capturar imagen para entrenamiento
+document.getElementById('btnCapturarTrain').addEventListener('click', () => {
+  if (!trainStream) return;
+  
+  canvas.width = trainVideo.videoWidth;
+  canvas.height = trainVideo.videoHeight;
+  ctx.drawImage(trainVideo, 0, 0);
+  capturedImageData = canvas.toDataURL('image/jpeg', 0.8);
+  
+  // Mostrar imagen capturada
+  const imgCapturada = document.getElementById('imgCapturada');
+  imgCapturada.src = capturedImageData;
+  document.getElementById('imagenCapturada').classList.remove('d-none');
+  document.getElementById('btnGuardarEntrenamiento').disabled = false;
+});
+
+// Guardar imagen de entrenamiento usando /api/reconocimiento/agregar-imagenes/{id}
+document.getElementById('btnGuardarEntrenamiento').addEventListener('click', async () => {
+  const tipoItem = document.getElementById('tipoItem').value;
+  const itemId = document.getElementById('selectItem').value;
+  const anguloVista = document.getElementById('anguloVista').value;
+  const descripcion = document.getElementById('descripcionEntrenamiento').value;
+  
+  if (!tipoItem || !itemId || !capturedImageData) {
+    alert('Complete todos los campos y capture una imagen');
+    return;
+  }
+  
+  if (tipoItem !== 'equipo') {
+    alert('Por ahora solo se puede entrenar con equipos');
+    return;
+  }
+  
+  const btn = document.getElementById('btnGuardarEntrenamiento');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Guardando imagen...';
+  btn.disabled = true;
+  
+  try {
+    // Usar endpoint de agregar imágenes de entrenamiento
+    const response = await fetch(`/api/reconocimiento/agregar-imagenes/${itemId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imagenes: [capturedImageData],
+        angulos: [anguloVista]
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      let detallesMsg = `¡Imagen guardada exitosamente!\n\n`;
+      detallesMsg += `✓ Imágenes guardadas: ${data.imagenes_guardadas}\n`;
+      detallesMsg += `✓ Total imágenes del equipo: ${data.total_imagenes_equipo}\n`;
+      detallesMsg += `✓ Listo para entrenar: ${data.listo_para_entrenar ? 'Sí (≥5 imágenes)' : 'No (necesita más imágenes)'}\n`;
+      
+      if (!data.listo_para_entrenar) {
+        detallesMsg += `\n⚠️ Necesitas al menos 5 imágenes para entrenar el modelo.`;
+      }
+      
+      alert(detallesMsg);
+      
+      // Limpiar formulario
+      document.getElementById('tipoItem').value = '';
+      document.getElementById('selectItem').innerHTML = '<option value="">Primero selecciona el tipo...</option>';
+      document.getElementById('selectItem').disabled = true;
+      document.getElementById('descripcionEntrenamiento').value = '';
+      document.getElementById('imagenCapturada').classList.add('d-none');
+      capturedImageData = null;
+      
+      // Recargar estadísticas
+      loadStats();
+      loadEquiposEntrenados();
+      
+      // Cerrar modal
+      bootstrap.Modal.getInstance(document.getElementById('modalEntrenar')).hide();
+    } else {
+      alert('Error: ' + (data.error || data.message || 'Error desconocido'));
+    }
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+});
+
+// Limpiar streams al cerrar modal
+document.getElementById('modalEntrenar').addEventListener('hidden.bs.modal', () => {
+  if (trainStream) {
+    trainStream.getTracks().forEach(track => track.stop());
+    trainStream = null;
+    document.getElementById('btnIniciarCamaraTrain').innerHTML = '<i class="bi bi-camera-video me-1"></i>Iniciar';
+    document.getElementById('btnCapturarTrain').disabled = true;
+  }
+});
+</script>
+
+{% endblock %}

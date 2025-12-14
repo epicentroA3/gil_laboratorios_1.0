@@ -1,0 +1,515 @@
+/* ===========================================
+   DASHBOARD.CSS - Estilos del Dashboard
+   Centro Minero SENA
+   =========================================== */
+
+/* ==========================================
+   STATS CARDS
+   ========================================== */
+
+.stats-card {
+  background: linear-gradient(135deg, var(--sena-green) 0%, #4CAF50 100%);
+  color: white;
+  border-radius: 15px;
+  padding: 25px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease;
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20px;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+.stats-card.blue {
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+}
+
+.stats-card.orange {
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+}
+
+.stats-card.purple {
+  background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+}
+
+.stats-card.cyan {
+  background: linear-gradient(135deg, #00BCD4 0%, #0097A7 100%);
+}
+
+.stats-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.stats-label {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin-top: 5px;
+  position: relative;
+  z-index: 2;
+}
+
+.stats-icon {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 2.5rem;
+  opacity: 0.3;
+}
+
+/* ==========================================
+   MODULE HEADER
+   ========================================== */
+
+.module-header {
+  background: linear-gradient(135deg, var(--sena-green) 0%, #2E7D32 100%);
+  border-radius: 15px !important;
+}
+
+.module-header .card-body {
+  color: white;
+}
+
+/* ==========================================
+   CHART CONTAINER
+   ========================================== */
+
+.chart-container {
+  background: white;
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+}
+
+.chart-container h5 {
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+/* ==========================================
+   ACTIVITY LIST
+   ========================================== */
+
+.activity-item {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  transition: background 0.3s ease;
+}
+
+.activity-item:hover {
+  background: #f8f9fa;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+  font-size: 1.2rem;
+}
+
+.activity-success { background: #d4edda; color: #155724; }
+.activity-warning { background: #fff3cd; color: #856404; }
+.activity-info { background: #d1ecf1; color: #0c5460; }
+.activity-danger { background: #f8d7da; color: #721c24; }
+
+/* ==========================================
+   QUICK ACTIONS
+   ========================================== */
+
+.quick-actions {
+  background: white;
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.quick-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  border-radius: 12px;
+  background: #f8f9fa;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: #333;
+}
+
+.quick-action-btn:hover {
+  border-color: var(--sena-green);
+  background: rgba(57, 169, 0, 0.05);
+  transform: translateY(-3px);
+}
+
+.quick-action-btn i {
+  font-size: 2rem;
+  color: var(--sena-green);
+  margin-bottom: 10px;
+}
+
+.quick-action-btn span {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* ==========================================
+   WELCOME SECTION
+   ========================================== */
+
+.welcome-section {
+  background: white;
+  border-radius: 15px;
+  padding: 30px;
+  margin-bottom: 25px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.welcome-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.welcome-subtitle {
+  color: #6c757d;
+  font-size: 1rem;
+}
+
+/* ==========================================
+   SUMMARY CARDS (Laboratorios)
+   ========================================== */
+
+.summary-card-lab {
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+}
+
+.summary-card-aula {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+.summary-card-taller {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+}
+
+.summary-card-almacen {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+}
+
+.summary-card-icon {
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==========================================
+   LAB CARD
+   ========================================== */
+
+.lab-card-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 15px 20px;
+}
+
+.lab-card-title {
+  color: var(--sena-green);
+  font-weight: 600;
+}
+
+.badge-estado-activo {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-estado-mantenimiento {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-estado-inactivo {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* ==========================================
+   STAT BOXES
+   ========================================== */
+
+.stat-box-equipos,
+.stat-box-items,
+.stat-box-criticos {
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.stat-box-equipos {
+  border-left: 3px solid #2196F3;
+}
+
+.stat-box-items {
+  border-left: 3px solid #4CAF50;
+}
+
+.stat-box-criticos {
+  border-left: 3px solid #9E9E9E;
+}
+
+.stat-box-criticos.danger {
+  border-left-color: #f44336;
+  background: #ffebee;
+}
+
+.stat-box-criticos.success {
+  border-left-color: #4CAF50;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #333;
+}
+
+/* ==========================================
+   BUTTONS
+   ========================================== */
+
+.btn-ver-inventario {
+  background: var(--sena-green);
+  color: white;
+  border: none;
+}
+
+.btn-ver-inventario:hover {
+  background: #2E7D32;
+  color: white;
+}
+
+/* ==========================================
+   INFO CARDS (Modales)
+   ========================================== */
+
+.info-card {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 15px;
+}
+
+.icon-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--sena-green), #4CAF50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-badge {
+  width: 35px;
+  height: 35px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.version-badge {
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #1565c0;
+}
+
+/* ==========================================
+   CONTACT ITEMS
+   ========================================== */
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.contact-item:last-child {
+  border-bottom: none;
+}
+
+.contact-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+}
+
+.contact-info {
+  flex: 1;
+}
+
+.schedule-badge {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.feature-list {
+  list-style: none;
+  padding: 0;
+}
+
+.feature-list li {
+  padding: 5px 0;
+}
+
+/* ==========================================
+   EQUIPMENT STATUS
+   ========================================== */
+
+.equipment-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.equipment-status:last-child {
+  border-bottom: none;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 10px;
+  display: inline-block;
+}
+
+.status-disponible { background: #28a745; }
+.status-en-uso { background: #ffc107; }
+.status-mantenimiento { background: #fd7e14; }
+.status-fuera-servicio { background: #dc3545; }
+
+/* ==========================================
+   QUICK ACTION BTN - Lista estilo
+   ========================================== */
+
+.quick-actions .quick-action-btn {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 15px;
+  margin-bottom: 10px;
+  background: white;
+  border: 2px solid #e9ecef;
+}
+
+.quick-actions .quick-action-btn i {
+  font-size: 1.5rem;
+  margin-right: 15px;
+  margin-bottom: 0;
+}
+
+.quick-actions .quick-action-btn:hover {
+  border-color: var(--sena-green);
+  color: var(--sena-green);
+  transform: translateX(5px);
+}
+
+/* ==========================================
+   RESPONSIVE - DASHBOARD
+   ========================================== */
+
+@media (max-width: 991.98px) {
+  .stats-card {
+    margin-bottom: 15px;
+  }
+  
+  .stats-number {
+    font-size: 2rem;
+  }
+  
+  .chart-container {
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .quick-actions {
+    margin-bottom: 15px;
+  }
+  
+  /* Ajustar grid de stats en tablet */
+  .row > [class*="col-xl-"],
+  .row > [class*="col-lg-"] {
+    margin-bottom: 15px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .stats-number {
+    font-size: 1.75rem;
+  }
+  
+  .stats-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.25rem;
+  }
+  
+  .chart-container {
+    padding: 12px;
+  }
+  
+  .weather-widget,
+  .time-widget {
+    padding: 15px;
+  }
+  
+  .activity-item {
+    padding: 10px;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+  }
+}

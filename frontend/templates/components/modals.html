@@ -1,0 +1,295 @@
+<!-- Modals Component - Todos los modales globales del sistema -->
+
+<!-- Modal: Ayuda Micrófono -->
+<div class="modal fade" id="modalAyudaMicrofono" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-sena text-white border-0">
+        <h5 class="modal-title"><i class="bi bi-mic me-2"></i>Comandos de Voz</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted mb-3">Usa estos comandos de voz para navegar:</p>
+        <ul class="list-unstyled">
+          <li class="mb-2"><kbd>Dashboard</kbd> - Ir al panel principal</li>
+          <li class="mb-2"><kbd>Inventario</kbd> - Ver inventario</li>
+          <li class="mb-2"><kbd>Reservas</kbd> - Gestionar reservas</li>
+          <li class="mb-2"><kbd>Equipos</kbd> - Ver equipos</li>
+          <li class="mb-2"><kbd>Ayuda</kbd> - Mostrar ayuda</li>
+          <li class="mb-2"><kbd>Salir</kbd> - Cerrar sesión</li>
+        </ul>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-sena" data-bs-dismiss="modal">Entendido</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Accesibilidad -->
+<div class="modal fade" id="modalAccesibilidad" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title"><i class="bi bi-universal-access me-2"></i>Opciones de Accesibilidad</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-4">Personaliza tu experiencia para una mejor navegación</p>
+        
+        <!-- Alto Contraste -->
+        <div class="d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
+          <div>
+            <h6 class="mb-1"><i class="bi bi-eye me-2"></i>Alto Contraste</h6>
+            <small class="text-muted">Aumenta el contraste entre texto y fondo</small>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="switchAltoContraste" style="width: 3em; height: 1.5em;">
+          </div>
+        </div>
+
+        <!-- Tamaño de Texto -->
+        <div class="mb-3 p-3 border rounded">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0"><i class="bi bi-fonts me-2"></i>Tamaño de Texto</h6>
+            <span class="badge bg-primary" id="badgeTamanoTexto">100%</span>
+          </div>
+          <small class="text-muted d-block mb-3">Ajusta el tamaño del texto</small>
+          <div class="d-flex align-items-center gap-3">
+            <small>A</small>
+            <input type="range" class="form-range flex-grow-1" id="rangeTamanoTexto" min="80" max="200" step="10" value="100">
+            <small class="fs-4">A</small>
+          </div>
+        </div>
+
+        <!-- Modo Oscuro -->
+        <div class="d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
+          <div>
+            <h6 class="mb-1"><i class="bi bi-moon-stars me-2"></i>Modo Oscuro</h6>
+            <small class="text-muted">Reduce el brillo con colores oscuros</small>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="switchModoOscuro" style="width: 3em; height: 1.5em;">
+          </div>
+        </div>
+
+        <!-- Reducir Animaciones -->
+        <div class="d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
+          <div>
+            <h6 class="mb-1"><i class="bi bi-lightning me-2"></i>Reducir Animaciones</h6>
+            <small class="text-muted">Desactiva transiciones y animaciones</small>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="switchAnimaciones" style="width: 3em; height: 1.5em;">
+          </div>
+        </div>
+
+        <!-- Atajos de Teclado -->
+        <div class="mt-4 p-3 bg-light rounded">
+          <h6 class="mb-3"><i class="bi bi-keyboard me-2"></i>Atajos de Teclado</h6>
+          <div class="row g-2">
+            <div class="col-md-6"><small><kbd>Tab</kbd> Navegar elementos</small></div>
+            <div class="col-md-6"><small><kbd>Enter</kbd> Activar elemento</small></div>
+            <div class="col-md-6"><small><kbd>Esc</kbd> Cerrar modal</small></div>
+            <div class="col-md-6"><small><kbd>Alt+L</kbd> Cerrar sesión</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btnGuardarAccesibilidad">
+          <i class="bi bi-check-circle me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Acerca de Nosotros -->
+<div class="modal fade" id="modalAcercaDe" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-gradient text-white border-0" style="background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);">
+        <h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Acerca de Nosotros</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <div class="icon-circle mx-auto mb-3">
+            <i class="bi bi-flower2 text-white" style="font-size: 3rem;"></i>
+          </div>
+          <h4 class="fw-bold mb-2">Centro Minero SENA</h4>
+          <span class="badge bg-sena px-3 py-2">Regional Boyacá</span>
+        </div>
+        
+        <div class="info-card mb-3">
+          <div class="d-flex align-items-center mb-2">
+            <div class="icon-badge bg-sena me-3">
+              <i class="bi bi-bullseye text-white"></i>
+            </div>
+            <h6 class="fw-bold text-sena mb-0">Nuestra Misión</h6>
+          </div>
+          <p class="text-muted ps-5">El Centro Minero del SENA es una institución líder en la formación profesional integral en el sector minero y energético de Colombia.</p>
+        </div>
+        
+        <div class="info-card mb-3">
+          <div class="d-flex align-items-center mb-2">
+            <div class="icon-badge bg-primary me-3">
+              <i class="bi bi-laptop text-white"></i>
+            </div>
+            <h6 class="fw-bold text-sena mb-0">Sistema de Gestión de Laboratorios</h6>
+          </div>
+          <ul class="feature-list ps-5 mb-0">
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Gestión eficiente de equipos e inventario</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Control de acceso con reconocimiento facial</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Reservas automatizadas de equipos</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Reportes en tiempo real</li>
+          </ul>
+        </div>
+        
+        <div class="version-badge">
+          <i class="bi bi-lightbulb-fill me-2"></i>
+          <strong>Versión:</strong> 1.0 | <strong>Año:</strong> 2025
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn btn-sena px-4" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Contacto -->
+<div class="modal fade" id="modalContacto" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-gradient text-white border-0" style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);">
+        <h5 class="modal-title"><i class="bi bi-envelope-heart me-2"></i>Contacto</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <h5 class="fw-bold">Centro Minero SENA</h5>
+        </div>
+        
+        <div class="contact-item">
+          <div class="contact-icon bg-danger">
+            <i class="bi bi-geo-alt-fill text-white"></i>
+          </div>
+          <div class="contact-info">
+            <strong class="d-block text-sena">Dirección</strong>
+            <span class="text-muted">Sogamoso, Boyacá, Colombia</span>
+          </div>
+        </div>
+        
+        <div class="contact-item">
+          <div class="contact-icon bg-success">
+            <i class="bi bi-telephone-fill text-white"></i>
+          </div>
+          <div class="contact-info">
+            <strong class="d-block text-sena">Teléfono</strong>
+            <a href="tel:+5746044440400" class="text-decoration-none text-muted">(604) 444 0400</a>
+          </div>
+        </div>
+        
+        <div class="contact-item">
+          <div class="contact-icon bg-primary">
+            <i class="bi bi-envelope-fill text-white"></i>
+          </div>
+          <div class="contact-info">
+            <strong class="d-block text-sena">Correo</strong>
+            <a href="mailto:gilcentrominero@gmail.com" class="text-decoration-none text-primary">gilcentrominero@gmail.com</a>
+          </div>
+        </div>
+        
+        <div class="schedule-badge mt-3">
+          <i class="bi bi-clock-fill me-2"></i>
+          <strong>Horario:</strong> Lunes a Viernes, 7:00 AM - 5:00 PM
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn btn-sena px-4" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Política de Privacidad -->
+<div class="modal fade" id="modalPrivacidad" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header text-white" style="background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%);">
+        <h5 class="modal-title"><i class="bi bi-shield-check me-2"></i>Política de Privacidad</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">Última actualización: Octubre 2025</p>
+        
+        <h6 class="fw-bold text-sena mt-4">1. Información que Recopilamos</h6>
+        <ul>
+          <li><strong>Datos de identificación:</strong> Nombre, documento, correo</li>
+          <li><strong>Datos biométricos:</strong> Imágenes faciales</li>
+          <li><strong>Datos de uso:</strong> Registros de acceso, reservas</li>
+        </ul>
+        
+        <h6 class="fw-bold text-sena mt-4">2. Protección de Datos</h6>
+        <ul>
+          <li>Cifrado de datos sensibles</li>
+          <li>Control de acceso basado en roles</li>
+          <li>Respaldos periódicos</li>
+        </ul>
+        
+        <h6 class="fw-bold text-sena mt-4">3. Derechos del Usuario</h6>
+        <ul>
+          <li>Acceder a sus datos personales</li>
+          <li>Solicitar corrección de datos</li>
+          <li>Solicitar eliminación de datos</li>
+        </ul>
+        
+        <div class="alert alert-info mt-4">
+          <i class="bi bi-info-circle me-2"></i>
+          Contacte a: <a href="mailto:gilcentrominero@gmail.com">gilcentrominero@gmail.com</a>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Términos de Uso -->
+<div class="modal fade" id="modalTerminos" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header text-white" style="background: linear-gradient(135deg, #EC4899 0%, #DB2777 100%);">
+        <h5 class="modal-title"><i class="bi bi-file-text me-2"></i>Términos de Uso</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">Última actualización: Octubre 2025</p>
+        
+        <h6 class="fw-bold text-sena mt-4">1. Aceptación de Términos</h6>
+        <p>Al utilizar el Sistema de Gestión de Laboratorios, acepta estos términos.</p>
+        
+        <h6 class="fw-bold text-sena mt-4">2. Uso Autorizado</h6>
+        <p>Sistema destinado exclusivamente para aprendices, instructores y personal autorizado del SENA.</p>
+        
+        <h6 class="fw-bold text-sena mt-4">3. Responsabilidades</h6>
+        <ul>
+          <li>Mantener la confidencialidad de credenciales</li>
+          <li>No compartir su cuenta con terceros</li>
+          <li>Reportar cualquier problema de seguridad</li>
+        </ul>
+        
+        <div class="alert alert-warning mt-4">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          <strong>Importante:</strong> El uso indebido puede resultar en acciones disciplinarias.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>

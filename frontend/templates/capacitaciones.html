@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Capacitaciones - GIL{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-award me-2"></i>Capacitaciones</h2>
+            <p class="text-muted mb-0">Gestión de capacitaciones y entrenamientos</p>
+        </div>
+        {% if puede_editar %}
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevaCapacitacion">
+            <i class="bi bi-plus-circle me-2"></i>Nueva Capacitación
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Título</th>
+                            <th>Instructor</th>
+                            <th>Duración</th>
+                            <th>Fecha Inicio</th>
+                            <th>Fecha Fin</th>
+                            <th>Estado</th>
+                            {% if puede_editar %}<th class="text-center">Acciones</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cap in capacitaciones %}
+                        <tr>
+                            <td><strong>{{ cap.titulo }}</strong></td>
+                            <td>{{ cap.instructor or 'Sin asignar' }}</td>
+                            <td>{{ cap.duracion_horas }} horas</td>
+                            <td>{{ cap.fecha_inicio or 'N/A' }}</td>
+                            <td>{{ cap.fecha_fin or 'N/A' }}</td>
+                            <td>
+                                {% if cap.estado == 'activo' %}
+                                <span class="badge bg-success">Activa</span>
+                                {% elif cap.estado == 'programada' %}
+                                <span class="badge bg-info">Programada</span>
+                                {% elif cap.estado == 'finalizada' %}
+                                <span class="badge bg-secondary">Finalizada</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ cap.estado }}</span>
+                                {% endif %}
+                            </td>
+                            {% if puede_editar %}
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-info" title="Ver"><i class="bi bi-eye"></i></button>
+                                <button class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No hay capacitaciones registradas
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,485 @@
+/* ===========================================
+   COMMON.CSS - Estilos base del sistema GIL
+   Centro Minero SENA
+   =========================================== */
+
+:root {
+  --sena-green: #39A900;
+  --sena-light-green: #4CAF50;
+  --sena-dark-green: #2E7D32;
+  --sidebar-width: 260px;
+  --sidebar-bg: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  --transition-speed: 0.3s;
+}
+
+/* ==========================================
+   SIDEBAR STYLES
+   ========================================== */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--sidebar-bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 1000;
+  transition: transform var(--transition-speed) ease;
+}
+
+.sidebar-modern {
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Logo y Brand */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  padding: 15px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-logo {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 10px;
+  margin-right: 12px;
+}
+
+.sidebar-logo-img {
+  width: 40px;
+  height: auto;
+  object-fit: contain;
+}
+
+.sidebar-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-title .fw-bold {
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* User Info */
+.sidebar-user-info {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  margin: 10px 0;
+}
+
+.sidebar-user-avatar {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sena-green);
+  border-radius: 50%;
+  margin-right: 10px;
+  font-size: 1.2rem;
+}
+
+.sidebar-user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-user-details .fw-semibold {
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-level {
+  font-size: 0.7rem;
+  color: var(--sena-green);
+  background: rgba(57, 169, 0, 0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+/* Navigation */
+.sidebar .nav-link {
+  color: rgba(255, 255, 255, 0.8);
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all var(--transition-speed) ease;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar .nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transform: translateX(5px);
+}
+
+.sidebar .nav-link.active {
+  background: var(--sena-green);
+  color: white;
+  font-weight: 500;
+}
+
+.sidebar .nav-link i {
+  font-size: 1.1rem;
+  width: 24px;
+  text-align: center;
+}
+
+/* Section Titles */
+.sidebar-section-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 15px 15px 5px;
+  font-weight: 600;
+}
+
+/* Highlight Link */
+.nav-link-highlight {
+  background: rgba(57, 169, 0, 0.2) !important;
+  border: 1px solid rgba(57, 169, 0, 0.3);
+}
+
+.nav-link-highlight:hover {
+  background: rgba(57, 169, 0, 0.3) !important;
+}
+
+/* ==========================================
+   MAIN CONTENT
+   ========================================== */
+
+.main-content {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  background: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================
+   FOOTER STYLES
+   ========================================== */
+
+.footer-minimal {
+  background: white;
+  padding: 15px 20px;
+  border-top: 1px solid #e9ecef;
+  margin-top: auto;
+}
+
+.footer-carousel-wrapper {
+  position: relative;
+  min-height: 50px;
+}
+
+.footer-slide {
+  position: absolute;
+  width: 100%;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.5s ease;
+  pointer-events: none;
+}
+
+.footer-slide.active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  position: relative;
+}
+
+.footer-title {
+  font-size: 0.85rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.footer-subtitle {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+.footer-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.footer-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #dee2e6;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.footer-dots .dot.active {
+  background: var(--sena-green);
+  transform: scale(1.2);
+}
+
+/* ==========================================
+   FAB (Floating Action Button)
+   ========================================== */
+
+.fab-container {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.fab-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--sena-green);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(57, 169, 0, 0.4);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fab-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(57, 169, 0, 0.5);
+}
+
+.fab-menu {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.fab-menu.active,
+.fab-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.fab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  background: white;
+  border: none;
+  border-radius: 25px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.fab-menu-item:hover {
+  background: #f8f9fa;
+  transform: translateX(-5px);
+}
+
+.fab-menu-item i {
+  color: var(--sena-green);
+}
+
+/* ==========================================
+   TOGGLE BUTTON (Mobile)
+   ========================================== */
+
+.btn-toggle {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1200;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--sena-green);
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(57, 169, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(57, 169, 0, 0.4);
+}
+
+.btn-toggle:active {
+  transform: scale(0.95);
+}
+
+/* Botón más pequeño en pantallas muy pequeñas */
+@media (max-width: 576px) {
+  .btn-toggle {
+    top: 10px;
+    left: 10px;
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+    border-radius: 8px;
+  }
+  
+  .container-fluid {
+    padding-top: 55px !important;
+  }
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+
+@media (max-width: 991.98px) {
+  .sidebar {
+    transform: translateX(-100%);
+    z-index: 1100;
+  }
+
+  .sidebar.show {
+    transform: translateX(0);
+    box-shadow: 5px 0 25px rgba(0, 0, 0, 0.3);
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .btn-toggle {
+    display: flex;
+  }
+  
+  /* Agregar espacio para el botón toggle en el header */
+  .container-fluid {
+    padding: 15px !important;
+    padding-top: 70px !important;
+  }
+}
+
+/* Overlay para sidebar móvil */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1099;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.show {
+  display: block;
+  opacity: 1;
+}
+
+/* Prevenir overflow horizontal - solo en el contenido principal */
+.main-content {
+  overflow-x: hidden;
+}
+
+/* Asegurar que el main-content no se desborde */
+.main-content {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* ==========================================
+   UTILITIES
+   ========================================== */
+
+.bg-sena {
+  background-color: var(--sena-green) !important;
+}
+
+.text-sena {
+  color: var(--sena-green) !important;
+}
+
+.btn-sena {
+  background: var(--sena-green);
+  border-color: var(--sena-green);
+  color: white;
+    
+}
+
+.btn-sena:hover {
+  background: var(--sena-dark-green);
+  border-color: var(--sena-dark-green);
+  color: white;
+}
+
+/* Fade In Animation */
+.fade-in {
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scrollbar personalizado para sidebar */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

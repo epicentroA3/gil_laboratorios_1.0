@@ -1,0 +1,1157 @@
+{% extends 'base.html' %}
+{% set title = 'Asistente LUCIA' %}
+
+{% block content %}
+<!-- Header -->
+<div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div>
+        <h4 class="mb-1 text-white fw-bold">
+          <i class="bi bi-mic-fill me-2"></i>Asistente de Voz LUCIA
+        </h4>
+        <p class="mb-0 text-white opacity-90">
+          Laboratorio Unificado de Control Inteligente y Asistencia
+        </p>
+      </div>
+      <div class="d-flex gap-2">
+        <span id="statusBadge" class="badge bg-warning text-dark px-3 py-2">
+          <i class="bi bi-hourglass-split me-1"></i>Verificando...
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sección Principal del Micrófono - Centrada -->
+<div class="row justify-content-center mb-4">
+  <div class="col-12 col-md-10 col-lg-8">
+    <div class="card border-0 shadow-lg mic-main-card">
+      <div class="card-body text-center py-5">
+        <!-- Indicador de escucha -->
+        <div id="listeningIndicator" class="d-none mb-4">
+          <div class="listening-animation-large">
+            <span class="listening-dot-large"></span>
+            <span class="listening-dot-large"></span>
+            <span class="listening-dot-large"></span>
+          </div>
+          <p class="text-white mb-0 fw-semibold fs-5">
+            <i class="bi bi-mic-fill me-2"></i>Escuchando... Di tu comando
+          </p>
+        </div>
+        
+        <!-- Indicador de procesamiento -->
+        <div id="processingIndicator" class="d-none mb-4">
+          <div class="spinner-border text-white me-2" role="status"></div>
+          <span class="text-white fs-5">Procesando tu comando...</span>
+        </div>
+        
+        <!-- Botón de micrófono grande centrado -->
+        <div id="micContainer" class="mic-container mb-4">
+          <button id="btnMicrophone" class="btn mic-button-large" 
+                  onclick="toggleSpeechRecognition()" title="Hablar con LUCIA">
+            <i class="bi bi-mic-fill"></i>
+          </button>
+          <div class="mic-ripple"></div>
+        </div>
+        
+        <h5 class="text-white fw-bold mb-2">Haz clic y habla con LUCIA</h5>
+        <p class="text-white-50 mb-4">Di <strong>"lucia"</strong> seguido de tu comando</p>
+        
+        <!-- Input de texto alternativo -->
+        <div class="row justify-content-center">
+          <div class="col-12 col-sm-10 col-md-8">
+            <div class="input-group input-group-lg">
+              <input type="text" id="inputTexto" class="form-control" 
+                     placeholder="O escribe tu comando aquí..." 
+                     onkeypress="if(event.key==='Enter') enviarTexto()">
+              <button class="btn btn-light" onclick="enviarTexto()" title="Enviar">
+                <i class="bi bi-send-fill text-primary"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Comandos Rápidos - Grid Responsive -->
+<div class="row justify-content-center mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-0 bg-white py-3">
+        <h5 class="mb-0 fw-bold text-center" style="color: #059669;">
+          <i class="bi bi-lightning-fill me-2"></i>Comandos Rápidos
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 g-md-3">
+          <div class="col-6 col-md-4 col-lg-3">
+            <button class="btn btn-comando w-100" onclick="enviarComandoRapido('lucia ver equipos')">
+              <i class="bi bi-cpu"></i>
+              <span>Ver Equipos</span>
+            </button>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <button class="btn btn-comando w-100" onclick="enviarComandoRapido('lucia ir a reservas')">
+              <i class="bi bi-calendar-check"></i>
+              <span>Mis Reservas</span>
+            </button>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <button class="btn btn-comando w-100" onclick="enviarComandoRapido('lucia ir a laboratorios')">
+              <i class="bi bi-building"></i>
+              <span>Laboratorios</span>
+            </button>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <button class="btn btn-comando w-100" onclick="enviarComandoRapido('lucia ir a usuarios')">
+              <i class="bi bi-people"></i>
+              <span>Usuarios</span>
+            </button>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <button class="btn btn-comando w-100" onclick="enviarComandoRapido('lucia ver reportes')">
+              <i class="bi bi-graph-up"></i>
+              <span>Reportes</span>
+            </button>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <button class="btn btn-comando w-100" onclick="enviarComandoRapido('lucia ir a mantenimiento')">
+              <i class="bi bi-tools"></i>
+              <span>Mantenimiento</span>
+            </button>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <button class="btn btn-comando w-100" onclick="enviarComandoRapido('lucia mi perfil')">
+              <i class="bi bi-person-circle"></i>
+              <span>Mi Perfil</span>
+            </button>
+          </div>
+          <div class="col-6 col-md-4 col-lg-3">
+            <button class="btn btn-comando w-100" onclick="enviarComandoRapido('lucia ayuda')">
+              <i class="bi bi-question-circle"></i>
+              <span>Ayuda</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Panel de Conversación -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header border-0 bg-white">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-bold" style="color: #059669;">
+            <i class="bi bi-chat-dots me-2"></i>Conversación
+          </h6>
+          <button class="btn btn-sm btn-outline-secondary" onclick="limpiarConversacion()">
+            <i class="bi bi-trash me-1"></i>Limpiar
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <!-- Área de Chat -->
+        <div id="chatArea" class="chat-area p-3" style="height: 350px; overflow-y: auto; background: #f8f9fa;">
+          <!-- Mensaje de bienvenida -->
+          <div class="chat-message assistant mb-3">
+            <div class="d-flex align-items-start">
+              <div class="avatar-lucia me-2">
+                <i class="bi bi-robot"></i>
+              </div>
+              <div class="message-content">
+                <div class="message-bubble assistant-bubble">
+                  ¡Hola! Soy <strong>LUCIA</strong>, tu asistente virtual del laboratorio. 
+                  Puedo ayudarte a navegar por el sistema, reservar equipos, consultar disponibilidad y mucho más.
+                </div>
+                <small class="text-muted">Ahora</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Panel Lateral -->
+  <div class="col-lg-4">
+    <!-- Estado del Sistema -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header border-0" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+        <h6 class="mb-0 text-white fw-bold">
+          <i class="bi bi-gear me-2"></i>Estado del Sistema
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="small">Reconocimiento de Voz</span>
+            <span id="speechStatus" class="badge bg-secondary">--</span>
+          </div>
+          <div class="progress" style="height: 4px;">
+            <div id="speechProgress" class="progress-bar" style="width: 0%"></div>
+          </div>
+        </div>
+        <div>
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="small">Clasificador NLU</span>
+            <span id="nluStatus" class="badge bg-secondary">--</span>
+          </div>
+          <div class="progress" style="height: 4px;">
+            <div id="nluProgress" class="progress-bar" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Estadísticas -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-0 bg-white">
+        <h6 class="mb-0 fw-bold" style="color: #059669;">
+          <i class="bi bi-bar-chart me-2"></i>Mis Estadísticas
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row text-center g-2">
+          <div class="col-6">
+            <div class="p-2 rounded" style="background: #d1fae5;">
+              <h4 class="mb-0 fw-bold" style="color: #059669;" id="statTotal">0</h4>
+              <small class="text-muted">Interacciones</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 rounded" style="background: #dcfce7;">
+              <h4 class="mb-0 fw-bold text-success" id="statExito">0%</h4>
+              <small class="text-muted">Tasa éxito</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 rounded" style="background: #dbeafe;">
+              <h4 class="mb-0 fw-bold text-primary" id="statConfianza">0%</h4>
+              <small class="text-muted">Confianza</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 rounded" style="background: #fef3c7;">
+              <h4 class="mb-0 fw-bold text-warning" id="statTiempo">0ms</h4>
+              <small class="text-muted">Tiempo resp.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Configuración de Micrófono -->
+<div class="modal fade" id="modalMicConfig" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);">
+        <h5 class="modal-title text-white">
+          <i class="bi bi-mic me-2"></i>Configuración de Micrófono
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>
+          Para usar el asistente de voz, necesitas permitir el acceso al micrófono.
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Seleccionar micrófono:</label>
+          <select id="selectMicrophone" class="form-select">
+            <option value="">Cargando dispositivos...</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Nivel de entrada:</label>
+          <div class="progress" style="height: 20px;">
+            <div id="micLevel" class="progress-bar bg-success" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" onclick="probarMicrofono()">
+          <i class="bi bi-mic me-1"></i>Probar Micrófono
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* === CARD PRINCIPAL DEL MICRÓFONO === */
+.mic-main-card {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  border-radius: 20px;
+}
+
+.mic-container {
+  position: relative;
+  display: inline-block;
+}
+
+.mic-button-large {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  color: #059669;
+  font-size: 3rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 2;
+}
+
+.mic-button-large:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  color: #059669;
+  background: white;
+}
+
+.mic-button-large.listening {
+  background: #dc2626;
+  color: white;
+  animation: pulse-mic-large 1.5s infinite;
+}
+
+@keyframes pulse-mic-large {
+  0%, 100% { transform: scale(1); box-shadow: 0 8px 30px rgba(220, 38, 38, 0.4); }
+  50% { transform: scale(1.08); box-shadow: 0 12px 50px rgba(220, 38, 38, 0.6); }
+}
+
+.mic-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  animation: ripple 2s infinite;
+  z-index: 1;
+}
+
+@keyframes ripple {
+  0% { width: 120px; height: 120px; opacity: 1; }
+  100% { width: 200px; height: 200px; opacity: 0; }
+}
+
+/* Animación de escucha grande */
+.listening-animation-large {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.listening-dot-large {
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  animation: bounce-dot-large 0.6s infinite alternate;
+}
+
+.listening-dot-large:nth-child(2) { animation-delay: 0.2s; }
+.listening-dot-large:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce-dot-large {
+  from { transform: translateY(0); opacity: 0.4; }
+  to { transform: translateY(-15px); opacity: 1; }
+}
+
+/* === BOTONES DE COMANDOS RÁPIDOS === */
+.btn-comando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 10px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+  color: #374151;
+  transition: all 0.3s ease;
+  min-height: 80px;
+}
+
+.btn-comando i {
+  font-size: 1.5rem;
+  color: #059669;
+  margin-bottom: 5px;
+}
+
+.btn-comando span {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.btn-comando:hover {
+  border-color: #059669;
+  background: #d1fae5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.15);
+}
+
+.btn-comando:active {
+  transform: translateY(0);
+}
+
+/* === ESTILOS DEL CHAT === */
+.avatar-lucia {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.avatar-user {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.message-bubble {
+  padding: 12px 16px;
+  border-radius: 18px;
+  max-width: 85%;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.assistant-bubble {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-top-left-radius: 4px;
+}
+
+.user-bubble {
+  background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);
+  color: white;
+  border-top-right-radius: 4px;
+  margin-left: auto;
+}
+
+.chat-message.user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.chat-message.user .message-content {
+  text-align: right;
+}
+
+.chat-message.user .d-flex {
+  flex-direction: row-reverse;
+}
+
+.chat-message.user .avatar-user {
+  margin-left: 8px;
+  margin-right: 0;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .mic-button-large {
+    width: 100px;
+    height: 100px;
+    font-size: 2.5rem;
+  }
+  
+  .mic-ripple {
+    width: 100px;
+    height: 100px;
+  }
+  
+  @keyframes ripple {
+    0% { width: 100px; height: 100px; opacity: 1; }
+    100% { width: 160px; height: 160px; opacity: 0; }
+  }
+  
+  .btn-comando {
+    min-height: 70px;
+    padding: 12px 8px;
+  }
+  
+  .btn-comando i {
+    font-size: 1.3rem;
+  }
+  
+  .btn-comando span {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .mic-button-large {
+    width: 90px;
+    height: 90px;
+    font-size: 2rem;
+  }
+  
+  .mic-main-card .card-body {
+    padding: 30px 15px !important;
+  }
+}
+
+/* === BOTÓN DE MICRÓFONO PEQUEÑO (para chat) === */
+.mic-button {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+}
+
+.mic-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  color: white;
+}
+
+.mic-button.listening {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  animation: pulse-mic 1.5s infinite;
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+}
+
+@keyframes pulse-mic {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Animación de escucha */
+.listening-animation {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.listening-dot {
+  width: 12px;
+  height: 12px;
+  background: #7c3aed;
+  border-radius: 50%;
+  animation: bounce-dot 0.6s infinite alternate;
+}
+
+.listening-dot:nth-child(2) { animation-delay: 0.2s; }
+.listening-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce-dot {
+  from { transform: translateY(0); opacity: 0.4; }
+  to { transform: translateY(-10px); opacity: 1; }
+}
+
+/* Scrollbar personalizado */
+.chat-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-area::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.chat-area::-webkit-scrollbar-thumb {
+  background: #c4b5fd;
+  border-radius: 3px;
+}
+
+.chat-area::-webkit-scrollbar-thumb:hover {
+  background: #7c3aed;
+}
+
+/* Badges de intención */
+.intent-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #f3e8ff;
+  color: #7c3aed;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+/* Datos adicionales en respuesta */
+.response-data {
+  margin-top: 10px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.response-data ul {
+  margin: 0;
+  padding-left: 20px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// === VARIABLES GLOBALES ===
+let recognition = null;
+let isListening = false;
+let listeningTimeout = null;
+const LISTENING_DURATION = 10 * 60 * 1000; // 10 minutos en milisegundos
+
+// === INICIALIZACIÓN ===
+document.addEventListener('DOMContentLoaded', function() {
+    verificarEstadoSistema();
+    cargarEstadisticas();
+    inicializarSpeechRecognition();
+});
+
+// === WEB SPEECH API ===
+function inicializarSpeechRecognition() {
+    // Verificar soporte del navegador
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+        console.warn('Web Speech API no soportada en este navegador');
+        actualizarEstadoSpeech(false, 'No soportado');
+        document.getElementById('btnMicrophone').disabled = true;
+        document.getElementById('btnMicrophone').title = 'Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.';
+        return;
+    }
+    
+    // Crear instancia de reconocimiento
+    recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';  // Español
+    recognition.continuous = true;  // Escucha continua (hasta 10 minutos)
+    recognition.interimResults = true;  // Mostrar resultados parciales
+    recognition.maxAlternatives = 1;
+    
+    // Evento: resultado de reconocimiento
+    recognition.onresult = function(event) {
+        let textoFinal = '';
+        let textoInterino = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+                textoFinal += transcript;
+            } else {
+                textoInterino += transcript;
+            }
+        }
+        
+        // Mostrar texto interino en el input
+        if (textoInterino) {
+            document.getElementById('inputTexto').value = textoInterino;
+        }
+        
+        // Procesar texto final
+        if (textoFinal) {
+            console.log('🎤 Texto reconocido:', textoFinal);
+            document.getElementById('inputTexto').value = textoFinal;
+            procesarTextoReconocido(textoFinal);
+        }
+    };
+    
+    // Evento: inicio de escucha
+    recognition.onstart = function() {
+        console.log('🎤 Escuchando... (máximo 10 minutos)');
+        isListening = true;
+        document.getElementById('btnMicrophone').classList.add('listening');
+        document.getElementById('listeningIndicator').classList.remove('d-none');
+        document.getElementById('micContainer').classList.add('d-none');
+        
+        // Timeout de 10 minutos
+        if (listeningTimeout) clearTimeout(listeningTimeout);
+        listeningTimeout = setTimeout(() => {
+            if (isListening) {
+                console.log('⏱️ Tiempo de escucha agotado (10 min)');
+                recognition.stop();
+                agregarMensajeChat('assistant', 'El tiempo de escucha ha terminado (10 minutos). Haz clic en el micrófono para continuar.');
+            }
+        }, LISTENING_DURATION);
+    };
+    
+    // Evento: fin de escucha
+    recognition.onend = function() {
+        console.log('🎤 Fin de escucha');
+        isListening = false;
+        document.getElementById('btnMicrophone').classList.remove('listening');
+        document.getElementById('listeningIndicator').classList.add('d-none');
+        document.getElementById('micContainer').classList.remove('d-none');
+        
+        // Limpiar timeout
+        if (listeningTimeout) {
+            clearTimeout(listeningTimeout);
+            listeningTimeout = null;
+        }
+    };
+    
+    // Evento: error
+    recognition.onerror = function(event) {
+        console.error('Error de reconocimiento:', event.error);
+        isListening = false;
+        document.getElementById('btnMicrophone').classList.remove('listening');
+        document.getElementById('listeningIndicator').classList.add('d-none');
+        
+        let mensaje = '';
+        switch(event.error) {
+            case 'no-speech':
+                mensaje = 'No detecté ninguna voz. Intenta de nuevo.';
+                break;
+            case 'audio-capture':
+                mensaje = 'No se pudo acceder al micrófono. Verifica los permisos.';
+                break;
+            case 'not-allowed':
+                mensaje = 'Permiso de micrófono denegado. Habilítalo en la configuración del navegador.';
+                break;
+            case 'network':
+                mensaje = 'Error de red. Verifica tu conexión a internet.';
+                break;
+            default:
+                mensaje = 'Error de reconocimiento de voz. Intenta de nuevo.';
+        }
+        agregarMensajeChat('assistant', mensaje);
+    };
+    
+    actualizarEstadoSpeech(true, 'Disponible');
+    console.log('✅ Web Speech API inicializada');
+}
+
+function actualizarEstadoSpeech(disponible, texto) {
+    document.getElementById('speechStatus').textContent = texto;
+    document.getElementById('speechStatus').className = `badge ${disponible ? 'bg-success' : 'bg-danger'}`;
+    document.getElementById('speechProgress').style.width = disponible ? '100%' : '0%';
+    document.getElementById('speechProgress').className = `progress-bar ${disponible ? 'bg-success' : 'bg-danger'}`;
+}
+
+function toggleSpeechRecognition() {
+    if (!recognition) {
+        agregarMensajeChat('assistant', 'El reconocimiento de voz no está disponible en tu navegador. Usa Chrome o Edge.');
+        return;
+    }
+    
+    if (isListening) {
+        recognition.stop();
+    } else {
+        try {
+            recognition.start();
+        } catch (e) {
+            console.error('Error iniciando reconocimiento:', e);
+            // Si ya está corriendo, detenerlo y reiniciar
+            recognition.stop();
+            setTimeout(() => recognition.start(), 100);
+        }
+    }
+}
+
+async function procesarTextoReconocido(texto) {
+    if (!texto.trim()) return;
+    
+    // Limpiar input
+    document.getElementById('inputTexto').value = '';
+    
+    // Mostrar mensaje del usuario
+    agregarMensajeChat('user', texto);
+    
+    // Mostrar indicador de procesamiento
+    document.getElementById('processingIndicator').classList.remove('d-none');
+    
+    try {
+        const response = await fetch('/api/voz/procesar-texto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ texto })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            agregarMensajeChat('assistant', data.respuesta, {
+                intencion: data.intencion,
+                confianza: data.confianza,
+                datos: data.datos
+            });
+            
+            hablar(data.respuesta);
+            cargarEstadisticas();
+            
+            // Verificar si debe redirigir
+            manejarRedireccion(data.intencion, data.accion, data.datos);
+        } else {
+            agregarMensajeChat('assistant', data.error || 'Ocurrió un error.');
+        }
+        
+    } catch (error) {
+        console.error('Error procesando texto:', error);
+        agregarMensajeChat('assistant', 'Error de conexión.');
+    } finally {
+        document.getElementById('processingIndicator').classList.add('d-none');
+    }
+}
+
+// === VERIFICAR ESTADO DEL SISTEMA ===
+async function verificarEstadoSistema() {
+    try {
+        const response = await fetch('/api/voz/status', {
+            credentials: 'same-origin'
+        });
+        const data = await response.json();
+        
+        // Actualizar estado de NLU
+        const nluReady = data.nlu?.ready || false;
+        document.getElementById('nluStatus').textContent = nluReady ? 'Activo' : 'No disponible';
+        document.getElementById('nluStatus').className = `badge ${nluReady ? 'bg-success' : 'bg-danger'}`;
+        document.getElementById('nluProgress').style.width = nluReady ? '100%' : '0%';
+        document.getElementById('nluProgress').className = `progress-bar ${nluReady ? 'bg-success' : 'bg-danger'}`;
+        
+        // Actualizar badge general
+        const statusBadge = document.getElementById('statusBadge');
+        if (data.ready) {
+            statusBadge.innerHTML = '<i class="bi bi-check-circle me-1"></i>Sistema Listo';
+            statusBadge.className = 'badge bg-success px-3 py-2';
+        } else {
+            statusBadge.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Servicios Limitados';
+            statusBadge.className = 'badge bg-warning text-dark px-3 py-2';
+        }
+        
+    } catch (error) {
+        console.error('Error verificando estado:', error);
+        document.getElementById('statusBadge').innerHTML = '<i class="bi bi-x-circle me-1"></i>Error de conexión';
+        document.getElementById('statusBadge').className = 'badge bg-danger px-3 py-2';
+    }
+}
+
+// === ENVIAR TEXTO ===
+async function enviarTexto() {
+    const input = document.getElementById('inputTexto');
+    const texto = input.value.trim();
+    
+    if (!texto) return;
+    
+    // Limpiar input
+    input.value = '';
+    
+    // Mostrar mensaje del usuario
+    agregarMensajeChat('user', texto);
+    
+    // Mostrar indicador de procesamiento
+    document.getElementById('processingIndicator').classList.remove('d-none');
+    
+    try {
+        const response = await fetch('/api/voz/procesar-texto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ texto })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            agregarMensajeChat('assistant', data.respuesta, {
+                intencion: data.intencion,
+                confianza: data.confianza,
+                datos: data.datos
+            });
+            
+            hablar(data.respuesta);
+            cargarEstadisticas();
+            
+            // Verificar si debe redirigir
+            manejarRedireccion(data.intencion, data.accion, data.datos);
+        } else {
+            agregarMensajeChat('assistant', data.error || 'Ocurrió un error.');
+        }
+        
+    } catch (error) {
+        console.error('Error enviando texto:', error);
+        agregarMensajeChat('assistant', 'Error de conexión.');
+    } finally {
+        document.getElementById('processingIndicator').classList.add('d-none');
+    }
+}
+
+// === MANEJAR REDIRECCIÓN ===
+function manejarRedireccion(intencion, accion, datos) {
+    console.log('🔄 Verificando redirección:', intencion, accion, datos);
+    
+    // Comando especial: apagar micrófono
+    if (intencion === 'apagar_microfono') {
+        console.log('🔇 Apagando micrófono por comando de voz');
+        setTimeout(() => {
+            if (recognition && isListening) {
+                recognition.stop();
+            }
+        }, 2000); // Esperar a que LUCIA termine de hablar
+        return;
+    }
+    
+    // Si el backend envía una acción de redirección con URL en datos
+    if (accion === 'redirect' && datos && datos.url) {
+        console.log('➡️ Redirigiendo a:', datos.url);
+        setTimeout(() => {
+            window.location.href = datos.url;
+        }, 1500); // Esperar 1.5s para que el usuario vea la respuesta
+        return;
+    }
+    
+    // Fallback: mapeo de intenciones a rutas
+    const rutas = {
+        // Gestión
+        'ir_dashboard': '/dashboard',
+        'ir_buscador': '/inventario',
+        'ir_usuarios': '/usuarios',
+        'ir_roles': '/roles',
+        'ir_programas': '/programas',
+        'listar_equipos': '/equipos',
+        'consultar_equipo': '/equipos',
+        'consultar_laboratorio': '/laboratorios',
+        'ir_practicas': '/practicas',
+        'listar_reservas': '/reservas',
+        'crear_reserva': '/reservas',
+        'cancelar_reserva': '/reservas',
+        'consultar_mantenimiento': '/mantenimiento',
+        'ir_capacitaciones': '/capacitaciones',
+        'reporte': '/reportes',
+        // IA
+        'ir_reconocimiento': '/reconocimiento',
+        'ir_registro_facial': '/registro-facial',
+        'ir_ia_visual': '/entrenamiento-ia',
+        'ir_nuevo_equipo_ia': '/registro-equipos-ia',
+        'ir_gestionar_registros': '/registros-gestion',
+        // Admin
+        'ir_backup': '/backup',
+        'ir_configuracion': '/configuracion',
+        // Usuario
+        'ir_perfil': '/perfil',
+        'ir_ayuda': '/ayuda',
+        'cerrar_sesion': '/logout'
+    };
+    
+    const ruta = rutas[intencion];
+    
+    if (ruta) {
+        console.log('➡️ Redirigiendo (fallback) a:', ruta);
+        setTimeout(() => {
+            window.location.href = ruta;
+        }, 1500);
+    }
+}
+
+// === COMANDO RÁPIDO ===
+function enviarComandoRapido(comando) {
+    document.getElementById('inputTexto').value = comando;
+    enviarTexto();
+}
+
+// === AGREGAR MENSAJE AL CHAT ===
+function agregarMensajeChat(tipo, mensaje, metadata = null) {
+    const chatArea = document.getElementById('chatArea');
+    const now = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    
+    let html = '';
+    
+    if (tipo === 'user') {
+        html = `
+            <div class="chat-message user mb-3">
+                <div class="d-flex align-items-start">
+                    <div class="message-content">
+                        <div class="message-bubble user-bubble">${escapeHtml(mensaje)}</div>
+                        <small class="text-muted">${now}</small>
+                    </div>
+                    <div class="avatar-user ms-2">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        let metadataHtml = '';
+        if (metadata) {
+            if (metadata.intencion) {
+                metadataHtml += `<span class="intent-badge"><i class="bi bi-tag me-1"></i>${metadata.intencion}</span>`;
+            }
+            if (metadata.confianza) {
+                metadataHtml += ` <span class="intent-badge"><i class="bi bi-graph-up me-1"></i>${Math.round(metadata.confianza * 100)}%</span>`;
+            }
+        }
+        
+        html = `
+            <div class="chat-message assistant mb-3">
+                <div class="d-flex align-items-start">
+                    <div class="avatar-lucia me-2">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-bubble assistant-bubble">${formatearMensaje(mensaje)}</div>
+                        ${metadataHtml}
+                        <br><small class="text-muted">${now}</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    chatArea.insertAdjacentHTML('beforeend', html);
+    chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+// === FORMATEAR MENSAJE ===
+function formatearMensaje(mensaje) {
+    // Convertir saltos de línea
+    let formatted = escapeHtml(mensaje).replace(/\n/g, '<br>');
+    
+    // Convertir listas con •
+    formatted = formatted.replace(/• /g, '<br>• ');
+    
+    return formatted;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// === SÍNTESIS DE VOZ ===
+function hablar(texto) {
+    if ('speechSynthesis' in window) {
+        // Cancelar cualquier síntesis anterior
+        speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(texto);
+        utterance.lang = 'es-ES';
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        
+        // Buscar voz en español
+        const voices = speechSynthesis.getVoices();
+        const spanishVoice = voices.find(v => v.lang.startsWith('es'));
+        if (spanishVoice) {
+            utterance.voice = spanishVoice;
+        }
+        
+        speechSynthesis.speak(utterance);
+    }
+}
+
+// === CARGAR ESTADÍSTICAS ===
+async function cargarEstadisticas() {
+    try {
+        const response = await fetch('/api/voz/estadisticas', {
+            credentials: 'same-origin'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            const stats = data.estadisticas;
+            document.getElementById('statTotal').textContent = stats.total_interacciones || 0;
+            document.getElementById('statExito').textContent = (stats.tasa_exito || 0) + '%';
+            document.getElementById('statConfianza').textContent = (stats.confianza_promedio || 0) + '%';
+            document.getElementById('statTiempo').textContent = Math.round(stats.duracion_promedio_ms || 0) + 'ms';
+        }
+    } catch (error) {
+        console.error('Error cargando estadísticas:', error);
+    }
+}
+
+// === LIMPIAR CONVERSACIÓN ===
+function limpiarConversacion() {
+    const chatArea = document.getElementById('chatArea');
+    chatArea.innerHTML = `
+        <div class="chat-message assistant mb-3">
+            <div class="d-flex align-items-start">
+                <div class="avatar-lucia me-2">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-bubble assistant-bubble">
+                        ¡Conversación limpiada! ¿En qué puedo ayudarte?
+                    </div>
+                    <small class="text-muted">Ahora</small>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// === PROBAR MICRÓFONO ===
+async function probarMicrofono() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        
+        analyser.fftSize = 256;
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        
+        function updateLevel() {
+            analyser.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+            const level = Math.min(100, (average / 128) * 100);
+            document.getElementById('micLevel').style.width = level + '%';
+            
+            if (audioContext.state !== 'closed') {
+                requestAnimationFrame(updateLevel);
+            }
+        }
+        
+        updateLevel();
+        
+        // Detener después de 5 segundos
+        setTimeout(() => {
+            stream.getTracks().forEach(track => track.stop());
+            if (audioContext) {
+                audioContext.close();
+            }
+            document.getElementById('micLevel').style.width = '0%';
+        }, 5000);
+        
+    } catch (error) {
+        console.error('Error probando micrófono:', error);
+        alert('No se pudo acceder al micrófono. Verifica los permisos.');
+    }
+}
+
+// Cargar voces cuando estén disponibles
+if ('speechSynthesis' in window) {
+    speechSynthesis.onvoiceschanged = () => {
+        speechSynthesis.getVoices();
+    };
+}
+</script>
+{% endblock %}

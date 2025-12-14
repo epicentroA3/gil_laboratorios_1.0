@@ -1,0 +1,71 @@
+<!-- Footer Component -->
+<footer class="footer-minimal mt-auto">
+  <div class="footer-carousel-wrapper">
+    <!-- Slide 1: Sistema -->
+    <div class="footer-slide active text-center" data-slide="1">
+      <p class="footer-title mb-2">
+        <i class="bi bi-c-circle me-1"></i>2025 Centro Minero SENA | Sistema v1.0
+      </p>
+      <p class="footer-subtitle mb-0">
+        Sistema de Gestión de Laboratorios - Regional Boyacá
+      </p>
+    </div>
+    
+    <!-- Slide 2: Desarrolladores -->
+    <div class="footer-slide text-center" data-slide="2">
+      <p class="footer-title mb-2">Desarrollado por</p>
+      <p class="footer-subtitle mb-0">
+        Stiven Suarez
+      </p>
+    </div>
+    
+    <!-- Slide 3: Contacto -->
+    <div class="footer-slide text-center" data-slide="3">
+      <p class="footer-title mb-2">Contacto</p>
+      <p class="footer-subtitle mb-0">
+        Sogamoso, Boyacá · (604) 444 0400 · gilcentrominero@gmail.com
+      </p>
+    </div>
+  </div>
+  
+  <!-- Indicadores -->
+  <div class="footer-dots">
+    <span class="dot active" data-slide="1"></span>
+    <span class="dot" data-slide="2"></span>
+    <span class="dot" data-slide="3"></span>
+  </div>
+</footer>
+
+<script>
+// Footer Carousel
+document.addEventListener('DOMContentLoaded', function() {
+  const slides = document.querySelectorAll('.footer-slide');
+  const dots = document.querySelectorAll('.footer-dots .dot');
+  let currentSlide = 0;
+  
+  function showSlide(index) {
+    slides.forEach((slide, i) => {
+      slide.classList.toggle('active', i === index);
+    });
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === index);
+    });
+  }
+  
+  function nextSlide() {
+    currentSlide = (currentSlide + 1) % slides.length;
+    showSlide(currentSlide);
+  }
+  
+  // Auto-rotate every 5 seconds
+  setInterval(nextSlide, 5000);
+  
+  // Click on dots
+  dots.forEach((dot, index) => {
+    dot.addEventListener('click', () => {
+      currentSlide = index;
+      showSlide(currentSlide);
+    });
+  });
+});
+</script>

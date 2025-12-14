@@ -1,0 +1,424 @@
+{% extends 'base.html' %}
+{% set title = 'Backup de Base de Datos' %}
+{% block content %}
+
+<style>
+/* FIX CRÍTICO: Asegurar que el modal esté SIEMPRE encima del backdrop */
+#modalRestore.modal,
+#modalDelete.modal {
+    z-index: 9999 !important;
+}
+
+#modalRestore .modal-dialog,
+#modalDelete .modal-dialog {
+    z-index: 10000 !important;
+}
+
+#modalRestore .modal-content,
+#modalDelete .modal-content {
+    z-index: 10001 !important;
+    position: relative;
+}
+
+/* Backdrop debe estar DEBAJO */
+.modal-backdrop {
+    z-index: 9998 !important;
+}
+
+/* Asegurar que los botones sean clickeables */
+#modalRestore button,
+#modalDelete button,
+#modalRestore .btn,
+#modalDelete .btn {
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 10002 !important;
+}
+</style>
+
+<div class="backup-header">
+    <i class="bi bi-database" style="font-size: 3em; margin-bottom: 15px;"></i>
+    <h1>Gestión de Backups</h1>
+    <p class="mb-0">Crea y restaura copias de seguridad de la base de datos</p>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category=='error' else category }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="backup-card">
+            <h4 class="mb-4"><i class="bi bi-plus-circle me-2"></i>Crear Nuevo Backup</h4>
+            
+            <div class="warning-box">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <small><strong>Importante:</strong> El proceso puede tardar varios minutos dependiendo del tamaño de la base de datos.</small>
+            </div>
+
+            <form method="POST" action="{{ url_for('backup') }}">
+                <input type="hidden" name="action" value="create">
+                <div class="d-grid">
+                    <button type="submit" class="btn-create-backup">
+                        <i class="bi bi-cloud-arrow-up me-2"></i>Crear Backup Ahora
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-4">
+                <h6 class="mb-3">Información del Backup</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Incluye todas las tablas
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Incluye procedimientos y triggers
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Formato SQL estándar
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Compresión automática
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="backup-card">
+            <h4 class="mb-4"><i class="bi bi-archive me-2"></i>Backups Disponibles ({{ backups|length }})</h4>
+
+            {% if backups %}
+                {% for backup in backups %}
+                <div class="backup-item">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <div class="backup-icon">
+                                <i class="bi bi-file-earmark-zip"></i>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <h6 class="mb-1">{{ backup.nombre }}</h6>
+                            <small class="text-muted">
+                                <i class="bi bi-calendar me-1"></i>{{ backup.fecha }}
+                                <span class="mx-2">|</span>
+                                <i class="bi bi-hdd me-1"></i>{{ backup.tamaño }}
+                            </small>
+                        </div>
+                        <div class="col-auto">
+                            <a href="{{ url_for('download_backup', filename=backup.nombre) }}" 
+                               class="btn btn-sm btn-outline-primary"
+                               title="Descargar backup">
+                                <i class="bi bi-download me-1"></i>Descargar
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-success ms-2" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalRestore"
+                                    data-backup="{{ backup.nombre }}"
+                                    title="Restaurar backup">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Restaurar
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-2"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalDelete"
+                                    data-backup="{{ backup.nombre }}"
+                                    title="Eliminar backup">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 4em; color: #ccc;"></i>
+                    <p class="text-muted mt-3">No hay backups disponibles</p>
+                    <p class="text-muted">Crea tu primer backup usando el botón de la izquierda</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="backup-card">
+            <h5 class="mb-3"><i class="bi bi-info-circle me-2"></i>Recomendaciones</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="alert alert-success">
+                        <strong>✓ Buenas Prácticas:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Crear backups diarios</li>
+                            <li>Mantener al menos 7 backups</li>
+                            <li>Verificar backups periódicamente</li>
+                            <li>Guardar copias en ubicación externa</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Precauciones:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Restaurar cierra todas las conexiones</li>
+                            <li>Los datos actuales se sobrescriben</li>
+                            <li>El proceso no se puede deshacer</li>
+                            <li>Notifica a los usuarios antes</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirmar Restauración -->
+<div class="modal fade" id="modalRestore" tabindex="-1" data-bs-backdrop="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Confirmar Restauración
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-shield-exclamation me-2"></i>
+                    <strong>¡ADVERTENCIA!</strong> Esta acción sobrescribirá todos los datos actuales de la base de datos.
+                </div>
+                <p>¿Estás seguro de que deseas restaurar este backup?</p>
+                <p class="mb-0"><strong>Archivo:</strong> <span id="backupFileName"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{{ url_for('backup') }}" style="display: inline;">
+                    <input type="hidden" name="action" value="restore">
+                    <input type="hidden" name="backup_file" id="backupFileInput">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Sí, Restaurar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirmar Eliminación -->
+<div class="modal fade" id="modalDelete" tabindex="-1" data-bs-backdrop="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-trash me-2"></i>Confirmar Eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>¡ATENCIÓN!</strong> Esta acción no se puede deshacer.
+                </div>
+                <p>¿Estás seguro de que deseas eliminar este backup?</p>
+                <p class="mb-0"><strong>Archivo:</strong> <span id="deleteFileName"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{{ url_for('backup') }}" style="display: inline;">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="backup_file" id="deleteFileInput">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-2"></i>Sí, Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay se crea dinámicamente con JavaScript -->
+
+<script>
+    // Pasar nombre del backup a los modales
+    document.addEventListener('DOMContentLoaded', function() {
+        let loadingOverlay = null;
+        let loadingTimer = null;
+        let loadingSeconds = 0;
+        
+        // Función para crear el overlay dinámicamente
+        function createLoadingOverlay() {
+            if (loadingOverlay) return; // Ya existe
+            
+            loadingOverlay = document.createElement('div');
+            loadingOverlay.id = 'loadingOverlay';
+            loadingOverlay.innerHTML = `
+                <div class="text-center text-white" style="position: relative; max-width: 500px; padding: 40px; background: rgba(45, 106, 79, 0.95); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+                    <button id="emergencyClose" onclick="location.reload()" 
+                            style="display: none; position: absolute; top: 10px; right: 10px; background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                        <i class="bi bi-x-circle me-1"></i>Cerrar y Recargar
+                    </button>
+                    <div class="spinner-border mb-3" role="status" style="width: 4rem; height: 4rem; border-color: white; border-right-color: transparent;">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <h4 id="loadingText" style="color: white; font-weight: 700;">Procesando backup...</h4>
+                    <p class="mb-0" style="color: rgba(255,255,255,0.9);">Por favor espera, esto puede tardar varios minutos</p>
+                    <small class="d-block mt-3" id="loadingTimer" style="color: rgba(255,255,255,0.7); font-size: 16px; font-weight: 600;"></small>
+                </div>
+            `;
+            // NO agregarlo al DOM todavía
+        }
+        
+        // Función para mostrar loading con timer
+        function showLoading(text) {
+            console.log('🔄 Mostrando loading:', text);
+            
+            // Crear el overlay si no existe
+            createLoadingOverlay();
+            
+            // Configurar estilos
+            loadingOverlay.style.position = 'fixed';
+            loadingOverlay.style.top = '0';
+            loadingOverlay.style.left = '0';
+            loadingOverlay.style.width = '100%';
+            loadingOverlay.style.height = '100%';
+            loadingOverlay.style.background = 'rgba(0,0,0,0.85)';
+            loadingOverlay.style.display = 'flex';
+            loadingOverlay.style.justifyContent = 'center';
+            loadingOverlay.style.alignItems = 'center';
+            loadingOverlay.style.zIndex = '99999';
+            
+            // Agregar al DOM
+            document.body.appendChild(loadingOverlay);
+            console.log('✅ Loading overlay agregado al DOM');
+            
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('emergencyClose').style.display = 'none';
+            loadingSeconds = 0;
+            
+            // Iniciar timer
+            loadingTimer = setInterval(() => {
+                loadingSeconds++;
+                const minutes = Math.floor(loadingSeconds / 60);
+                const seconds = loadingSeconds % 60;
+                document.getElementById('loadingTimer').textContent = 
+                    `Tiempo transcurrido: ${minutes}m ${seconds}s`;
+                
+                // Mostrar botón de emergencia después de 30 segundos
+                if (loadingSeconds >= 30) {
+                    document.getElementById('emergencyClose').style.display = 'block';
+                }
+            }, 1000);
+        }
+        
+        // Función para ocultar loading
+        function hideLoading() {
+            if (loadingOverlay && loadingOverlay.parentNode) {
+                loadingOverlay.parentNode.removeChild(loadingOverlay);
+                console.log('✅ Loading overlay removido del DOM');
+            }
+            if (loadingTimer) {
+                clearInterval(loadingTimer);
+                loadingTimer = null;
+            }
+        }
+        
+        // Modal de restauración - Cargar datos
+        const modalRestore = document.getElementById('modalRestore');
+        if (modalRestore) {
+            modalRestore.addEventListener('show.bs.modal', function(event) {
+                // Cargar nombre del backup en el modal
+                const button = event.relatedTarget;
+                const backupName = button.getAttribute('data-backup');
+                document.getElementById('backupFileName').textContent = backupName;
+                document.getElementById('backupFileInput').value = backupName;
+            });
+            
+            // Manejar submit del formulario de restauración
+            const restoreForm = modalRestore.querySelector('form');
+            if (restoreForm) {
+                restoreForm.addEventListener('submit', function(e) {
+                    // Cerrar el modal inmediatamente
+                    const modal = bootstrap.Modal.getInstance(modalRestore);
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // Limpiar backdrop y mostrar loading después de que el modal se cierre
+                    setTimeout(() => {
+                        // Remover todos los backdrops
+                        const backdrops = document.querySelectorAll('.modal-backdrop');
+                        backdrops.forEach(backdrop => backdrop.remove());
+                        
+                        // Restaurar body
+                        document.body.classList.remove('modal-open');
+                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
+                        
+                        // Mostrar overlay de carga
+                        showLoading('Restaurando backup...');
+                    }, 350);
+                });
+            }
+        }
+        
+        // Modal de eliminación - Cargar datos
+        const modalDelete = document.getElementById('modalDelete');
+        if (modalDelete) {
+            modalDelete.addEventListener('show.bs.modal', function(event) {
+                // Cargar nombre del backup en el modal
+                const button = event.relatedTarget;
+                const backupName = button.getAttribute('data-backup');
+                document.getElementById('deleteFileName').textContent = backupName;
+                document.getElementById('deleteFileInput').value = backupName;
+            });
+            
+            // Manejar submit del formulario de eliminación
+            const deleteForm = modalDelete.querySelector('form');
+            if (deleteForm) {
+                deleteForm.addEventListener('submit', function(e) {
+                    // Cerrar el modal inmediatamente
+                    const modal = bootstrap.Modal.getInstance(modalDelete);
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // Limpiar backdrop y mostrar loading después de que el modal se cierre
+                    setTimeout(() => {
+                        // Remover todos los backdrops
+                        const backdrops = document.querySelectorAll('.modal-backdrop');
+                        backdrops.forEach(backdrop => backdrop.remove());
+                        
+                        // Restaurar body
+                        document.body.classList.remove('modal-open');
+                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
+                        
+                        // Mostrar overlay de carga
+                        showLoading('Eliminando backup...');
+                    }, 350);
+                });
+            }
+        }
+        
+        // Manejar submit del formulario de crear backup
+        const createForms = document.querySelectorAll('form');
+        createForms.forEach(form => {
+            const actionInput = form.querySelector('input[name="action"][value="create"]');
+            if (actionInput) {
+                form.addEventListener('submit', function(e) {
+                    showLoading('Creando backup...');
+                });
+            }
+        });
+    });
+</script>
+
+{% endblock %}

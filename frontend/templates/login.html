@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Centro Minero SENA</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    
+    
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="row g-0">
+                <!-- Left Panel -->
+                <div class="col-lg-6">
+                    <div class="login-left slide-in">
+                        <div class="logo-container">
+                            <div class="logo">
+                                <img src="{{ url_for('static', filename='img/logo-sena.jpg') }}" alt="Logo">
+                            </div>
+                            <h2 class="h3 mb-0">Centro Minero</h2>
+                            <p class="mb-0 opacity-75">Sistema de Laboratorio</p>
+                        </div>
+                        
+                        <div class="welcome-text">
+                            <h4 class="mb-4">Sistema Inteligente de Gestión</h4>
+                            <ul class="features-list">
+                                <li>
+                                    <i class="bi bi-gear"></i>
+                                    Gestión de Equipos
+                                </li>
+                                <li>
+                                    <i class="bi bi-box-seam"></i>
+                                    Control de Inventario
+                                </li>
+                                <li>
+                                    <i class="bi bi-calendar-check"></i>
+                                    Sistema de Reservas
+                                </li>
+                                <li>
+                                    <i class="bi bi-mic"></i>
+                                    Comandos de Voz
+                                </li>
+                                <li>
+                                    <i class="bi bi-camera"></i>
+                                    Reconocimiento Facial
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Panel -->
+                <div class="col-lg-6">
+                    <div class="login-right fade-in">
+                        <div class="text-center mb-4">
+                            <h3 class="fw-bold text-dark">Iniciar Sesión</h3>
+                            <p class="text-muted">Ingrese sus credenciales para acceder</p>
+                        </div>
+
+                        <!-- Flash Messages -->
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                        <i class="bi bi-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }} me-2"></i>
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        <!-- Login Form -->
+                        <form method="POST" id="loginForm">
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="user_id" name="user_id" placeholder="Documento" required autocomplete="username">
+                                <label for="user_id">
+                                    <i class="bi bi-person-badge me-2"></i>Número de Documento
+                                </label>
+                            </div>
+
+                            <div class="form-floating mb-3 password-field">
+                                <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required autocomplete="current-password">
+                                <label for="password">
+                                    <i class="bi bi-lock me-2"></i>Contraseña
+                                </label>
+                                <button type="button" class="btn btn-link password-toggle" onclick="togglePassword()">
+                                    <i class="bi bi-eye" id="toggleIcon"></i>
+                                </button>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                                    <label class="form-check-label text-muted" for="remember">
+                                        Recordar sesión
+                                    </label>
+                                </div>
+                                <div class="forgot-password">
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                                        ¿Olvidó su contraseña?
+                                    </a>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-login btn-primary w-100 mb-3" id="submitBtn">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>
+                                Iniciar Sesión
+                            </button>
+                        </form>
+
+                        <div class="divider">
+                            <span>o accede con</span>
+                        </div>
+
+                        <!-- Face Recognition -->
+                        <button type="button" class="btn face-recognition-btn w-100" id="faceRecognitionBtn">
+                            <i class="bi bi-camera me-2"></i>
+                            Reconocimiento Facial
+                        </button>
+
+                        <!-- Help Text -->
+                        <div class="text-center mt-4">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Ingrese su documento y contraseña para acceder
+                            </small>
+                        </div>
+
+                        <!-- Demo Credentials (for development) -->
+                        <div class="demo-credentials mt-3">
+                            <button type="button" class="btn btn-outline-secondary btn-sm w-100" data-bs-toggle="collapse" data-bs-target="#demoInfo">
+                                <i class="bi bi-question-circle me-1"></i>
+                                Ver credenciales de prueba
+                            </button>
+                            <div class="collapse mt-2" id="demoInfo">
+                                <div class="card card-body small bg-light">
+                                    <strong>Usuarios de Prueba:</strong>
+                                    <ul class="mb-1 ps-3">
+                                        <li><code>1098765432</code> - Administrador</li>
+                                        <li><code>1076543210</code> - Instructor</li>
+                                        <li><code>1021098765</code> - Aprendiz</li>
+                                    </ul>
+                                    <strong>Contraseña:</strong> <code>Sena2024*</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Status -->
+                        <div class="status-indicators">
+                            <div class="status-item text-success">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <small>Sistema</small>
+                            </div>
+                            <div class="status-item text-success">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <small>Base Datos</small>
+                            </div>
+                            <div class="status-item text-success">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <small>API</small>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="login-footer">
+                            <small>
+                                © 2024 <a href="https://www.sena.edu.co" target="_blank">SENA</a> - Centro Minero de Sogamoso<br>
+                                Sistema de Gestión Integral de Laboratorios v1.0
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Face Recognition Modal -->
+    <div class="modal fade" id="faceModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-camera me-2"></i>
+                        Reconocimiento Facial
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="cameraContainer">
+                        <video id="video" width="400" height="300" autoplay style="border-radius: 10px;"></video>
+                        <canvas id="canvas" style="display: none;"></canvas>
+                    </div>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-sena" id="captureBtn">
+                            <i class="bi bi-camera me-2"></i>
+                            Capturar Rostro
+                        </button>
+                        <button type="button" class="btn btn-secondary ms-2" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                    </div>
+                    <div id="recognitionStatus" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal fade" id="forgotPasswordModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-key me-2"></i>
+                        Recuperar Contraseña
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        Ingrese su correo electrónico registrado y le enviaremos instrucciones para restablecer su contraseña.
+                    </p>
+                    <form id="forgotPasswordForm">
+                        <div class="form-floating mb-3">
+                            <input type="email" class="form-control" id="recoveryEmail" placeholder="correo@sena.edu.co" required>
+                            <label for="recoveryEmail">
+                                <i class="bi bi-envelope me-2"></i>Correo Electrónico
+                            </label>
+                        </div>
+                        <div id="recoveryStatus" class="mb-3"></div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-sena" id="sendRecoveryBtn">
+                                <i class="bi bi-send me-2"></i>
+                                Enviar Instrucciones
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Si no recuerda su correo, contacte al administrador del sistema.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            }
+        }
+
+        // Form validation
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const userId = document.getElementById('user_id').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!userId) {
+                e.preventDefault();
+                showAlert('Por favor ingrese su número de documento', 'error');
+                document.getElementById('user_id').focus();
+                return;
+            }
+            
+            if (!password) {
+                e.preventDefault();
+                showAlert('Por favor ingrese su contraseña', 'error');
+                document.getElementById('password').focus();
+                return;
+            }
+            
+            if (password.length < 6) {
+                e.preventDefault();
+                showAlert('La contraseña debe tener al menos 6 caracteres', 'error');
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verificando...';
+            submitBtn.disabled = true;
+            
+            // Re-enable if form submission fails
+            setTimeout(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }, 5000);
+        });
+
+        // Face Recognition functionality
+        let video = document.getElementById('video');
+        let canvas = document.getElementById('canvas');
+        let stream = null;
+
+        document.getElementById('faceRecognitionBtn').addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('faceModal'));
+            modal.show();
+            startCamera();
+        });
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 400, height: 300 } 
+                });
+                video.srcObject = stream;
+                document.getElementById('recognitionStatus').innerHTML = 
+                    '<small class="text-info">Posicione su rostro en el centro de la cámara</small>';
+            } catch (err) {
+                document.getElementById('recognitionStatus').innerHTML = 
+                    '<small class="text-danger">Error al acceder a la cámara: ' + err.message + '</small>';
+            }
+        }
+
+        document.getElementById('captureBtn').addEventListener('click', function() {
+            if (stream) {
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0);
+                
+                // Convert to base64
+                const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                
+                // Show processing status
+                this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
+                this.disabled = true;
+                
+                // Simulate face recognition process
+                setTimeout(() => {
+                    document.getElementById('recognitionStatus').innerHTML = 
+                        '<div class="alert alert-info">Procesando reconocimiento facial...</div>';
+                    
+                    // In real implementation, send imageData to server for face recognition
+                    processFaceRecognition(imageData);
+                }, 1000);
+            }
+        });
+
+        function processFaceRecognition(imageData) {
+            // Simulate API call for face recognition
+            fetch('/api/face-recognition', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image: imageData
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.user_id) {
+                    document.getElementById('recognitionStatus').innerHTML = 
+                        '<div class="alert alert-success">¡Usuario reconocido! Redirigiendo...</div>';
+                    
+                    // Auto-fill form and submit
+                    setTimeout(() => {
+                        document.getElementById('user_id').value = data.user_id;
+                        document.querySelector('form').submit();
+                    }, 1500);
+                } else {
+                    document.getElementById('recognitionStatus').innerHTML = 
+                        '<div class="alert alert-warning">No se pudo reconocer el usuario. Intente nuevamente.</div>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('recognitionStatus').innerHTML = 
+                    '<div class="alert alert-danger">Error en el reconocimiento: ' + error.message + '</div>';
+            })
+            .finally(() => {
+                document.getElementById('captureBtn').innerHTML = 
+                    '<i class="bi bi-camera me-2"></i>Capturar Rostro';
+                document.getElementById('captureBtn').disabled = false;
+            });
+        }
+
+        // Stop camera when modal is closed
+        document.getElementById('faceModal').addEventListener('hidden.bs.modal', function() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+        });
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <i class="bi bi-${type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const form = document.querySelector('form');
+            form.parentNode.insertBefore(alertDiv, form);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Auto-hide existing alerts
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert-dismissible');
+            alerts.forEach(alert => {
+                if (alert.classList.contains('show')) {
+                    bootstrap.Alert.getOrCreateInstance(alert).close();
+                }
+            });
+        }, 5000);
+
+        // Focus on user input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('user_id').focus();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('faceRecognitionBtn').click();
+            }
+        });
+
+        // Forgot Password Form Handler
+        document.getElementById('forgotPasswordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('recoveryEmail').value.trim();
+            const statusDiv = document.getElementById('recoveryStatus');
+            const submitBtn = document.getElementById('sendRecoveryBtn');
+            
+            if (!email) {
+                statusDiv.innerHTML = '<div class="alert alert-danger py-2"><i class="bi bi-exclamation-circle me-2"></i>Ingrese su correo electrónico</div>';
+                return;
+            }
+            
+            // Show loading
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
+            submitBtn.disabled = true;
+            
+            // Simulate API call (replace with actual endpoint)
+            setTimeout(() => {
+                statusDiv.innerHTML = '<div class="alert alert-success py-2"><i class="bi bi-check-circle me-2"></i>Si el correo está registrado, recibirá instrucciones en breve.</div>';
+                submitBtn.innerHTML = '<i class="bi bi-send me-2"></i>Enviar Instrucciones';
+                submitBtn.disabled = false;
+                document.getElementById('recoveryEmail').value = '';
+            }, 1500);
+        });
+    </script>
+</body>
+</html>

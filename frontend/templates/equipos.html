@@ -1,0 +1,1624 @@
+{% extends 'base.html' %}
+{% set title = 'Equipos' %}
+{% block content %}
+<!-- Header -->
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+      <h4 class="mb-0"><i class="bi bi-cpu me-2"></i>Gestión de Equipos</h4>
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <div class="input-group" style="width: 220px;">
+          <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+          <input id="filtroEquipos" type="text" class="form-control" placeholder="Buscar equipo...">
+        </div>
+        <select id="filtroEstado" class="form-select" style="width: 160px;">
+          <option value="">Todos los estados</option>
+          <option value="disponible">Disponible</option>
+          <option value="prestado">Prestado</option>
+          <option value="mantenimiento">Mantenimiento</option>
+          <option value="reparacion">Reparación</option>
+          <option value="dado_baja">Dado de baja</option>
+        </select>
+        {% if user and user.get('user_level', 0) >= 3 %}
+        <button class="btn btn-sena" data-bs-toggle="modal" data-bs-target="#modalNuevoEquipo">
+          <i class="bi bi-plus-lg me-1"></i>Nuevo Equipo
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estadísticas rápidas -->
+<div class="row g-2 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body py-3 text-center">
+        <div class="h3 mb-0 text-success fw-bold">{{ equipos|selectattr('estado', 'equalto', 'disponible')|list|length }}</div>
+        <small class="text-muted">Disponibles</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body py-3 text-center">
+        <div class="h3 mb-0 text-info fw-bold">{{ equipos|selectattr('estado', 'equalto', 'prestado')|list|length }}</div>
+        <small class="text-muted">Prestados</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body py-3 text-center">
+        <div class="h3 mb-0 text-warning fw-bold">{{ equipos|selectattr('estado', 'equalto', 'mantenimiento')|list|length }}</div>
+        <small class="text-muted">Mantenimiento</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body py-3 text-center">
+        <div class="h3 mb-0 text-primary fw-bold">{{ equipos|length }}</div>
+        <small class="text-muted">Total Equipos</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="table-responsive shadow-sm bg-white rounded">
+  <table class="table table-hover align-middle mb-0" id="tablaEquipos">
+    <thead class="table-light">
+      <tr>
+        <th style="width:50px"></th>
+        <th>Código</th>
+        <th>Nombre</th>
+        <th>Marca / Modelo</th>
+        <th>Categoría</th>
+        <th><i class="bi bi-building me-1"></i>Laboratorio</th>
+        <th>Estado</th>
+        <th>Condición</th>
+        <th>Mantenimiento</th>
+        <th class="text-center">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in equipos %}
+      <tr data-id="{{ e.id }}" data-codigo="{{ e.codigo_interno|lower }}" data-nombre="{{ e.nombre|lower }}" data-marca="{{ e.marca|lower }}" data-estado="{{ e.estado }}" data-categoria="{{ e.categoria|lower }}">
+        <td>
+          {% if e.imagen_url %}
+          <img src="{{ e.imagen_url }}" alt="" class="rounded" style="width:40px;height:40px;object-fit:cover">
+          {% else %}
+          <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:40px;height:40px">
+            <i class="bi bi-cpu text-muted"></i>
+          </div>
+          {% endif %}
+        </td>
+        <td><code class="text-primary">{{ e.codigo_interno }}</code></td>
+        <td class="fw-semibold">{{ e.nombre }}</td>
+        <td>
+          <span class="text-muted">{{ e.marca }}</span>
+          {% if e.modelo %}<br><small>{{ e.modelo }}</small>{% endif %}
+        </td>
+        <td><span class="badge bg-secondary">{{ e.categoria }}</span></td>
+        <td>
+          <span class="badge bg-primary">
+            {{ e.laboratorio_nombre or 'Sin asignar' }}
+          </span>
+        </td>
+        <td>
+          {% set estado_colors = {'disponible': 'success', 'prestado': 'info', 'mantenimiento': 'warning', 'reparacion': 'orange', 'dado_baja': 'danger'} %}
+          <span class="badge bg-{{ estado_colors.get(e.estado, 'secondary') }}">{{ e.estado|replace('_', ' ')|title }}</span>
+        </td>
+        <td>
+          {% set fisico_colors = {'excelente': 'success', 'bueno': 'primary', 'regular': 'warning', 'malo': 'danger'} %}
+          <span class="badge bg-{{ fisico_colors.get(e.estado_fisico, 'secondary') }}-subtle text-{{ fisico_colors.get(e.estado_fisico, 'secondary') }}">{{ e.estado_fisico|title }}</span>
+        </td>
+        <td>
+          <small class="text-muted d-block">Último: {{ e.ultimo_mantenimiento }}</small>
+          <small class="text-primary">Próximo: {{ e.proximo_mantenimiento }}</small>
+        </td>
+        <td class="text-center">
+          <div class="btn-group btn-group-sm border rounded">
+            <button class="btn btn-outline-primary border-0" title="Ver detalle" data-bs-toggle="modal" data-bs-target="#modalDetalleEquipo" data-equipo='{{ e|tojson }}'>
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-outline-secondary border-0 border-start" title="Generar QR" onclick="generarQR( {{ e.id }} )">
+              <i class="bi bi-qr-code"></i>
+            </button>
+            {% if user and user.get('user_level', 0) >= 3 %}
+            <button class="btn btn-outline-warning border-0 border-start" title="Editar" data-bs-toggle="modal" data-bs-target="#modalEditarEquipo" data-equipo='{{ e|tojson }}'>
+              <i class="bi bi-pencil"></i>
+            </button>
+            {% endif %}
+            {% if e.estado == 'disponible' %}
+            <button class="btn btn-sena border-0 border-start" title="Solicitar Préstamo" data-bs-toggle="modal" data-bs-target="#modalSolicitarPrestamo" data-equipo='{{ e|tojson }}'>
+              <i class="bi bi-box-arrow-right"></i>
+            </button>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal: Nuevo equipo COMPLETO -->
+<div class="modal fade" id="modalNuevoEquipo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-sena text-white">
+        <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Registrar Nuevo Equipo</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Alertas de validación -->
+        <div id="eqValidationAlert" class="alert alert-danger d-none mb-3">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          <span id="eqValidationMsg"></span>
+        </div>
+        
+        <ul class="nav nav-tabs mb-3" id="tabNuevoEquipo">
+          <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tabBasico">Información Básica</a></li>
+          <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabTecnico">Datos Técnicos</a></li>
+          <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabAdquisicion">Adquisición</a></li>
+          <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabImagen">Imagen y QR</a></li>
+        </ul>
+        <div class="tab-content">
+          <!-- Tab: Información Básica -->
+          <div class="tab-pane fade show active" id="tabBasico">
+            <div class="row g-3">
+              <div class="col-md-8">
+                <label class="form-label fw-semibold">Nombre del Equipo <span class="text-danger">*</span></label>
+                <input id="eqNombre" class="form-control" placeholder="Ej: Microscopio óptico" required maxlength="200">
+                <div class="invalid-feedback">El nombre es obligatorio (máx. 200 caracteres)</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Estado Inicial</label>
+                <select id="eqEstado" class="form-select">
+                  <option value="disponible" selected>Disponible</option>
+                  <option value="mantenimiento">Mantenimiento</option>
+                  <option value="reparacion">Reparación</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Categoría <span class="text-danger">*</span></label>
+                <select id="eqCategoria" class="form-select" required>
+                  <option value="">Seleccionar categoría...</option>
+                  {% for cat in categorias %}
+                  <option value="{{ cat.id }}">{{ cat.nombre }}</option>
+                  {% endfor %}
+                </select>
+                <div class="invalid-feedback">Seleccione una categoría</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Laboratorio <span class="text-danger">*</span></label>
+                <select id="eqLaboratorio" class="form-select" required>
+                  <option value="">Seleccionar laboratorio...</option>
+                  {% for lab in laboratorios %}
+                  <option value="{{ lab.id }}">{{ lab.codigo_lab }} - {{ lab.nombre }}</option>
+                  {% endfor %}
+                </select>
+                <div class="invalid-feedback">Seleccione un laboratorio</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Ubicación Específica</label>
+                <input id="eqUbicacion" class="form-control" placeholder="Ej: Mesa 3, Estante A" maxlength="200">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Estado Físico</label>
+                <select id="eqEstadoFisico" class="form-select">
+                  <option value="excelente">Excelente</option>
+                  <option value="bueno" selected>Bueno</option>
+                  <option value="regular">Regular</option>
+                  <option value="malo">Malo</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Descripción</label>
+                <textarea id="eqDescripcion" class="form-control" rows="2" placeholder="Descripción general del equipo..." maxlength="1000"></textarea>
+                <small class="text-muted">Máximo 1000 caracteres</small>
+              </div>
+            </div>
+          </div>
+          <!-- Tab: Datos Técnicos -->
+          <div class="tab-pane fade" id="tabTecnico">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Marca <span class="text-danger">*</span></label>
+                <input id="eqMarca" class="form-control" placeholder="Ej: Olympus" maxlength="100" required>
+                <div class="invalid-feedback">La marca es requerida (máx. 100 caracteres)</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Modelo</label>
+                <input id="eqModelo" class="form-control" placeholder="Ej: CX23" maxlength="100">
+                <div class="invalid-feedback">Máximo 100 caracteres</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Número de Serie</label>
+                <input id="eqNumeroSerie" class="form-control" placeholder="Ej: SN123456789" maxlength="150">
+                <div class="invalid-feedback">Máximo 150 caracteres</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Especificaciones Técnicas</label>
+                <textarea id="eqSpecs" class="form-control" rows="4" placeholder="Características técnicas detalladas..." maxlength="5000"></textarea>
+                <small class="text-muted">Máximo 5000 caracteres</small>
+              </div>
+            </div>
+          </div>
+          <!-- Tab: Adquisición -->
+          <div class="tab-pane fade" id="tabAdquisicion">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Valor de Adquisición <span class="text-danger">*</span></label>
+                <div class="input-group has-validation">
+                  <span class="input-group-text">$</span>
+                  <input id="eqValor" type="number" step="0.01" min="0" max="999999999999" class="form-control" placeholder="0.00" required>
+                  <div class="invalid-feedback">Ingrese un valor válido (mayor o igual a 0)</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Fecha de Adquisición <span class="text-danger">*</span></label>
+                <input id="eqFechaAdquisicion" type="date" class="form-control" required>
+                <div class="invalid-feedback">Seleccione la fecha de adquisición</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Proveedor</label>
+                <input id="eqProveedor" class="form-control" placeholder="Nombre del proveedor" maxlength="200">
+                <div class="invalid-feedback">Máximo 200 caracteres</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Garantía (meses)</label>
+                <input id="eqGarantia" type="number" min="0" max="120" class="form-control" value="12">
+                <div class="invalid-feedback">Debe ser entre 0 y 120 meses</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Vida Útil (años)</label>
+                <input id="eqVidaUtil" type="number" min="1" max="50" class="form-control" value="5">
+                <div class="invalid-feedback">Debe ser entre 1 y 50 años</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Observaciones</label>
+                <textarea id="eqObservaciones" class="form-control" rows="2" placeholder="Notas adicionales..." maxlength="500"></textarea>
+                <small class="text-muted">Máximo 500 caracteres</small>
+              </div>
+            </div>
+          </div>
+          <!-- Tab: Imagen y QR -->
+          <div class="tab-pane fade" id="tabImagen">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Código QR Personalizado</label>
+                <input id="eqCodigoQR" class="form-control" placeholder="Ej: QR-LAB001-EQ001" maxlength="255" pattern="[A-Za-z0-9\-_]+">
+                <div class="invalid-feedback">Solo letras, números, guiones y guiones bajos</div>
+                <small class="text-muted">Opcional. Si no se ingresa, se generará automáticamente.</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">URL de Imagen</label>
+                <input id="eqImagenUrl" type="url" class="form-control" placeholder="https://..." maxlength="500">
+                <div class="invalid-feedback">Ingrese una URL válida (https://...)</div>
+                <small class="text-muted">URL externa de la imagen del equipo</small>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Subir Imagen del Equipo</label>
+                <input id="eqImagenFile" type="file" class="form-control" accept="image/jpeg,image/png,image/gif,image/webp">
+                <div class="invalid-feedback">Archivo inválido. Use JPG, PNG, GIF o WebP (máx. 5MB)</div>
+                <small class="text-muted">Formatos: JPG, PNG, GIF, WebP. Máx. 5MB. Se calculará hash para reconocimiento visual.</small>
+              </div>
+              <div class="col-12">
+                <div id="eqImagenPreview" class="mt-2 text-center d-none">
+                  <img id="eqImagenPreviewImg" class="img-thumbnail" style="max-height:200px">
+                  <p class="small text-muted mt-1">Vista previa de la imagen</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <span class="text-muted small me-auto"><span class="text-danger">*</span> Campos obligatorios</span>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-sena" id="btnCrearEquipo"><i class="bi bi-check-lg me-1"></i>Crear Equipo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ver Detalle del Equipo -->
+<div class="modal fade" id="modalDetalleEquipo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white py-2">
+        <h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Detalle del Equipo</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-3">
+        <!-- Encabezado con imagen y datos principales -->
+        <div class="d-flex gap-3 mb-3">
+          <div id="detalleImagen" class="bg-light rounded d-flex align-items-center justify-content-center flex-shrink-0" style="width:120px;height:120px">
+            <i class="bi bi-cpu display-4 text-muted"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h4 id="detalleNombre" class="mb-1 fw-bold"></h4>
+            <p class="mb-2"><code id="detalleCodigo" class="text-primary"></code></p>
+            <div class="d-flex gap-2 flex-wrap">
+              <span id="detalleEstado" class="badge"></span>
+              <span id="detalleCondicion" class="badge"></span>
+              <strong id="detalleValor" class="text-success"></strong>
+            </div>
+          </div>
+          <div id="detalleQR" class="flex-shrink-0"></div>
+        </div>
+        
+        <div class="row g-3">
+          <!-- Columna izquierda -->
+          <div class="col-md-6">
+            <!-- Información técnica -->
+            <div class="card border-0 bg-light mb-3">
+              <div class="card-body py-2 px-3">
+                <h6 class="card-title text-muted mb-2"><i class="bi bi-gear me-1"></i>Información Técnica</h6>
+                <div class="small">
+                  <div class="mb-1"><span class="text-muted">Marca:</span> <strong id="detalleMarca"></strong></div>
+                  <div class="mb-1"><span class="text-muted">Modelo:</span> <strong id="detalleModelo"></strong></div>
+                  <div class="mb-1"><span class="text-muted">Nº Serie:</span> <strong id="detalleSerie"></strong></div>
+                  <div class="mb-1"><span class="text-muted">Categoría:</span> <strong id="detalleCategoria"></strong></div>
+                  <div class="mb-1"><span class="text-muted">Laboratorio:</span> <strong id="detalleLaboratorio"></strong></div>
+                  <div><span class="text-muted">Ubicación:</span> <strong id="detalleUbicacion"></strong></div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Descripción -->
+            <div class="card border-0 bg-light">
+              <div class="card-body py-2 px-3">
+                <h6 class="card-title text-muted mb-2"><i class="bi bi-file-text me-1"></i>Descripción</h6>
+                <p id="detalleDescripcion" class="text-muted small mb-0"></p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Columna derecha -->
+          <div class="col-md-6">
+            <!-- Información de adquisición -->
+            <div class="card border-0 bg-light mb-3">
+              <div class="card-body py-2 px-3">
+                <h6 class="card-title text-muted mb-2"><i class="bi bi-cart-check me-1"></i>Adquisición</h6>
+                <div class="small">
+                  <div class="mb-1"><span class="text-muted">Fecha:</span> <strong id="detalleFechaAdq"></strong></div>
+                  <div class="mb-1"><span class="text-muted">Proveedor:</span> <strong id="detalleProveedor"></strong></div>
+                  <div class="mb-1"><span class="text-muted">Garantía:</span> <strong id="detalleGarantia"></strong></div>
+                  <div><span class="text-muted">Vida Útil:</span> <strong id="detalleVidaUtil"></strong></div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Mantenimiento -->
+            <div class="card border-0 bg-warning bg-opacity-10">
+              <div class="card-body py-2 px-3">
+                <h6 class="card-title text-muted mb-2"><i class="bi bi-tools me-1"></i>Mantenimiento</h6>
+                <div class="small">
+                  <div class="mb-1"><span class="text-muted">Último:</span> <strong id="detalleUltimoMant"></strong></div>
+                  <div><span class="text-muted">Próximo:</span> <strong id="detalleProxMant"></strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-outline-primary btn-sm" onclick="generarQR(window.equipoDetalleId)"><i class="bi bi-qr-code me-1"></i>Generar QR</button>
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Editar equipo COMPLETO para Administradores -->
+<div class="modal fade" id="modalEditarEquipo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Editar Equipo</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Alerta de validación -->
+        <div id="editValidationAlert" class="alert alert-danger d-none mb-3">
+          <i class="bi bi-exclamation-triangle me-2"></i><span id="editValidationMsg"></span>
+        </div>
+        
+        <input type="hidden" id="editEquipoId">
+        <p class="text-muted mb-3">Código: <code id="editCodigoInterno"></code></p>
+        
+        <!-- Tabs de navegación -->
+        <ul class="nav nav-tabs mb-3" id="tabEditarEquipo">
+          <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#editTabBasico">Información Básica</a></li>
+          <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#editTabTecnico">Datos Técnicos</a></li>
+          <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#editTabAdquisicion">Adquisición</a></li>
+          <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#editTabEstado">Estado y Ubicación</a></li>
+          <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#editTabImagen">Imagen y QR</a></li>
+        </ul>
+        
+        <div class="tab-content">
+          <!-- Tab: Información Básica -->
+          <div class="tab-pane fade show active" id="editTabBasico">
+            <div class="row g-3">
+              <div class="col-md-8">
+                <label class="form-label fw-semibold">Nombre del Equipo <span class="text-danger">*</span></label>
+                <input id="editNombre" class="form-control" maxlength="200">
+                <div class="invalid-feedback">El nombre es obligatorio (máx. 200 caracteres)</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Categoría</label>
+                <select id="editCategoria" class="form-select">
+                  <option value="">Sin categoría</option>
+                  {% for cat in categorias %}
+                  <option value="{{ cat.id }}">{{ cat.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Laboratorio</label>
+                <select id="editLaboratorio" class="form-select">
+                  <option value="">Sin asignar</option>
+                  {% for lab in laboratorios %}
+                  <option value="{{ lab.id }}">{{ lab.codigo_lab }} - {{ lab.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label fw-semibold">Descripción</label>
+                <textarea id="editDescripcion" class="form-control" rows="2" maxlength="1000"></textarea>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Tab: Datos Técnicos -->
+          <div class="tab-pane fade" id="editTabTecnico">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Marca</label>
+                <input id="editMarca" class="form-control" maxlength="100">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Modelo</label>
+                <input id="editModelo" class="form-control" maxlength="100">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Número de Serie</label>
+                <input id="editNumeroSerie" class="form-control" maxlength="150">
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Especificaciones Técnicas</label>
+                <textarea id="editSpecs" class="form-control" rows="3" maxlength="5000"></textarea>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Tab: Adquisición -->
+          <div class="tab-pane fade" id="editTabAdquisicion">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Valor de Adquisición</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input id="editValor" type="number" step="0.01" min="0" class="form-control">
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Fecha de Adquisición</label>
+                <input id="editFechaAdquisicion" type="date" class="form-control">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Proveedor</label>
+                <input id="editProveedor" class="form-control" maxlength="200">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Garantía (meses)</label>
+                <input id="editGarantia" type="number" min="0" max="120" class="form-control">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Vida Útil (años)</label>
+                <input id="editVidaUtil" type="number" min="1" max="50" class="form-control">
+              </div>
+            </div>
+          </div>
+          
+          <!-- Tab: Estado y Ubicación -->
+          <div class="tab-pane fade" id="editTabEstado">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Estado</label>
+                <select id="editEstado" class="form-select">
+                  <option value="disponible">Disponible</option>
+                  <option value="prestado">Prestado</option>
+                  <option value="mantenimiento">Mantenimiento</option>
+                  <option value="reparacion">Reparación</option>
+                  <option value="dado_baja">Dado de baja</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Estado Físico</label>
+                <select id="editEstadoFisico" class="form-select">
+                  <option value="excelente">Excelente</option>
+                  <option value="bueno">Bueno</option>
+                  <option value="regular">Regular</option>
+                  <option value="malo">Malo</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Ubicación Específica</label>
+                <input id="editUbicacion" class="form-control" maxlength="200">
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Observaciones</label>
+                <textarea id="editObservaciones" class="form-control" rows="2" maxlength="1000"></textarea>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Tab: Imagen -->
+          <div class="tab-pane fade" id="editTabImagen">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Código QR Personalizado</label>
+                <input id="editCodigoQR" class="form-control" maxlength="255" pattern="[A-Za-z0-9\-_]+">
+                <small class="text-muted">Solo letras, números, guiones y guiones bajos</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">URL de Imagen</label>
+                <input id="editImagenUrl" type="url" class="form-control" maxlength="500">
+                <small class="text-muted">URL externa de la imagen del equipo</small>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Subir Nueva Imagen del Equipo</label>
+                <input id="editImagenFile" type="file" class="form-control" accept="image/jpeg,image/png,image/gif,image/webp">
+                <small class="text-muted">Formatos: JPG, PNG, GIF, WebP. Máx. 5MB. Se calculará hash para reconocimiento visual.</small>
+              </div>
+              <div class="col-12">
+                <div id="editImagenPreview" class="mt-2 text-center d-none">
+                  <p class="small text-muted mb-2">Vista previa de la nueva imagen:</p>
+                  <img id="editImagenPreviewImg" class="img-thumbnail" style="max-height:200px">
+                </div>
+                <div id="editImagenActual" class="mt-2 text-center">
+                  <p class="small text-muted mb-2">Imagen actual:</p>
+                  <img id="editImagenActualImg" class="img-thumbnail d-none" style="max-height:150px">
+                  <div id="editImagenActualPlaceholder" class="bg-light rounded p-3 d-inline-block">
+                    <i class="bi bi-image text-muted" style="font-size:3rem"></i>
+                    <p class="small text-muted mb-0">Sin imagen</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <span class="text-muted small me-auto"><span class="text-danger">*</span> Campo obligatorio</span>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-sena" id="btnGuardarEquipo"><i class="bi bi-check-lg me-1"></i>Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Visión por cámara -->
+<div class="modal fade" id="modalVision" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title"><i class="bi bi-camera-video me-2"></i>Buscar equipo por imagen</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12 col-md-7">
+            <div class="ratio ratio-16x9 bg-dark rounded overflow-hidden">
+              <video id="camPreview" autoplay playsinline muted class="w-100 h-100"></video>
+            </div>
+          </div>
+          <div class="col-12 col-md-5">
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="modoSimple" checked>
+              <label class="form-check-label small" for="modoSimple">Modo simple: solo reconocer</label>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Cámara</label>
+              <select id="camDevice" class="form-select form-select-sm"></select>
+            </div>
+            <div id="advancedSection">
+            <div class="mb-2">
+              <label class="form-label small">Destino (equipo u objeto para guardar)</label>
+              <select id="eqDestino" class="form-select form-select-sm"></select>
+              <div class="form-text">Seleccione un Equipo para guardar plantilla o un Objeto para guardar vista.</div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Subcarpeta (opcional)</label>
+              <input id="tplCarpeta" class="form-control form-control-sm" placeholder="Ej: frontal, lateral">
+            </div>
+            <div class="mb-2">
+              <div class="small text-muted mb-1">Plantillas existentes</div>
+              <div id="tplGallery" class="d-flex flex-wrap gap-1"></div>
+            </div>
+            </div>
+            <div class="alert alert-light border small" id="visionMsg">Apunte la cámara al equipo y presione Capturar.</div>
+            <div id="visionResultado" class="small"></div>
+          </div>
+        </div>
+        <canvas id="camCanvas" class="d-none"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-sena" id="btnGuardarPlantilla" title="Guardar imagen actual como plantilla de reconocimiento" disabled><i class="bi bi-save"></i> Guardar plantilla</button>
+          <button class="btn btn-sena" id="btnCapturarVision"><i class="bi bi-camera"></i> Capturar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+ </div>
+
+<!-- Modal: Solicitar Préstamo -->
+<div class="modal fade" id="modalSolicitarPrestamo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+        <h5 class="modal-title text-white fw-bold"><i class="bi bi-box-arrow-right me-2"></i>Solicitar Préstamo</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <input type="hidden" id="prestamoEquipoId">
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: #2d6a4f;"><i class="bi bi-laptop me-1"></i>Equipo</label>
+          <input id="prestamoEquipoNombre" class="form-control" disabled>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: #2d6a4f;"><i class="bi bi-calendar-x me-1"></i>Fecha de Devolución *</label>
+          <input id="prestamoFechaDevolucion" type="datetime-local" class="form-control" required>
+          <div class="invalid-feedback" id="errorPrestamoFecha"></div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: #2d6a4f;"><i class="bi bi-card-text me-1"></i>Propósito del Préstamo *</label>
+          <textarea id="prestamoProposito" class="form-control" rows="3" placeholder="Describa el propósito del préstamo (mínimo 10 caracteres)..." required></textarea>
+          <div class="invalid-feedback" id="errorPrestamoProposito"></div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: #2d6a4f;"><i class="bi bi-chat-text me-1"></i>Observaciones</label>
+          <textarea id="prestamoObservaciones" class="form-control" rows="2" placeholder="Observaciones adicionales (opcional)..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn" id="btnCrearPrestamo" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+          <i class="bi bi-check-circle me-1"></i>Solicitar Préstamo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Version: 2025-10-11-22:14 - Correccion de creacion de equipos
+  const inputFiltro = document.getElementById('filtroEquipos');
+  const selectEstado = document.getElementById('filtroEstado');
+  const tbody = document.querySelector('#tablaEquipos tbody');
+
+  // Variable global para datos de equipo desde URL
+  window.equipoDesdeURL = null;
+  
+  // Manejar parámetro de búsqueda desde URL (viene de reconocimiento)
+  (function checkBuscarParam() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const buscar = urlParams.get('buscar');
+    if (buscar) {
+      // Poner el valor en el filtro
+      inputFiltro.value = buscar;
+      
+      // Buscar el equipo en la tabla y abrir su modal de detalle
+      setTimeout(() => {
+        const filas = [...tbody.rows];
+        const filaEncontrada = filas.find(r => {
+          const codigo = r.querySelector('code')?.textContent?.trim();
+          return codigo && codigo.toLowerCase() === buscar.toLowerCase();
+        });
+        
+        if (filaEncontrada) {
+          // Obtener los datos del equipo del botón
+          const btnDetalle = filaEncontrada.querySelector('button[data-bs-target="#modalDetalleEquipo"]');
+          if (btnDetalle) {
+            const equipoData = btnDetalle.getAttribute('data-equipo');
+            if (equipoData) {
+              // Guardar datos ANTES de abrir el modal
+              const equipoParsed = JSON.parse(equipoData);
+              window.equipoDesdeURL = equipoParsed;
+              
+              // Limpiar el filtro y mostrar todos los equipos
+              inputFiltro.value = '';
+              filtrar();
+              
+              // Pequeño delay para asegurar que los datos estén listos
+              setTimeout(() => {
+                const modalEl = document.getElementById('modalDetalleEquipo');
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+              }, 50);
+            }
+          }
+        }
+        
+        // Limpiar el parámetro de la URL sin recargar
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 300);
+    }
+  })();
+
+  function filtrar() {
+    const t = (inputFiltro.value||'').toLowerCase();
+    const est = selectEstado.value;
+    [...tbody.rows].forEach(r=>{
+      const codigo = (r.dataset.codigo || '').toLowerCase();
+      const nombre = (r.dataset.nombre || '').toLowerCase();
+      const marca = (r.dataset.marca || '').toLowerCase();
+      const categoria = (r.dataset.categoria || '').toLowerCase();
+      const okTexto = codigo.includes(t) || nombre.includes(t) || marca.includes(t) || categoria.includes(t);
+      const okEstado = !est || r.dataset.estado === est;
+      r.classList.toggle('d-none', !(okTexto && okEstado));
+    });
+  }
+
+  async function showObjetoDetalle(o){
+    // Intenta obtener thumb (first_img_id) consultando /api/objetos?q=nombre
+    let thumbId = null;
+    try{
+      const token = localStorage.getItem('jwt');
+      const res = await fetch('/api/objetos?q='+encodeURIComponent(o.nombre), { headers: Object.assign({}, token? {'Authorization':'Bearer '+token}:{}) });
+      const data = await res.json();
+      const found = (data.objetos||[]).find(x=>x.id===o.id) || (data.objetos||[])[0];
+      if(found && found.first_img_id) thumbId = found.first_img_id;
+    }catch{}
+    const imgHtml = thumbId ? `<img src="/api/objetos/imagen_thumb/${thumbId}" class="rounded border me-2" style="width:72px;height:72px;object-fit:cover;">` : '';
+    visionResultado.innerHTML = `
+      <div class="d-flex align-items-start mt-2">
+        ${imgHtml}
+        <div>
+          <div class="fw-semibold">${o.nombre}${o.categoria? ' · '+o.categoria:''}</div>
+          <div class="text-muted small">${o.descripcion? o.descripcion: ''}</div>
+        </div>
+      </div>`;
+  }
+
+  async function loadGalleryForSelection(sel){
+    tplGallery.innerHTML = '<span class="text-muted small">Cargando...</span>';
+    if(!sel){ tplGallery.innerHTML=''; return; }
+    const [kind, id] = sel.split(':');
+    try{
+      if(kind==='eq'){
+        const res = await fetch(`/api/vision/equipos/${id}/plantillas`);
+        const data = await res.json();
+        const arr = data.plantillas||[];
+        if(arr.length===0){ tplGallery.innerHTML = '<span class="text-muted small">(sin plantillas)</span>'; return; }
+        tplGallery.innerHTML = '';
+        arr.slice(0,8).forEach(p=>{
+          const img = document.createElement('img');
+          img.src = `/api/vision/equipos/plantilla_image?equipo_id=${encodeURIComponent(id)}&f=${encodeURIComponent(p.file)}`;
+          img.className = 'rounded border';
+          img.style.width = '60px'; img.style.height='40px'; img.style.objectFit='cover';
+          tplGallery.appendChild(img);
+        });
+        if(arr.length>8){
+          const more = document.createElement('span'); more.className='small text-muted align-self-center';
+          more.textContent = `+${arr.length-8} más`;
+          tplGallery.appendChild(more);
+        }
+      } else if(kind==='obj'){
+        // Requiere JWT para listar imágenes del objeto
+        const token = localStorage.getItem('jwt');
+        if(!token){ tplGallery.innerHTML = '<span class="text-warning small">Inicie sesión para ver vistas del objeto</span>'; return; }
+        const res = await fetch(`/api/objetos/${id}/imagenes`, { headers: {'Authorization':'Bearer '+token} });
+        const data = await res.json();
+        const arr = (data.imagenes||[]);
+        if(arr.length===0){ tplGallery.innerHTML = '<span class="text-muted small">(sin vistas)</span>'; return; }
+        tplGallery.innerHTML = '';
+        arr.slice(0,8).forEach(imgRow=>{
+          const img = document.createElement('img');
+          img.src = `/api/objetos/imagen_thumb/${imgRow.id}`;
+          img.className = 'rounded border';
+          img.style.width = '60px'; img.style.height='40px'; img.style.objectFit='cover';
+          tplGallery.appendChild(img);
+        });
+        if(arr.length>8){
+          const more = document.createElement('span'); more.className='small text-muted align-self-center';
+          more.textContent = `+${arr.length-8} más`;
+          tplGallery.appendChild(more);
+        }
+      }
+    }catch(e){ tplGallery.innerHTML = '<span class="text-danger small">Error cargando galería</span>'; }
+  }
+
+  inputFiltro.addEventListener('input', filtrar);
+  selectEstado.addEventListener('change', filtrar);
+
+  // Modal Solicitar Préstamo - Validación Híbrida
+  let prestamoEquipoId = null;
+  let prestamoDebounceTimers = {};
+  const REGLAS_PRESTAMO = { proposito: { min: 10, max: 500 } };
+  
+  // Funciones de validación híbrida
+  function limpiarErrorPrestamo(campo) {
+    const mapeo = {
+      'fecha': { input: 'prestamoFechaDevolucion', error: 'errorPrestamoFecha' },
+      'proposito': { input: 'prestamoProposito', error: 'errorPrestamoProposito' }
+    };
+    const config = mapeo[campo];
+    if (config) {
+      document.getElementById(config.input).classList.remove('is-invalid', 'is-valid');
+      document.getElementById(config.error).textContent = '';
+    }
+  }
+  
+  function mostrarErrorPrestamo(campo, mensaje) {
+    const mapeo = {
+      'fecha': { input: 'prestamoFechaDevolucion', error: 'errorPrestamoFecha' },
+      'proposito': { input: 'prestamoProposito', error: 'errorPrestamoProposito' }
+    };
+    const config = mapeo[campo];
+    if (config) {
+      const inputEl = document.getElementById(config.input);
+      const errorEl = document.getElementById(config.error);
+      inputEl.classList.remove('is-valid');
+      inputEl.classList.add('is-invalid');
+      errorEl.textContent = mensaje;
+    }
+  }
+  
+  function mostrarValidoPrestamo(campo) {
+    const mapeo = {
+      'fecha': { input: 'prestamoFechaDevolucion', error: 'errorPrestamoFecha' },
+      'proposito': { input: 'prestamoProposito', error: 'errorPrestamoProposito' }
+    };
+    const config = mapeo[campo];
+    if (config) {
+      const inputEl = document.getElementById(config.input);
+      const errorEl = document.getElementById(config.error);
+      inputEl.classList.remove('is-invalid');
+      inputEl.classList.add('is-valid');
+      errorEl.textContent = '';
+    }
+  }
+  
+  function validarCampoPrestamo(campo) {
+    clearTimeout(prestamoDebounceTimers[campo]);
+    
+    prestamoDebounceTimers[campo] = setTimeout(() => {
+      if (campo === 'proposito') {
+        const valor = document.getElementById('prestamoProposito').value.trim();
+        if (!valor) {
+          mostrarErrorPrestamo('proposito', 'El propósito es requerido');
+        } else if (valor.length < REGLAS_PRESTAMO.proposito.min) {
+          mostrarErrorPrestamo('proposito', `Mínimo ${REGLAS_PRESTAMO.proposito.min} caracteres (actual: ${valor.length})`);
+        } else {
+          mostrarValidoPrestamo('proposito');
+        }
+      } else if (campo === 'fecha') {
+        const valor = document.getElementById('prestamoFechaDevolucion').value;
+        if (!valor) {
+          mostrarErrorPrestamo('fecha', 'La fecha de devolución es requerida');
+        } else if (new Date(valor) <= new Date()) {
+          mostrarErrorPrestamo('fecha', 'La fecha debe ser posterior a la actual');
+        } else {
+          mostrarValidoPrestamo('fecha');
+        }
+      }
+    }, 200);
+  }
+  
+  document.getElementById('modalSolicitarPrestamo').addEventListener('show.bs.modal', (ev)=>{
+    const btn = ev.relatedTarget;
+    try {
+      const equipo = JSON.parse(btn.getAttribute('data-equipo'));
+      prestamoEquipoId = equipo.id;
+      document.getElementById('prestamoEquipoId').value = equipo.id;
+      document.getElementById('prestamoEquipoNombre').value = `${equipo.nombre} (${equipo.codigo_interno || equipo.id})`;
+    } catch {}
+    // Establecer fecha mínima como ahora
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('prestamoFechaDevolucion').min = now.toISOString().slice(0,16);
+    document.getElementById('prestamoFechaDevolucion').value = '';
+    document.getElementById('prestamoProposito').value = '';
+    document.getElementById('prestamoObservaciones').value = '';
+    // Limpiar errores y estados
+    document.querySelectorAll('#modalSolicitarPrestamo .is-invalid, #modalSolicitarPrestamo .is-valid').forEach(el => {
+      el.classList.remove('is-invalid', 'is-valid');
+    });
+    document.getElementById('errorPrestamoFecha').textContent = '';
+    document.getElementById('errorPrestamoProposito').textContent = '';
+  });
+  
+  // Validación en tiempo real
+  document.getElementById('prestamoProposito').addEventListener('input', () => validarCampoPrestamo('proposito'));
+  document.getElementById('prestamoFechaDevolucion').addEventListener('change', () => validarCampoPrestamo('fecha'));
+
+  document.getElementById('btnCrearPrestamo').addEventListener('click', async ()=>{
+    const equipoId = document.getElementById('prestamoEquipoId').value;
+    const fechaDevolucion = document.getElementById('prestamoFechaDevolucion').value;
+    const proposito = document.getElementById('prestamoProposito').value.trim();
+    const observaciones = document.getElementById('prestamoObservaciones').value.trim();
+    
+    // Validación final antes de enviar
+    let hayErrores = false;
+    
+    if (!fechaDevolucion) {
+      mostrarErrorPrestamo('fecha', 'La fecha de devolución es requerida');
+      hayErrores = true;
+    } else if (new Date(fechaDevolucion) <= new Date()) {
+      mostrarErrorPrestamo('fecha', 'La fecha debe ser posterior a la actual');
+      hayErrores = true;
+    }
+    
+    if (!proposito || proposito.length < REGLAS_PRESTAMO.proposito.min) {
+      mostrarErrorPrestamo('proposito', `El propósito debe tener al menos ${REGLAS_PRESTAMO.proposito.min} caracteres`);
+      hayErrores = true;
+    }
+    
+    if (hayErrores) return;
+    
+    try {
+      const res = await fetch('/api/prestamos', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          id_equipo: parseInt(equipoId),
+          fecha_devolucion_programada: fechaDevolucion,
+          proposito: proposito,
+          observaciones: observaciones
+        })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        alert(`✅ Préstamo solicitado exitosamente.\nCódigo: ${data.codigo}`);
+        bootstrap.Modal.getInstance(document.getElementById('modalSolicitarPrestamo')).hide();
+        location.reload(); // Recargar para actualizar estado del equipo
+      } else if (data.errores) {
+        Object.keys(data.errores).forEach(campo => {
+          if (campo === 'equipo') {
+            alert('Error: ' + data.errores[campo]);
+          } else if (campo === 'fecha_devolucion') {
+            document.getElementById('prestamoFechaDevolucion').classList.add('is-invalid');
+            document.getElementById('errorPrestamoFecha').textContent = data.errores[campo];
+          } else if (campo === 'proposito') {
+            document.getElementById('prestamoProposito').classList.add('is-invalid');
+            document.getElementById('errorPrestamoProposito').textContent = data.errores[campo];
+          }
+        });
+      } else {
+        alert('Error: ' + (data.message || 'Error desconocido'));
+      }
+    } catch(e) { 
+      alert('Error solicitando préstamo: ' + e.message); 
+    }
+  });
+  // Inicializar filtro al cargar
+  filtrar();
+
+  // Funciones de validación
+  function showValidationError(msg){
+    const alert = document.getElementById('eqValidationAlert');
+    document.getElementById('eqValidationMsg').textContent = msg;
+    alert.classList.remove('d-none');
+    alert.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+  function hideValidationError(){
+    document.getElementById('eqValidationAlert').classList.add('d-none');
+  }
+  function markInvalid(id){
+    const el = document.getElementById(id);
+    if(el) el.classList.add('is-invalid');
+  }
+  function clearInvalid(){
+    document.querySelectorAll('#modalNuevoEquipo .is-invalid').forEach(el=>el.classList.remove('is-invalid'));
+  }
+
+  // Vista previa de imagen
+  document.getElementById('eqImagenFile').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    const preview = document.getElementById('eqImagenPreview');
+    const img = document.getElementById('eqImagenPreviewImg');
+    if(file){
+      if(file.size > 5*1024*1024){
+        showValidationError('La imagen no debe superar 5MB');
+        e.target.value = '';
+        preview.classList.add('d-none');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev)=>{
+        img.src = ev.target.result;
+        preview.classList.remove('d-none');
+      };
+      reader.readAsDataURL(file);
+    } else {
+      preview.classList.add('d-none');
+    }
+  });
+
+  // Vista previa de imagen en modal de editar
+  document.getElementById('editImagenFile').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    const preview = document.getElementById('editImagenPreview');
+    const img = document.getElementById('editImagenPreviewImg');
+    if(file){
+      if(file.size > 5*1024*1024){
+        alert('La imagen no debe superar 5MB');
+        e.target.value = '';
+        preview.classList.add('d-none');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev)=>{
+        img.src = ev.target.result;
+        preview.classList.remove('d-none');
+      };
+      reader.readAsDataURL(file);
+    } else {
+      preview.classList.add('d-none');
+    }
+  });
+
+  // Limpiar formulario de nuevo equipo al abrir modal
+  document.getElementById('modalNuevoEquipo').addEventListener('show.bs.modal', ()=>{
+    hideValidationError();
+    clearInvalid();
+    // Limpiar todos los campos del formulario
+    ['eqNombre','eqMarca','eqModelo','eqNumeroSerie','eqUbicacion','eqDescripcion','eqSpecs','eqProveedor','eqObservaciones','eqCodigoQR','eqImagenUrl'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+    document.getElementById('eqEstado').value = 'disponible';
+    document.getElementById('eqEstadoFisico').value = 'bueno';
+    document.getElementById('eqCategoria').value = '';
+    document.getElementById('eqLaboratorio').value = '';
+    document.getElementById('eqValor').value = '';
+    document.getElementById('eqFechaAdquisicion').value = '';
+    document.getElementById('eqGarantia').value = '12';
+    document.getElementById('eqVidaUtil').value = '5';
+    document.getElementById('eqImagenFile').value = '';
+    document.getElementById('eqImagenPreview').classList.add('d-none');
+    // Ir al primer tab
+    new bootstrap.Tab(document.querySelector('#tabNuevoEquipo .nav-link')).show();
+  });
+
+  // Crear equipo con validaciones y todos los campos
+  document.getElementById('btnCrearEquipo').addEventListener('click', async ()=>{
+    hideValidationError();
+    clearInvalid();
+    let errores = [];
+    let tabConError = null;
+    
+    // === TAB 1: Información Básica ===
+    const nombre = document.getElementById('eqNombre').value.trim();
+    if(!nombre){ errores.push('Nombre del equipo'); markInvalid('eqNombre'); tabConError = tabConError || 'tabBasico'; }
+    if(nombre.length > 200){ errores.push('Nombre muy largo (máx 200)'); markInvalid('eqNombre'); tabConError = tabConError || 'tabBasico'; }
+    
+    const categoria = document.getElementById('eqCategoria').value;
+    if(!categoria){ errores.push('Categoría'); markInvalid('eqCategoria'); tabConError = tabConError || 'tabBasico'; }
+    
+    const laboratorio = document.getElementById('eqLaboratorio').value;
+    if(!laboratorio){ errores.push('Laboratorio'); markInvalid('eqLaboratorio'); tabConError = tabConError || 'tabBasico'; }
+    
+    // === TAB 2: Datos Técnicos ===
+    const marca = document.getElementById('eqMarca').value.trim();
+    if(!marca){ errores.push('Marca'); markInvalid('eqMarca'); tabConError = tabConError || 'tabTecnico'; }
+    if(marca.length > 100){ errores.push('Marca muy larga (máx 100)'); markInvalid('eqMarca'); tabConError = tabConError || 'tabTecnico'; }
+    
+    const modelo = document.getElementById('eqModelo').value.trim();
+    if(modelo.length > 100){ errores.push('Modelo muy largo (máx 100)'); markInvalid('eqModelo'); tabConError = tabConError || 'tabTecnico'; }
+    
+    const numSerie = document.getElementById('eqNumeroSerie').value.trim();
+    if(numSerie.length > 150){ errores.push('Número de serie muy largo (máx 150)'); markInvalid('eqNumeroSerie'); tabConError = tabConError || 'tabTecnico'; }
+    
+    // === TAB 3: Adquisición ===
+    const valor = document.getElementById('eqValor').value;
+    if(!valor || valor === ''){ errores.push('Valor de adquisición'); markInvalid('eqValor'); tabConError = tabConError || 'tabAdquisicion'; }
+    else if(isNaN(parseFloat(valor)) || parseFloat(valor) < 0){
+      errores.push('Valor de adquisición inválido'); markInvalid('eqValor'); tabConError = tabConError || 'tabAdquisicion';
+    }
+    
+    const fechaAdq = document.getElementById('eqFechaAdquisicion').value;
+    if(!fechaAdq){ errores.push('Fecha de adquisición'); markInvalid('eqFechaAdquisicion'); tabConError = tabConError || 'tabAdquisicion'; }
+    
+    const garantia = document.getElementById('eqGarantia').value;
+    if(garantia && (parseInt(garantia) < 0 || parseInt(garantia) > 120)){
+      errores.push('Garantía debe ser entre 0 y 120 meses'); markInvalid('eqGarantia'); tabConError = tabConError || 'tabAdquisicion';
+    }
+    
+    const vidaUtil = document.getElementById('eqVidaUtil').value;
+    if(vidaUtil && (parseInt(vidaUtil) < 1 || parseInt(vidaUtil) > 50)){
+      errores.push('Vida útil debe ser entre 1 y 50 años'); markInvalid('eqVidaUtil'); tabConError = tabConError || 'tabAdquisicion';
+    }
+    
+    // === TAB 4: Imagen y QR ===
+    const codigoQR = document.getElementById('eqCodigoQR').value.trim();
+    if(codigoQR && !/^[A-Za-z0-9\-_]+$/.test(codigoQR)){
+      errores.push('Código QR inválido (solo letras, números, guiones)'); markInvalid('eqCodigoQR'); tabConError = tabConError || 'tabImagen';
+    }
+    
+    const imagenUrl = document.getElementById('eqImagenUrl').value.trim();
+    if(imagenUrl && !imagenUrl.match(/^https?:\/\/.+/)){
+      errores.push('URL de imagen inválida'); markInvalid('eqImagenUrl'); tabConError = tabConError || 'tabImagen';
+    }
+    
+    const imagenFile = document.getElementById('eqImagenFile').files[0];
+    if(imagenFile && imagenFile.size > 5*1024*1024){
+      errores.push('Imagen muy grande (máx 5MB)'); markInvalid('eqImagenFile'); tabConError = tabConError || 'tabImagen';
+    }
+    
+    if(errores.length > 0){
+      showValidationError('Campos requeridos o inválidos: ' + errores.join(', '));
+      // Ir al tab con el primer error
+      if(tabConError){
+        const tabLink = document.querySelector(`#tabNuevoEquipo a[href="#${tabConError}"]`);
+        if(tabLink) new bootstrap.Tab(tabLink).show();
+      }
+      return;
+    }
+    
+    try{
+      const datos = {
+        nombre,
+        estado: document.getElementById('eqEstado').value,
+        estado_fisico: document.getElementById('eqEstadoFisico').value,
+        marca: document.getElementById('eqMarca').value.trim(),
+        modelo: document.getElementById('eqModelo').value.trim(),
+        numero_serie: document.getElementById('eqNumeroSerie').value.trim(),
+        id_categoria: parseInt(categoria),
+        id_laboratorio: parseInt(laboratorio),
+        ubicacion: document.getElementById('eqUbicacion').value.trim(),
+        descripcion: document.getElementById('eqDescripcion').value.trim(),
+        especificaciones_tecnicas: document.getElementById('eqSpecs').value.trim(),
+        valor_adquisicion: parseFloat(document.getElementById('eqValor').value) || null,
+        fecha_adquisicion: document.getElementById('eqFechaAdquisicion').value || null,
+        proveedor: document.getElementById('eqProveedor').value.trim(),
+        garantia_meses: parseInt(document.getElementById('eqGarantia').value) || 12,
+        vida_util_anos: parseInt(document.getElementById('eqVidaUtil').value) || 5,
+        observaciones: document.getElementById('eqObservaciones').value.trim(),
+        codigo_qr: document.getElementById('eqCodigoQR').value.trim() || null,
+        imagen_url: document.getElementById('eqImagenUrl').value.trim() || null
+      };
+      
+      // Primero crear el equipo
+      const res = await fetch('/api/equipos',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials: 'same-origin',
+        body:JSON.stringify(datos)
+      });
+      
+      if(!res.ok){
+        const data = await res.json();
+        showValidationError(data.error || data.message || 'Error creando equipo');
+        return;
+      }
+      
+      const result = await res.json();
+      const equipoId = result.id;
+      
+      // Si hay imagen archivo, subirla
+      const imagenFile = document.getElementById('eqImagenFile').files[0];
+      if(imagenFile && equipoId){
+        console.log('📷 Subiendo imagen archivo:', imagenFile.name, imagenFile.size);
+        const formData = new FormData();
+        formData.append('imagen', imagenFile);
+        try{
+          const imgRes = await fetch('/api/equipos/'+equipoId+'/imagen',{
+            method:'POST',
+            credentials: 'same-origin',
+            body: formData
+          });
+          const imgData = await imgRes.json();
+          console.log('📷 Respuesta subida imagen:', imgData);
+          if(!imgRes.ok){
+            console.error('Error subiendo imagen:', imgData.error);
+          }
+        }catch(imgErr){
+          console.error('Error subiendo imagen:', imgErr);
+        }
+      } else {
+        console.log('📷 No hay archivo de imagen seleccionado');
+      }
+      
+      alert('Equipo creado exitosamente');
+      location.reload();
+      
+    }catch(e){ 
+      showValidationError('Error: '+e.message);
+    }
+  });
+
+  // Función para llenar datos del modal de detalle
+  function llenarModalDetalle(e) {
+    if (!e) return;
+    window.equipoDetalleId = e.id;
+    
+    // Llenar datos
+    document.getElementById('detalleNombre').textContent = e.nombre || '-';
+    document.getElementById('detalleCodigo').textContent = e.codigo_interno || '-';
+    document.getElementById('detalleMarca').textContent = e.marca || '-';
+    document.getElementById('detalleModelo').textContent = e.modelo || '-';
+    document.getElementById('detalleSerie').textContent = e.numero_serie || '-';
+    document.getElementById('detalleCategoria').textContent = e.categoria || 'General';
+    document.getElementById('detalleLaboratorio').textContent = e.laboratorio_nombre || 'Sin asignar';
+    document.getElementById('detalleUbicacion').textContent = e.ubicacion || '-';
+    document.getElementById('detalleDescripcion').textContent = e.descripcion || 'Sin descripción';
+    document.getElementById('detalleFechaAdq').textContent = e.fecha_adquisicion || '-';
+    document.getElementById('detalleProveedor').textContent = e.proveedor || '-';
+    document.getElementById('detalleGarantia').textContent = (e.garantia_meses || 12) + ' meses';
+    document.getElementById('detalleVidaUtil').textContent = (e.vida_util_anos || 5) + ' años';
+    document.getElementById('detalleUltimoMant').textContent = e.ultimo_mantenimiento || 'N/A';
+    document.getElementById('detalleProxMant').textContent = e.proximo_mantenimiento || 'N/A';
+    
+    // Estado
+    const estadoEl = document.getElementById('detalleEstado');
+    const estadoColors = {disponible:'success', prestado:'info', mantenimiento:'warning', reparacion:'warning', dado_baja:'danger'};
+    estadoEl.className = 'badge bg-' + (estadoColors[e.estado] || 'secondary');
+    estadoEl.textContent = (e.estado || 'disponible').replace('_', ' ');
+    
+    // Condición física
+    const condEl = document.getElementById('detalleCondicion');
+    const condColors = {excelente:'success', bueno:'primary', regular:'warning', malo:'danger'};
+    condEl.className = 'badge bg-' + (condColors[e.estado_fisico] || 'secondary');
+    condEl.textContent = e.estado_fisico || 'bueno';
+    
+    // Valor
+    document.getElementById('detalleValor').textContent = e.valor_adquisicion ? '$' + e.valor_adquisicion.toLocaleString() : '-';
+    
+    // Imagen
+    const imgContainer = document.getElementById('detalleImagen');
+    if(e.imagen_url){
+      imgContainer.innerHTML = `<img src="${e.imagen_url}" class="img-fluid rounded" style="max-height:150px">`;
+    } else {
+      imgContainer.innerHTML = '<i class="bi bi-cpu display-1 text-muted"></i>';
+    }
+  }
+
+  // Modal Detalle del Equipo
+  document.getElementById('modalDetalleEquipo').addEventListener('show.bs.modal', (ev)=>{
+    let e;
+    // Si viene desde URL (reconocimiento), usar datos guardados
+    if (window.equipoDesdeURL) {
+      e = window.equipoDesdeURL;
+      window.equipoDesdeURL = null; // Limpiar después de usar
+    } else {
+      // Viene de clic en botón normal
+      const btn = ev.relatedTarget;
+      if (!btn) return;
+      e = JSON.parse(btn.getAttribute('data-equipo'));
+    }
+    llenarModalDetalle(e);
+  });
+
+  // Editar equipo - Cargar TODOS los campos
+  let equipoActualId = null;
+  document.getElementById('modalEditarEquipo').addEventListener('show.bs.modal', (ev)=>{
+    const btn = ev.relatedTarget;
+    const e = JSON.parse(btn.getAttribute('data-equipo'));
+    equipoActualId = e.id;
+    
+    // Limpiar alerta de validación
+    document.getElementById('editValidationAlert').classList.add('d-none');
+    
+    // Tab Básico
+    document.getElementById('editEquipoId').value = e.id;
+    document.getElementById('editCodigoInterno').textContent = e.codigo_interno || '';
+    document.getElementById('editNombre').value = e.nombre || '';
+    document.getElementById('editCategoria').value = e.id_categoria || '';
+    document.getElementById('editLaboratorio').value = e.id_laboratorio || '';
+    document.getElementById('editDescripcion').value = e.descripcion || '';
+    
+    // Tab Técnico
+    document.getElementById('editMarca').value = e.marca || '';
+    document.getElementById('editModelo').value = e.modelo || '';
+    document.getElementById('editNumeroSerie').value = e.numero_serie || '';
+    document.getElementById('editSpecs').value = e.especificaciones || '';
+    
+    // Tab Adquisición
+    document.getElementById('editValor').value = e.valor_adquisicion || '';
+    // Convertir fecha de dd/mm/yyyy a yyyy-mm-dd para input date
+    if(e.fecha_adquisicion && e.fecha_adquisicion.includes('/')){
+      const parts = e.fecha_adquisicion.split('/');
+      document.getElementById('editFechaAdquisicion').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    } else {
+      document.getElementById('editFechaAdquisicion').value = e.fecha_adquisicion || '';
+    }
+    document.getElementById('editProveedor').value = e.proveedor || '';
+    document.getElementById('editGarantia').value = e.garantia_meses || 12;
+    document.getElementById('editVidaUtil').value = e.vida_util_anos || 5;
+    document.getElementById('editCodigoQR').value = e.codigo_qr || '';
+    
+    // Tab Estado
+    document.getElementById('editEstado').value = e.estado || 'disponible';
+    document.getElementById('editEstadoFisico').value = e.estado_fisico || 'bueno';
+    document.getElementById('editUbicacion').value = e.ubicacion || '';
+    document.getElementById('editObservaciones').value = e.observaciones || '';
+    
+    // Tab Imagen
+    document.getElementById('editImagenUrl').value = e.imagen_url || '';
+    document.getElementById('editCodigoQR').value = e.codigo_qr || '';
+    document.getElementById('editImagenFile').value = '';
+    document.getElementById('editImagenPreview').classList.add('d-none');
+    
+    // Mostrar imagen actual si existe
+    const imgActual = document.getElementById('editImagenActualImg');
+    const imgPlaceholder = document.getElementById('editImagenActualPlaceholder');
+    if(e.imagen_url){
+      imgActual.src = e.imagen_url;
+      imgActual.classList.remove('d-none');
+      imgPlaceholder.classList.add('d-none');
+    } else {
+      imgActual.classList.add('d-none');
+      imgPlaceholder.classList.remove('d-none');
+    }
+    
+    // Ir al primer tab
+    new bootstrap.Tab(document.querySelector('#tabEditarEquipo .nav-link')).show();
+  });
+
+  // Guardar equipo - Enviar TODOS los campos
+  document.getElementById('btnGuardarEquipo').addEventListener('click', async ()=>{
+    // Validación básica
+    const nombre = document.getElementById('editNombre').value.trim();
+    if(!nombre){
+      document.getElementById('editValidationMsg').textContent = 'El nombre es obligatorio';
+      document.getElementById('editValidationAlert').classList.remove('d-none');
+      document.getElementById('editNombre').classList.add('is-invalid');
+      new bootstrap.Tab(document.querySelector('#tabEditarEquipo .nav-link')).show();
+      return;
+    }
+    
+    try{
+      const datos = {
+        nombre: nombre,
+        id_categoria: document.getElementById('editCategoria').value || null,
+        id_laboratorio: document.getElementById('editLaboratorio').value || null,
+        descripcion: document.getElementById('editDescripcion').value.trim(),
+        marca: document.getElementById('editMarca').value.trim(),
+        modelo: document.getElementById('editModelo').value.trim(),
+        numero_serie: document.getElementById('editNumeroSerie').value.trim(),
+        especificaciones_tecnicas: document.getElementById('editSpecs').value.trim(),
+        valor_adquisicion: parseFloat(document.getElementById('editValor').value) || null,
+        fecha_adquisicion: document.getElementById('editFechaAdquisicion').value || null,
+        proveedor: document.getElementById('editProveedor').value.trim(),
+        garantia_meses: parseInt(document.getElementById('editGarantia').value) || 12,
+        vida_util_anos: parseInt(document.getElementById('editVidaUtil').value) || 5,
+        codigo_qr: document.getElementById('editCodigoQR').value.trim() || null,
+        estado: document.getElementById('editEstado').value,
+        estado_fisico: document.getElementById('editEstadoFisico').value,
+        ubicacion: document.getElementById('editUbicacion').value.trim(),
+        observaciones: document.getElementById('editObservaciones').value.trim(),
+        imagen_url: document.getElementById('editImagenUrl').value.trim() || null
+      };
+      
+      // Convertir IDs a enteros
+      if(datos.id_categoria) datos.id_categoria = parseInt(datos.id_categoria);
+      if(datos.id_laboratorio) datos.id_laboratorio = parseInt(datos.id_laboratorio);
+      
+      const res = await fetch('/api/equipos/'+equipoActualId,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        credentials: 'same-origin',
+        body:JSON.stringify(datos)
+      });
+      
+      if(res.ok){ 
+        alert('Equipo actualizado exitosamente');
+        location.reload(); 
+      } else { 
+        const data = await res.json();
+        document.getElementById('editValidationMsg').textContent = data.error || data.message || 'Error desconocido';
+        document.getElementById('editValidationAlert').classList.remove('d-none');
+      }
+    }catch(e){
+      document.getElementById('editValidationMsg').textContent = 'Error: ' + e.message;
+      document.getElementById('editValidationAlert').classList.remove('d-none');
+    }
+  });
+
+  // Función para generar QR
+  async function generarQR(equipoId){
+    try{
+      const res = await fetch('/api/equipos/'+equipoId+'/qr');
+      const data = await res.json();
+      if(data.success && data.qr_code){
+        const win = window.open('', '_blank', 'width=400,height=400');
+        win.document.write(`<html><head><title>QR Equipo</title></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><img src="${data.qr_code}" style="max-width:90%"></body></html>`);
+      } else {
+        alert('Error generando QR: ' + (data.error || 'Error desconocido'));
+      }
+    }catch(e){
+      alert('Error: ' + e.message);
+    }
+  }
+
+  // --- Visión por cámara ---
+  const modalVision = document.getElementById('modalVision');
+  const video = document.getElementById('camPreview');
+  const canvas = document.getElementById('camCanvas');
+  const btnCapturar = document.getElementById('btnCapturarVision');
+  const visionMsg = document.getElementById('visionMsg');
+  const visionResultado = document.getElementById('visionResultado');
+  const camDevice = document.getElementById('camDevice');
+  const eqDestino = document.getElementById('eqDestino');
+  const tplCarpeta = document.getElementById('tplCarpeta');
+  const tplGallery = document.getElementById('tplGallery');
+  const modoSimple = document.getElementById('modoSimple');
+  const advancedSection = document.getElementById('advancedSection');
+  let stream = null;
+
+  function setVisionMsg(kind, text){
+    const map = { info:'alert-light border', warn:'alert-warning', err:'alert-danger', ok:'alert-success' };
+    visionMsg.className = 'alert small ' + (map[kind]||'alert-light border');
+    visionMsg.textContent = text;
+  }
+
+  async function startCamera(deviceId){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      setVisionMsg('err','Este navegador no soporta acceso a cámara');
+      return;
+    }
+    try{
+      if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+      const constraints = deviceId ? { video: { deviceId: { exact: deviceId } }, audio: false }
+                                   : { video: { facingMode: 'environment', width: { ideal: 1280 } }, audio: false };
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = stream;
+      setVisionMsg('info','Apunte la cámara al equipo y presione Capturar.');
+    }catch(e){
+      console.warn('getUserMedia error', e);
+      let msg = 'No se pudo acceder a la cámara';
+      if(e.name==='NotAllowedError') msg = 'Permiso de cámara denegado. Habilite el acceso en el navegador.';
+      else if(e.name==='NotFoundError' || e.name==='OverconstrainedError') msg = 'No se encontró ningún dispositivo de cámara disponible.';
+      else if(e.name==='NotReadableError') msg = 'La cámara está siendo utilizada por otra aplicación.';
+      setVisionMsg('err', msg + (e.message? ' · '+e.message:''));
+    }
+  }
+
+  async function refreshDevices(){
+    try{
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter(d=>d.kind==='videoinput');
+      camDevice.innerHTML = cams.map((d,i)=>`<option value="${d.deviceId}">${d.label||('Cámara '+(i+1))}</option>`).join('');
+      if(cams.length>0 && !stream){ await startCamera(camDevice.value); }
+    }catch(e){ /* ignore */ }
+  }
+
+  modalVision?.addEventListener('shown.bs.modal', async ()=>{
+    setVisionMsg('info','Inicializando cámara...');
+    // Intentar prefetchear permisos (solo en contextos seguros; localhost es seguro)
+    try{ await refreshDevices(); }catch{}
+    // Cargar lista de equipos (DOM) y objetos (API) solo si no está en modo simple
+    try{
+      if(!modoSimple.checked){
+        const rows = [...document.querySelectorAll('#tablaEquipos tbody tr')];
+        const optEquipos = rows.map(r=>`<option value="eq:${r.getAttribute('data-id')}">${r.children[0].textContent}</option>`).join('');
+        let optObjetos = '';
+        try{
+          const token = localStorage.getItem('jwt');
+          if(token){
+            const res = await fetch('/api/objetos', { headers:{'Authorization':'Bearer '+token} });
+            const data = await res.json();
+            optObjetos = (data.objetos||[]).map(o=>`<option value="obj:${o.id}">${o.nombre}</option>`).join('');
+          }
+        }catch{}
+        eqDestino.innerHTML = `${optEquipos? `<optgroup label="Equipos">${optEquipos}</optgroup>`:''}${optObjetos? `<optgroup label="Objetos">${optObjetos}</optgroup>`:''}`;
+      }
+    }catch{}
+    if(!modoSimple.checked && eqDestino.value) loadGalleryForSelection(eqDestino.value);
+    await startCamera(camDevice.value);
+  });
+  modalVision?.addEventListener('hidden.bs.modal', ()=>{
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    video.srcObject=null; visionResultado.innerHTML=''; setVisionMsg('info','Apunte la cámara al equipo y presione Capturar.');
+  });
+
+  camDevice?.addEventListener('change', ()=>startCamera(camDevice.value));
+  eqDestino?.addEventListener('change', ()=> loadGalleryForSelection(eqDestino.value));
+
+  // Toggle modo simple
+  function applyModoSimple(){
+    const simple = modoSimple.checked;
+    advancedSection.style.display = simple ? 'none' : '';
+    document.getElementById('btnGuardarPlantilla').disabled = simple;
+    setVisionMsg('info', simple ? 'Apunte la cámara y presione Capturar.' : 'Apunte la cámara al equipo/objeto y use las opciones para guardar si desea.');
+  }
+  modoSimple.addEventListener('change', applyModoSimple);
+  applyModoSimple();
+
+  // Guardar frame actual como plantilla (equipo) o vista (objeto)
+  document.getElementById('btnGuardarPlantilla')?.addEventListener('click', async ()=>{
+    if(!video.videoWidth){ setVisionMsg('warn','La cámara aún no está lista'); return; }
+    const sel = eqDestino.value;
+    if(!sel){ setVisionMsg('warn','Seleccione un destino'); return; }
+    const [kind, id] = sel.split(':');
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    setVisionMsg('info', kind==='eq' ? 'Guardando plantilla...' : 'Guardando vista del objeto...');
+    try{
+      const token = localStorage.getItem('jwt');
+      let res, data;
+      const sub = (tplCarpeta.value.trim()||'frontal');
+      if(kind==='eq'){
+        res = await fetch(`/api/vision/equipos/${id}/plantilla`, { method:'POST', headers: Object.assign({'Content-Type':'application/json'}, token? {'Authorization':'Bearer '+token}:{} ), body: JSON.stringify({ image_base64: dataUrl, carpeta: sub }) });
+        data = await res.json();
+        if(res.ok){ setVisionMsg('ok','Plantilla guardada correctamente'); }
+        else { setVisionMsg('err', data?.message||'No se pudo guardar la plantilla'); }
+      } else if(kind==='obj'){
+        if(!token){ setVisionMsg('warn','Inicie sesión API para guardar vistas de objetos'); return; }
+        res = await fetch(`/api/objetos/${id}/imagenes`, { method:'POST', headers: {'Content-Type':'application/json','Authorization':'Bearer '+token}, body: JSON.stringify({ image_base64: dataUrl, notas: '', carpeta: '', fuente:'camera', tipo_registro:'objeto', vista: sub }) });
+        data = await res.json();
+        if(res.ok){ setVisionMsg('ok','Vista del objeto guardada'); }
+        else { setVisionMsg('err', data?.message||'No se pudo guardar la vista'); }
+      }
+      loadGalleryForSelection(eqDestino.value);
+    }catch(e){ setVisionMsg('err','Error guardando: '+e.message); }
+  });
+
+  btnCapturar?.addEventListener('click', async ()=>{
+    if(!video.videoWidth){ return; }
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    visionMsg.className='alert alert-warning small'; visionMsg.textContent='Buscando coincidencias...';
+    try{
+      const res = await fetch('/api/vision/match',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_base64:dataUrl})});
+      const data = await res.json();
+      // Confirmed EQUIPO
+      if(data?.tipo==='equipo' && data?.equipo){
+        visionMsg.className='alert alert-success small';
+        const scoreTxt = data?.match?.score? ` · score ${data.match.score}`:'';
+        visionMsg.textContent=`Coincidencia: ${data.equipo.nombre} (${data.equipo.id}) · Estado: ${data.equipo.estado} · Ubicación: ${data.equipo.ubicacion}${scoreTxt}`;
+        const row = [...tbody.rows].find(r=>r.dataset.id===data.equipo.id);
+        if(row){ row.classList.add('table-success'); row.scrollIntoView({behavior:'smooth', block:'center'}); }
+        return;
+      }
+      // Confirmed OBJETO
+      if(data?.tipo==='objeto' && data?.objeto){
+        const o = data.objeto;
+        visionMsg.className='alert alert-success small';
+        const scoreTxt = data?.match?.score? ` · score ${data.match.score}`:'';
+        visionMsg.innerHTML = `Coincidencia de objeto: <strong>${o.nombre}</strong>${o.categoria? ' · '+o.categoria:''}${scoreTxt} <button class="btn btn-link btn-sm ms-2 p-0" id="btnVerDetalles">Ver detalles</button>`;
+        document.getElementById('btnVerDetalles')?.addEventListener('click', ()=> showObjetoDetalle(o));
+        return;
+      }
+      // SUGERENCIAS
+      if(data?.tipo==='sugerencia'){
+        const scoreTxt = data?.match?.score? ` · score ${data.match.score}`:'';
+        if(data.categoria==='objeto'){
+          if(data.objeto){
+            visionMsg.className='alert alert-info small';
+            visionMsg.innerHTML = `Más parecido (baja confianza): <strong>${data.objeto.nombre}</strong>${data.objeto.categoria? ' · '+data.objeto.categoria:''}${scoreTxt} <button class="btn btn-link btn-sm ms-2 p-0" id="btnVerDetalles">Ver detalles</button>`;
+            document.getElementById('btnVerDetalles')?.addEventListener('click', ()=> showObjetoDetalle(data.objeto));
+          } else if(data.key){
+            visionMsg.className='alert alert-info small';
+            visionMsg.innerHTML = `Más parecido (carpeta): <strong>${data.key}</strong>${scoreTxt}`;
+          }
+        } else if(data.categoria==='equipo'){
+          if(data.equipo){
+            visionMsg.className='alert alert-info small';
+            visionMsg.innerHTML = `Más parecido (equipo): <strong>${data.equipo.nombre}</strong> (${data.equipo.id})${scoreTxt}`;
+          } else if(data.key){
+            visionMsg.className='alert alert-info small';
+            visionMsg.textContent = `Sugerencia de equipo (id): ${data.key}${scoreTxt}`;
+          }
+        }
+        return;
+      }
+      // Sin coincidencias
+      visionMsg.className='alert alert-info small';
+      visionMsg.textContent = data?.message || 'Sin coincidencias';
+    }catch(e){
+      visionMsg.className='alert alert-danger small'; visionMsg.textContent='Error consultando visión: '+e.message;
+    }
+  });
+</script>
+{% endblock %}

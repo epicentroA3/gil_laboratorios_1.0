@@ -1,0 +1,753 @@
+{% extends "base.html" %}
+{% set page_title = "Registro de Reconocimiento Facial" %}
+
+{% block title %}Registro Facial - Sistema GIL{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Layout principal - ocupa más pantalla */
+.facial-page {
+    min-height: calc(100vh - 120px);
+}
+
+.facial-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+/* Panel izquierdo - Video */
+.video-panel {
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.video-panel-header {
+    background: linear-gradient(135deg, #39a900 0%, #2d8a00 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+}
+
+.video-panel-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.video-panel-body {
+    padding: 1.5rem;
+}
+
+/* Video container */
+.video-container {
+    position: relative;
+    background: #1a1a2e;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    aspect-ratio: 4/3;
+    margin-bottom: 1rem;
+}
+
+.video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+.video-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    background: #f8f9fa;
+}
+
+.video-placeholder i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.face-guide {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 220px;
+    height: 280px;
+    border: 3px dashed rgba(57, 169, 0, 0.9);
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.3);
+}
+
+.video-hint {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(57, 169, 0, 0.9);
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 2rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Botones de control */
+.control-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.875rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    border: none;
+}
+
+.btn-start {
+    background: linear-gradient(135deg, #39a900 0%, #2d8a00 100%);
+    color: white;
+}
+
+.btn-start:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(57, 169, 0, 0.35);
+    color: white;
+}
+
+.btn-capture {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: white;
+}
+
+.btn-capture:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(13, 110, 253, 0.35);
+    color: white;
+}
+
+.btn-stop {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-stop:hover {
+    background: #bb2d3b;
+    color: white;
+}
+
+/* Panel derecho - Información */
+.info-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.info-card {
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.info-card-header {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.info-card-header h6 {
+    margin: 0;
+    font-weight: 600;
+    color: #333;
+}
+
+.info-card-body {
+    padding: 1.5rem;
+}
+
+/* Usuario info */
+.user-info-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.user-field label {
+    display: block;
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.user-field .value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.user-field input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.user-field input:focus {
+    outline: none;
+    border-color: #39a900;
+    box-shadow: 0 0 0 3px rgba(57, 169, 0, 0.15);
+}
+
+/* Estado badge */
+.status-display {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+}
+
+.status-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.status-icon.pending { background: #e9ecef; color: #6c757d; }
+.status-icon.ready { background: #fff3cd; color: #856404; }
+.status-icon.registered { background: #d1e7dd; color: #0f5132; }
+.status-icon.error { background: #f8d7da; color: #842029; }
+
+.status-text h6 { margin: 0; font-weight: 600; }
+.status-text small { color: #6c757d; }
+
+/* Pasos */
+.steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+}
+
+.step-item.active {
+    background: #d1e7dd;
+    border-left: 3px solid #39a900;
+}
+
+.step-item.completed {
+    background: #e8f5e9;
+}
+
+.step-num {
+    width: 28px;
+    height: 28px;
+    background: #39a900;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.step-item.completed .step-num {
+    background: #198754;
+}
+
+.step-text {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Mensajes */
+.message-area {
+    margin-top: 1rem;
+}
+
+.alert-custom {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.alert-custom i { font-size: 1.25rem; margin-top: 2px; }
+
+.alert-success-custom { background: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+.alert-danger-custom { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+.alert-warning-custom { background: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+.alert-info-custom { background: #cff4fc; color: #055160; border: 1px solid #b6effb; }
+
+/* Preview captura */
+.capture-preview {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+}
+
+.capture-preview img {
+    max-width: 150px;
+    border-radius: 0.5rem;
+    border: 3px solid #39a900;
+    margin-top: 0.5rem;
+}
+
+/* Privacidad */
+.privacy-note {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #e8f5e9;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    color: #2e7d32;
+}
+
+.privacy-note i {
+    font-size: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .facial-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .control-buttons {
+        flex-direction: column;
+    }
+    
+    .btn-action {
+        width: 100%;
+    }
+    
+    .face-guide {
+        width: 160px;
+        height: 200px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="facial-page">
+    <div class="facial-row">
+        <!-- Panel Izquierdo - Video -->
+        <div class="video-panel">
+            <div class="video-panel-header">
+                <h5><i class="bi bi-camera-video-fill me-2"></i>Cámara de Captura</h5>
+            </div>
+            <div class="video-panel-body">
+                <!-- Contenedor de video -->
+                <div class="video-container" id="videoContainer">
+                    <div class="video-placeholder" id="videoPlaceholder">
+                        <i class="bi bi-camera-video-off"></i>
+                        <p>Cámara no activa</p>
+                        <small>Haz clic en "Activar Cámara" para comenzar</small>
+                    </div>
+                    <video id="videoPreview" autoplay playsinline style="display: none;"></video>
+                    <div class="face-guide" id="faceGuide" style="display: none;"></div>
+                    <div class="video-hint" id="videoHint" style="display: none;">
+                        <i class="bi bi-bullseye me-1"></i> Centra tu rostro en el óvalo
+                    </div>
+                </div>
+                <canvas id="captureCanvas" style="display: none;"></canvas>
+                
+                <!-- Botones de control -->
+                <div class="control-buttons">
+                    <button class="btn btn-action btn-start" id="startCameraBtn">
+                        <i class="bi bi-camera-video-fill"></i> Activar Cámara
+                    </button>
+                    <button class="btn btn-action btn-capture" id="captureBtn" style="display: none;">
+                        <i class="bi bi-camera-fill"></i> Capturar Rostro
+                    </button>
+                    <button class="btn btn-action btn-stop" id="stopCameraBtn" style="display: none;">
+                        <i class="bi bi-x-circle-fill"></i> Detener
+                    </button>
+                </div>
+                
+                <!-- Mensajes -->
+                <div id="messageArea" class="message-area"></div>
+            </div>
+        </div>
+        
+        <!-- Panel Derecho - Información -->
+        <div class="info-panel">
+            <!-- Card Usuario -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h6><i class="bi bi-person-badge me-2"></i>Información del Usuario</h6>
+                </div>
+                <div class="info-card-body">
+                    <div class="user-info-grid">
+                        <div class="user-field">
+                            <label>Documento / ID de Usuario</label>
+                            <input type="text" id="userId" value="{{ user.user_id or '' }}" placeholder="Ingresa tu documento">
+                        </div>
+                        <div class="user-field" id="userNameField" style="display: none;">
+                            <label>Nombre Completo</label>
+                            <div class="value" id="userName">-</div>
+                        </div>
+                        <div class="user-field" id="userRolField" style="display: none;">
+                            <label>Rol</label>
+                            <div class="value" id="userRol">-</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Estado -->
+                    <div class="status-display mt-3" id="statusDisplay">
+                        <div class="status-icon pending" id="statusIcon">
+                            <i class="bi bi-question-circle"></i>
+                        </div>
+                        <div class="status-text">
+                            <h6 id="statusTitle">Sin verificar</h6>
+                            <small id="statusSubtitle">Ingresa tu documento para verificar</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Card Pasos -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h6><i class="bi bi-list-ol me-2"></i>Pasos del Registro</h6>
+                </div>
+                <div class="info-card-body">
+                    <div class="steps-list">
+                        <div class="step-item" id="step1">
+                            <span class="step-num">1</span>
+                            <span class="step-text">Ingresa tu documento de identidad</span>
+                        </div>
+                        <div class="step-item" id="step2">
+                            <span class="step-num">2</span>
+                            <span class="step-text">Activa la cámara</span>
+                        </div>
+                        <div class="step-item" id="step3">
+                            <span class="step-num">3</span>
+                            <span class="step-text">Centra tu rostro en el óvalo</span>
+                        </div>
+                        <div class="step-item" id="step4">
+                            <span class="step-num">4</span>
+                            <span class="step-text">Captura tu rostro</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Preview de captura -->
+            <div class="info-card" id="capturePreviewCard" style="display: none;">
+                <div class="info-card-header">
+                    <h6><i class="bi bi-image me-2"></i>Imagen Capturada</h6>
+                </div>
+                <div class="info-card-body">
+                    <div class="capture-preview">
+                        <img id="capturedImage" src="" alt="Rostro capturado">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Privacidad -->
+            <div class="privacy-note">
+                <i class="bi bi-shield-lock-fill"></i>
+                <div>
+                    <strong>Tu privacidad es importante</strong><br>
+                    <small>La información biométrica se almacena de forma segura y encriptada. Solo se usa para verificar tu identidad.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+class RegistroFacialSystem {
+    constructor() {
+        this.stream = null;
+        this.videoElement = document.getElementById('videoPreview');
+        this.canvas = document.getElementById('captureCanvas');
+        this.userId = null;
+        this.userData = null;
+        this.currentStep = 1;
+    }
+
+    init() {
+        document.getElementById('startCameraBtn').addEventListener('click', () => this.iniciarCamara());
+        document.getElementById('stopCameraBtn').addEventListener('click', () => this.detenerCamara());
+        document.getElementById('captureBtn').addEventListener('click', () => this.capturarYRegistrar());
+        
+        const userIdInput = document.getElementById('userId');
+        userIdInput.addEventListener('input', () => this.onUserIdChange());
+        userIdInput.addEventListener('blur', () => this.verificarUsuario());
+        
+        // Verificar si ya hay un ID
+        if (userIdInput.value) {
+            this.verificarUsuario();
+        }
+        
+        this.setStep(1);
+    }
+
+    setStep(step) {
+        this.currentStep = step;
+        for (let i = 1; i <= 4; i++) {
+            const el = document.getElementById(`step${i}`);
+            el.classList.remove('active', 'completed');
+            if (i < step) el.classList.add('completed');
+            if (i === step) el.classList.add('active');
+        }
+    }
+
+    onUserIdChange() {
+        const userId = document.getElementById('userId').value.trim();
+        if (!userId) {
+            this.actualizarEstado('pending', 'Sin verificar', 'Ingresa tu documento para verificar');
+            document.getElementById('userNameField').style.display = 'none';
+            document.getElementById('userRolField').style.display = 'none';
+        }
+    }
+
+    async verificarUsuario() {
+        const userId = document.getElementById('userId').value.trim();
+        if (!userId) {
+            this.actualizarEstado('pending', 'Sin verificar', 'Ingresa tu documento para verificar');
+            return;
+        }
+
+        this.actualizarEstado('pending', 'Verificando...', 'Consultando base de datos');
+
+        try {
+            const response = await fetch(`/api/facial/check/${userId}`);
+            const result = await response.json();
+
+            if (result.success) {
+                this.userData = result.user;
+                
+                // Mostrar info del usuario
+                document.getElementById('userName').textContent = result.user.nombre;
+                document.getElementById('userRol').textContent = result.user.rol;
+                document.getElementById('userNameField').style.display = 'block';
+                document.getElementById('userRolField').style.display = 'block';
+                
+                if (result.registered) {
+                    this.actualizarEstado('registered', 'Ya registrado', 'Tu rostro ya está en el sistema');
+                    this.setStep(4);
+                } else {
+                    this.actualizarEstado('ready', 'Listo para registrar', 'Activa la cámara para continuar');
+                    this.setStep(2);
+                }
+            } else {
+                this.actualizarEstado('error', 'Usuario no encontrado', result.error || 'Verifica el documento');
+                document.getElementById('userNameField').style.display = 'none';
+                document.getElementById('userRolField').style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error verificando usuario:', error);
+            this.actualizarEstado('error', 'Error de conexión', 'No se pudo verificar el usuario');
+        }
+    }
+
+    actualizarEstado(tipo, titulo, subtitulo) {
+        const iconEl = document.getElementById('statusIcon');
+        const titleEl = document.getElementById('statusTitle');
+        const subtitleEl = document.getElementById('statusSubtitle');
+        
+        const iconos = {
+            'pending': 'question-circle',
+            'ready': 'exclamation-circle',
+            'registered': 'check-circle-fill',
+            'error': 'x-circle-fill'
+        };
+        
+        iconEl.className = `status-icon ${tipo}`;
+        iconEl.innerHTML = `<i class="bi bi-${iconos[tipo] || 'circle'}"></i>`;
+        titleEl.textContent = titulo;
+        subtitleEl.textContent = subtitulo;
+    }
+
+    async iniciarCamara() {
+        const userId = document.getElementById('userId').value.trim();
+        if (!userId) {
+            this.mostrarMensaje('Ingresa tu documento primero', 'warning');
+            document.getElementById('userId').focus();
+            return;
+        }
+
+        this.userId = userId;
+
+        try {
+            this.stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+            });
+
+            this.videoElement.srcObject = this.stream;
+            this.videoElement.style.display = 'block';
+            
+            document.getElementById('videoPlaceholder').style.display = 'none';
+            document.getElementById('faceGuide').style.display = 'block';
+            document.getElementById('videoHint').style.display = 'block';
+            document.getElementById('startCameraBtn').style.display = 'none';
+            document.getElementById('captureBtn').style.display = 'inline-flex';
+            document.getElementById('stopCameraBtn').style.display = 'inline-flex';
+            
+            this.setStep(3);
+            this.mostrarMensaje('Cámara activa. Centra tu rostro en el óvalo verde.', 'success');
+
+        } catch (error) {
+            console.error('Error cámara:', error);
+            this.mostrarMensaje('No se pudo acceder a la cámara. Verifica los permisos.', 'danger');
+        }
+    }
+
+    detenerCamara() {
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+
+        this.videoElement.style.display = 'none';
+        document.getElementById('videoPlaceholder').style.display = 'flex';
+        document.getElementById('faceGuide').style.display = 'none';
+        document.getElementById('videoHint').style.display = 'none';
+        document.getElementById('startCameraBtn').style.display = 'inline-flex';
+        document.getElementById('captureBtn').style.display = 'none';
+        document.getElementById('stopCameraBtn').style.display = 'none';
+        
+        this.mostrarMensaje('Cámara detenida.', 'info');
+    }
+
+    async capturarYRegistrar() {
+        if (!this.stream || !this.userId) {
+            this.mostrarMensaje('Cámara no activa o usuario no especificado', 'danger');
+            return;
+        }
+
+        try {
+            // Capturar imagen
+            this.canvas.width = this.videoElement.videoWidth;
+            this.canvas.height = this.videoElement.videoHeight;
+            
+            const context = this.canvas.getContext('2d');
+            // Voltear horizontalmente para que coincida con el espejo
+            context.translate(this.canvas.width, 0);
+            context.scale(-1, 1);
+            context.drawImage(this.videoElement, 0, 0);
+
+            const imageData = this.canvas.toDataURL('image/jpeg', 0.9);
+
+            // Mostrar preview de la imagen capturada
+            document.getElementById('capturedImage').src = imageData;
+            document.getElementById('capturedPreview').style.display = 'block';
+
+            // Mostrar loading
+            this.mostrarMensaje('Procesando y registrando rostro...', 'info');
+
+            // Enviar a API
+            const response = await fetch('/api/facial/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: this.userId,
+                    image: imageData
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.mostrarMensaje(result.message || 'Rostro registrado exitosamente', 'success');
+                this.actualizarEstado('registered', 'Registrado exitosamente', 'Tu rostro ha sido guardado');
+                this.setStep(4);
+                
+                // Mostrar preview
+                document.getElementById('capturePreviewCard').style.display = 'block';
+                
+                // Detener cámara después de 2 segundos
+                setTimeout(() => {
+                    this.detenerCamara();
+                }, 2000);
+            } else {
+                this.mostrarMensaje(result.error || 'Error al registrar', 'danger');
+                this.actualizarEstado('error', 'Error en registro', result.error || 'Intenta nuevamente');
+            }
+
+        } catch (error) {
+            console.error('Error capturando rostro:', error);
+            this.mostrarMensaje('Error de conexión con el servidor. Intenta nuevamente.', 'warning');
+            this.actualizarEstado('error', 'Error de conexión', 'No se pudo conectar al servidor');
+        }
+    }
+
+    mostrarMensaje(texto, tipo) {
+        const messageArea = document.getElementById('messageArea');
+        const iconos = {
+            'success': 'check-circle-fill',
+            'danger': 'x-circle-fill',
+            'warning': 'exclamation-triangle-fill',
+            'info': 'info-circle-fill'
+        };
+        const icono = iconos[tipo] || 'info-circle-fill';
+        
+        messageArea.innerHTML = `
+            <div class="alert-custom alert-${tipo}-custom" role="alert">
+                <i class="bi bi-${icono}"></i>
+                <div>
+                    ${texto}
+                </div>
+                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            </div>
+        `;
+    }
+}
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', () => {
+    const sistema = new RegistroFacialSystem();
+    sistema.init();
+});
+</script>
+{% endblock %}

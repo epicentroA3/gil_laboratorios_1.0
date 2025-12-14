@@ -1,0 +1,1122 @@
+{% extends 'base.html' %}
+{% set title = 'Inventarios' %}
+
+{% block content %}
+<!-- Header -->
+<div class="card border-0 shadow-sm mb-4 module-header">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-1 text-white fw-bold"><i class="bi bi-building me-2"></i>Inventario de Espacios</h1>
+                <p class="mb-0 text-white opacity-90">Consulta el inventario de cada espacio de formación</p>
+            </div>
+            {% if puede_editar %}
+            <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#modalNuevoLaboratorio">
+                <i class="bi bi-plus-circle me-1"></i> Nuevo Espacio
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="row mb-4">
+    <div class="col-md-5">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control" id="filtroNombre" placeholder="Buscar por nombre o código...">
+        </div>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="filtroTipo">
+            <option value="">Todos los tipos</option>
+            <option value="quimica">Química</option>
+            <option value="mineria">Minería</option>
+            <option value="suelos">Suelos</option>
+            <option value="metalurgia">Metalurgia</option>
+            <option value="general">General</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="filtroEstado">
+            <option value="">Todos los estados</option>
+            <option value="disponible">Disponibles</option>
+            <option value="ocupado">Ocupados</option>
+            <option value="mantenimiento">En mantenimiento</option>
+            <option value="fuera_servicio">Fuera de servicio</option>
+        </select>
+    </div>
+    <div class="col-md-1">
+        <button type="button" class="btn btn-outline-secondary w-100" onclick="limpiarFiltros()">
+            Limpiar
+        </button>
+    </div>
+</div>
+
+<!-- Lista de laboratorios -->
+<div class="row" id="laboratoriosList">
+    {% for lab in laboratorios %}
+    <div class="col-lg-6 mb-4 laboratorio-card" 
+         data-tipo="{{ lab.tipo }}" 
+         data-estado="{{ lab.estado }}"
+         data-nombre="{{ lab.nombre.lower() }} {{ lab.codigo.lower() }}">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header border-0 d-flex justify-content-between align-items-center lab-card-header">
+                <div>
+                    <h5 class="mb-1 lab-card-title">
+                        <i class="bi bi-{{ 'flask' if lab.tipo == 'laboratorio' else 'book' if lab.tipo == 'aula' else 'tools' if lab.tipo == 'taller' else 'archive' }} me-2"></i>
+                        {{ lab.codigo }}
+                    </h5>
+                    <small class="text-muted">{{ lab.tipo.title() }}</small>
+                </div>
+                <span class="badge rounded-pill px-3 py-2 badge-estado-{{ lab.estado }}">
+                    {{ lab.estado.title() }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="card-title mb-0">{{ lab.nombre }}</h6>
+                    <span class="badge bg-primary rounded-pill">
+                        <i class="bi bi-pc-display me-1"></i>{{ lab.total_equipos or 0 }} equipos
+                    </span>
+                </div>
+                <p class="card-text mb-0">
+                    <small class="text-muted">
+                        <i class="bi bi-geo-alt me-1"></i> {{ lab.ubicacion or 'Sin ubicación' }}<br>
+                        <i class="bi bi-people me-1"></i> Capacidad: {{ lab.capacidad_estudiantes or 20 }} personas<br>
+                        {% if lab.area_m2 %}
+                        <i class="bi bi-arrows-fullscreen me-1"></i> Área: {{ lab.area_m2 }} m²<br>
+                        {% endif %}
+                        <i class="bi bi-person me-1"></i> {{ lab.responsable or 'Sin responsable asignado' }}
+                    </small>
+                </p>
+            </div>
+            <div class="card-footer bg-light border-0">
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary border-0 {% if puede_editar %}flex-grow-1{% else %}w-100{% endif %}" 
+                            onclick="verDetalleLaboratorio({{ lab.id }})" title="Ver Detalle">
+                        <i class="bi bi-eye me-1"></i> Ver Detalle
+                    </button>
+                    {% if puede_editar %}
+                    <button type="button" class="btn btn-sm btn-warning btn-editar-lab" 
+                            data-lab-id="{{ lab.id }}" 
+                            title="Editar laboratorio">
+                        <i class="bi bi-pencil-fill"></i>
+                    </button>
+                                        {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Paginación -->
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-body py-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <label class="small text-muted mb-0">Mostrar:</label>
+            <select class="form-select form-select-sm" id="itemsPorPagina" style="width:auto" onchange="cambiarItemsPorPagina()">
+                <option value="4" selected>4</option>
+                <option value="8">8</option>
+                <option value="12">12</option>
+                <option value="20">20</option>
+            </select>
+            <span class="small text-muted">por página</span>
+            <span class="badge bg-secondary ms-2" id="contadorLabs">0 de 0</span>
+        </div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="paginacion"></ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Modal Nuevo Laboratorio -->
+{% if puede_editar %}
+<div class="modal fade" id="modalNuevoLaboratorio" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header module-header" style="border-bottom-left-radius: 0 !important; border-bottom-right-radius: 0 !important;">
+                <h5 class="modal-title text-white"><i class="bi bi-plus-circle me-2"></i>Nuevo Laboratorio/Aula</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formNuevoLaboratorio">
+                <div class="modal-body">
+                    <div id="errorGeneral" class="alert alert-danger d-none mb-3"></div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Código <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="codigo" id="nuevoCodigo" placeholder="Ej: LAB-QUI-001" oninput="validarCampoNuevo('codigo')">
+                                <div class="text-danger small mt-1 d-none" id="errorCodigo"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tipo <span class="text-danger">*</span></label>
+                                <select class="form-select" name="tipo" id="nuevoTipo" onchange="validarCampoNuevo('tipo')">
+                                    <option value="">Seleccionar tipo</option>
+                                    <option value="quimica">Química</option>
+                                    <option value="mineria">Minería</option>
+                                    <option value="suelos">Suelos</option>
+                                    <option value="metalurgia">Metalurgia</option>
+                                    <option value="general">General</option>
+                                </select>
+                                <div class="text-danger small mt-1 d-none" id="errorTipo"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="nombre" id="nuevoNombre" placeholder="Ej: Laboratorio de Química General" oninput="validarCampoNuevo('nombre')">
+                        <div class="text-danger small mt-1 d-none" id="errorNombre"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ubicación</label>
+                        <input type="text" class="form-control" name="ubicacion" placeholder="Ej: Edificio A - Piso 2">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Capacidad Personas</label>
+                                <input type="number" class="form-control" name="capacidad_personas" id="nuevoCapacidad" placeholder="20" oninput="validarCampoNuevo('capacidad')">
+                                <div class="text-danger small mt-1 d-none" id="errorCapacidad"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Área (m²)</label>
+                                <input type="number" class="form-control" name="area_m2" step="0.01" placeholder="80.5">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Persona Responsable</label>
+                        <div class="position-relative">
+                            <div class="input-group mb-1">
+                                <input type="text" class="form-control" id="buscarResponsable" 
+                                       placeholder="Buscar por nombre..." 
+                                       onfocus="mostrarOpcionesResponsable()" oninput="filtrarResponsables()">
+                                <button class="btn btn-outline-secondary" type="button" onclick="limpiarResponsable()">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="toggleOpcionesResponsable()">
+                                    <i class="bi bi-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div id="opcionesResponsable" class="border rounded bg-white position-absolute w-100 d-none" 
+                                 style="max-height: 150px; overflow-y: auto; z-index: 1000;">
+                                <div class="list-group list-group-flush">
+                                    <a href="#" class="list-group-item list-group-item-action py-2" 
+                                       onclick="seleccionarResponsable('', 'Sin asignar'); return false;">Sin asignar</a>
+                                    {% for instructor in instructores %}
+                                    <a href="#" class="list-group-item list-group-item-action py-2 opcion-responsable" 
+                                       data-value="{{ instructor.id }}" 
+                                       data-nombre="{{ instructor.nombre }}{% if instructor.especialidad %} - {{ instructor.especialidad }}{% endif %}"
+                                       onclick="seleccionarResponsable('{{ instructor.id }}', '{{ instructor.nombre }}{% if instructor.especialidad %} - {{ instructor.especialidad }}{% endif %}'); return false;">
+                                        {{ instructor.nombre }}
+                                        {% if instructor.especialidad %} - {{ instructor.especialidad }}{% endif %}
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <input type="hidden" name="responsable_id" id="responsableIdInput" value="">
+                        </div>
+                        <small class="form-text text-muted">
+                            <i class="bi bi-info-circle"></i> Selecciona la persona responsable del laboratorio
+                        </small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Estado</label>
+                        <select class="form-select" name="estado">
+                            <option value="disponible" selected>Disponible</option>
+                            <option value="ocupado">Ocupado</option>
+                            <option value="mantenimiento">En Mantenimiento</option>
+                            <option value="fuera_servicio">Fuera de Servicio</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Laboratorio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Laboratorio -->
+<div class="modal fade" id="modalEditarLaboratorio" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header module-header" style="border-bottom-left-radius: 0 !important; border-bottom-right-radius: 0 !important;">
+                <h5 class="modal-title text-white"><i class="bi bi-pencil-square me-2"></i>Editar Laboratorio/Aula</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarLaboratorio">
+                <input type="hidden" id="editLabId" name="id">
+                <div class="modal-body">
+                    <div id="errorGeneralEdit" class="alert alert-danger d-none mb-3"></div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Código <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="editCodigo" name="codigo" oninput="validarCampoEdit('codigo')">
+                                <div class="text-danger small mt-1 d-none" id="errorCodigoEdit"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tipo <span class="text-danger">*</span></label>
+                                <select class="form-select" id="editTipo" name="tipo" onchange="validarCampoEdit('tipo')">
+                                    <option value="quimica">Química</option>
+                                    <option value="mineria">Minería</option>
+                                    <option value="suelos">Suelos</option>
+                                    <option value="metalurgia">Metalurgia</option>
+                                    <option value="general">General</option>
+                                </select>
+                                <div class="text-danger small mt-1 d-none" id="errorTipoEdit"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="editNombre" name="nombre" oninput="validarCampoEdit('nombre')">
+                        <div class="text-danger small mt-1 d-none" id="errorNombreEdit"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ubicación</label>
+                        <input type="text" class="form-control" id="editUbicacion" name="ubicacion">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Capacidad Personas</label>
+                                <input type="number" class="form-control" id="editCapacidad" name="capacidad_personas" oninput="validarCampoEdit('capacidad')">
+                                <div class="text-danger small mt-1 d-none" id="errorCapacidadEdit"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Área (m²)</label>
+                                <input type="number" class="form-control" id="editArea" name="area_m2" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Persona Responsable</label>
+                        <div class="position-relative">
+                            <div class="input-group mb-1">
+                                <input type="text" class="form-control" id="buscarResponsableEdit" 
+                                       placeholder="Buscar por nombre..." 
+                                       onfocus="mostrarOpcionesResponsableEdit()" oninput="filtrarResponsablesEdit()">
+                                <button class="btn btn-outline-secondary" type="button" onclick="limpiarResponsableEdit()">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="toggleOpcionesResponsableEdit()">
+                                    <i class="bi bi-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div id="opcionesResponsableEdit" class="border rounded bg-white position-absolute w-100 d-none" 
+                                 style="max-height: 150px; overflow-y: auto; z-index: 1000;">
+                                <div class="list-group list-group-flush">
+                                    <a href="#" class="list-group-item list-group-item-action py-2" 
+                                       onclick="seleccionarResponsableEdit('', 'Sin asignar'); return false;">Sin asignar</a>
+                                    {% for instructor in instructores %}
+                                    <a href="#" class="list-group-item list-group-item-action py-2 opcion-responsable-edit" 
+                                       data-value="{{ instructor.id }}" 
+                                       data-nombre="{{ instructor.nombre }}{% if instructor.especialidad %} - {{ instructor.especialidad }}{% endif %}"
+                                       onclick="seleccionarResponsableEdit('{{ instructor.id }}', '{{ instructor.nombre }}{% if instructor.especialidad %} - {{ instructor.especialidad }}{% endif %}'); return false;">
+                                        {{ instructor.nombre }}
+                                        {% if instructor.especialidad %} - {{ instructor.especialidad }}{% endif %}
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <input type="hidden" name="responsable_id" id="editResponsableIdInput" value="">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Estado</label>
+                        <select class="form-select" id="editEstado" name="estado">
+                            <option value="disponible">Disponible</option>
+                            <option value="ocupado">Ocupado</option>
+                            <option value="mantenimiento">En Mantenimiento</option>
+                            <option value="fuera_servicio">Fuera de Servicio</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Laboratorio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+// Variables de paginación
+let paginaActual = 1;
+let itemsPorPagina = 4;
+let cardsFiltradas = [];
+const todasLasCards = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Guardar todas las cards
+    document.querySelectorAll('.laboratorio-card').forEach(card => {
+        todasLasCards.push(card);
+    });
+    
+    // Aplicar filtros y paginación inicial
+    aplicarFiltros();
+    
+    // Filtros
+    const filtroNombre = document.getElementById('filtroNombre');
+    const filtroTipo = document.getElementById('filtroTipo');
+    const filtroEstado = document.getElementById('filtroEstado');
+    
+    [filtroNombre, filtroTipo, filtroEstado].forEach(filtro => {
+        filtro.addEventListener('input', function() {
+            paginaActual = 1;
+            aplicarFiltros();
+        });
+        filtro.addEventListener('change', function() {
+            paginaActual = 1;
+            aplicarFiltros();
+        });
+    });
+    
+    // Inicializar formularios de administración si existen
+    const formNuevo = document.getElementById('formNuevoLaboratorio');
+    if (formNuevo) {
+        formNuevo.addEventListener('submit', function(e) {
+            e.preventDefault();
+            crearLaboratorio();
+        });
+    }
+    
+    const formEditar = document.getElementById('formEditarLaboratorio');
+    if (formEditar) {
+        formEditar.addEventListener('submit', function(e) {
+            e.preventDefault();
+            actualizarLaboratorio();
+        });
+    }
+    
+    // Event delegation para botones de administración
+    document.addEventListener('click', function(e) {
+        // Botón editar
+        const btnEditar = e.target.closest('.btn-editar-lab');
+        if (btnEditar) {
+            const labId = btnEditar.dataset.labId;
+            abrirModalEditar(labId);
+        }
+        
+            });
+});
+
+function aplicarFiltros() {
+    const filtroNombre = document.getElementById('filtroNombre').value.toLowerCase();
+    const filtroTipo = document.getElementById('filtroTipo').value;
+    const filtroEstado = document.getElementById('filtroEstado').value;
+    
+    // Filtrar cards
+    cardsFiltradas = todasLasCards.filter(card => {
+        const nombre = card.dataset.nombre || '';
+        const tipo = card.dataset.tipo || '';
+        const estado = card.dataset.estado || '';
+        
+        const coincideNombre = !filtroNombre || nombre.includes(filtroNombre);
+        const coincideTipo = !filtroTipo || tipo === filtroTipo;
+        const coincideEstado = !filtroEstado || estado === filtroEstado;
+        
+        return coincideNombre && coincideTipo && coincideEstado;
+    });
+    
+    mostrarPagina();
+}
+
+function mostrarPagina() {
+    const inicio = (paginaActual - 1) * itemsPorPagina;
+    const fin = inicio + itemsPorPagina;
+    
+    // Ocultar todas las cards
+    todasLasCards.forEach(card => card.style.display = 'none');
+    
+    // Mostrar solo las de la página actual
+    cardsFiltradas.slice(inicio, fin).forEach(card => card.style.display = 'block');
+    
+    // Actualizar contador
+    const contador = document.getElementById('contadorLabs');
+    if (contador) {
+        const mostrados = Math.min(fin, cardsFiltradas.length);
+        contador.textContent = `${mostrados} de ${cardsFiltradas.length}`;
+    }
+    
+    // Generar paginación
+    generarPaginacion();
+}
+
+function generarPaginacion() {
+    const totalPaginas = Math.ceil(cardsFiltradas.length / itemsPorPagina);
+    const paginacion = document.getElementById('paginacion');
+    paginacion.innerHTML = '';
+    
+    if (totalPaginas <= 1) return;
+    
+    // Botón anterior
+    const liPrev = document.createElement('li');
+    liPrev.className = `page-item ${paginaActual === 1 ? 'disabled' : ''}`;
+    liPrev.innerHTML = `<a class="page-link" href="#" onclick="irAPagina(${paginaActual - 1}); return false;">«</a>`;
+    paginacion.appendChild(liPrev);
+    
+    // Páginas
+    for (let i = 1; i <= totalPaginas; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === paginaActual ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#" onclick="irAPagina(${i}); return false;">${i}</a>`;
+        paginacion.appendChild(li);
+    }
+    
+    // Botón siguiente
+    const liNext = document.createElement('li');
+    liNext.className = `page-item ${paginaActual === totalPaginas ? 'disabled' : ''}`;
+    liNext.innerHTML = `<a class="page-link" href="#" onclick="irAPagina(${paginaActual + 1}); return false;">»</a>`;
+    paginacion.appendChild(liNext);
+}
+
+function irAPagina(pagina) {
+    const totalPaginas = Math.ceil(cardsFiltradas.length / itemsPorPagina);
+    if (pagina < 1 || pagina > totalPaginas) return;
+    paginaActual = pagina;
+    mostrarPagina();
+}
+
+function cambiarItemsPorPagina() {
+    itemsPorPagina = parseInt(document.getElementById('itemsPorPagina').value);
+    paginaActual = 1;
+    mostrarPagina();
+}
+
+function limpiarFiltros() {
+    document.getElementById('filtroNombre').value = '';
+    document.getElementById('filtroTipo').value = '';
+    document.getElementById('filtroEstado').value = '';
+    paginaActual = 1;
+    aplicarFiltros();
+}
+
+// ========== Funciones para dropdown de responsable (Modal Nuevo) ==========
+function mostrarOpcionesResponsable() {
+    document.getElementById('opcionesResponsable').classList.remove('d-none');
+}
+
+function ocultarOpcionesResponsable() {
+    setTimeout(() => {
+        document.getElementById('opcionesResponsable').classList.add('d-none');
+    }, 200);
+}
+
+function toggleOpcionesResponsable() {
+    document.getElementById('opcionesResponsable').classList.toggle('d-none');
+}
+
+function filtrarResponsables() {
+    const busqueda = document.getElementById('buscarResponsable').value.toLowerCase();
+    const opciones = document.querySelectorAll('#opcionesResponsable .opcion-responsable');
+    
+    opciones.forEach(opcion => {
+        const texto = opcion.textContent.toLowerCase();
+        if (texto.includes(busqueda)) {
+            opcion.style.display = '';
+        } else {
+            opcion.style.display = 'none';
+        }
+    });
+    mostrarOpcionesResponsable();
+}
+
+function seleccionarResponsable(id, nombre) {
+    document.getElementById('buscarResponsable').value = nombre;
+    document.getElementById('responsableIdInput').value = id;
+    document.getElementById('opcionesResponsable').classList.add('d-none');
+}
+
+function limpiarResponsable() {
+    document.getElementById('buscarResponsable').value = '';
+    document.getElementById('responsableIdInput').value = '';
+    filtrarResponsables();
+}
+
+// ========== Funciones para dropdown de responsable (Modal Editar) ==========
+function mostrarOpcionesResponsableEdit() {
+    document.getElementById('opcionesResponsableEdit').classList.remove('d-none');
+}
+
+function ocultarOpcionesResponsableEdit() {
+    setTimeout(() => {
+        document.getElementById('opcionesResponsableEdit').classList.add('d-none');
+    }, 200);
+}
+
+function toggleOpcionesResponsableEdit() {
+    document.getElementById('opcionesResponsableEdit').classList.toggle('d-none');
+}
+
+function filtrarResponsablesEdit() {
+    const busqueda = document.getElementById('buscarResponsableEdit').value.toLowerCase();
+    const opciones = document.querySelectorAll('#opcionesResponsableEdit .opcion-responsable-edit');
+    
+    opciones.forEach(opcion => {
+        const texto = opcion.textContent.toLowerCase();
+        if (texto.includes(busqueda)) {
+            opcion.style.display = '';
+        } else {
+            opcion.style.display = 'none';
+        }
+    });
+    mostrarOpcionesResponsableEdit();
+}
+
+function seleccionarResponsableEdit(id, nombre) {
+    document.getElementById('buscarResponsableEdit').value = nombre;
+    document.getElementById('editResponsableIdInput').value = id;
+    document.getElementById('opcionesResponsableEdit').classList.add('d-none');
+}
+
+function limpiarResponsableEdit() {
+    document.getElementById('buscarResponsableEdit').value = '';
+    document.getElementById('editResponsableIdInput').value = '';
+    filtrarResponsablesEdit();
+}
+
+// Obtener clase de badge según estado
+function getBadgeEstado(estado) {
+    const badges = {
+        'disponible': 'bg-success',
+        'ocupado': 'bg-warning text-dark',
+        'mantenimiento': 'bg-info',
+        'fuera_servicio': 'bg-danger'
+    };
+    return badges[estado] || 'bg-secondary';
+}
+
+// Obtener icono según tipo
+function getIconoTipo(tipo) {
+    const iconos = {
+        'quimica': 'bi-droplet',
+        'mineria': 'bi-gem',
+        'suelos': 'bi-layers',
+        'metalurgia': 'bi-fire',
+        'general': 'bi-building'
+    };
+    return iconos[tipo] || 'bi-building';
+}
+
+// Ver detalle de laboratorio
+function verDetalleLaboratorio(labId) {
+    fetch(`/api/laboratorios/${labId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.laboratorio) {
+            const lab = data.laboratorio;
+            const badgeClass = getBadgeEstado(lab.estado);
+            const iconoTipo = getIconoTipo(lab.tipo);
+            
+            let html = `
+                <div class="d-flex align-items-center mb-3">
+                    <div class="d-flex align-items-center justify-content-center bg-primary text-white me-3" 
+                         style="width: 50px; height: 50px; border-radius: 50%;">
+                        <i class="bi ${iconoTipo} fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">${lab.nombre}</h5>
+                        <span class="badge ${badgeClass}">${lab.estado ? lab.estado.replace('_', ' ').toUpperCase() : 'N/A'}</span>
+                    </div>
+                </div>
+                <hr>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-upc-scan text-muted me-2"></i>
+                            <div>
+                                <small class="text-muted d-block">Código</small>
+                                <strong>${lab.codigo || lab.codigo_lab || 'N/A'}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-tag text-muted me-2"></i>
+                            <div>
+                                <small class="text-muted d-block">Tipo</small>
+                                <strong>${lab.tipo ? lab.tipo.charAt(0).toUpperCase() + lab.tipo.slice(1) : 'N/A'}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-geo-alt text-muted me-2"></i>
+                            <div>
+                                <small class="text-muted d-block">Ubicación</small>
+                                <strong>${lab.ubicacion || 'Sin ubicación'}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-people text-muted me-2"></i>
+                            <div>
+                                <small class="text-muted d-block">Capacidad</small>
+                                <strong>${lab.capacidad_personas || 20} personas</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-arrows-fullscreen text-muted me-2"></i>
+                            <div>
+                                <small class="text-muted d-block">Área</small>
+                                <strong>${lab.area_m2 ? lab.area_m2 + ' m²' : 'No especificada'}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-person-badge text-muted me-2"></i>
+                            <div>
+                                <small class="text-muted d-block">Responsable</small>
+                                <strong>${lab.responsable || 'Sin asignar'}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Crear modal dinámico
+            let modal = document.getElementById('modalDetalleLab');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'modalDetalleLab';
+                modal.className = 'modal fade';
+                modal.innerHTML = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header module-header" style="border-bottom-left-radius: 0 !important; border-bottom-right-radius: 0 !important;">
+                                <h5 class="modal-title text-white"><i class="bi bi-building me-2"></i>Detalle del Laboratorio</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body" id="detalleLabContent"></div>
+                            <div class="modal-footer border-0 pt-0">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            document.getElementById('detalleLabContent').innerHTML = html;
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        } else {
+            alert('Error: ' + (data.message || 'No se pudo obtener el laboratorio'));
+        }
+    })
+    .catch(err => alert('Error: ' + err.message));
+}
+
+// Validación híbrida: Frontend (instantáneo) + Backend (solo para BD)
+let timeoutCodigoUnico = null;
+
+// Reglas de validación (mismas que el backend)
+const REGLAS_LAB = {
+    codigo: { min: 3, max: 20, requerido: true },
+    nombre: { min: 3, max: 100, requerido: true },
+    tipo: { requerido: true, opciones: ['quimica', 'mineria', 'suelos', 'metalurgia', 'general'] },
+    capacidad: { min: 1, max: 100 }
+};
+
+function validarCampoNuevo(campo) {
+    const mapeo = {
+        'codigo': { input: 'nuevoCodigo', error: 'errorCodigo' },
+        'tipo': { input: 'nuevoTipo', error: 'errorTipo' },
+        'nombre': { input: 'nuevoNombre', error: 'errorNombre' },
+        'capacidad': { input: 'nuevoCapacidad', error: 'errorCapacidad' }
+    };
+    
+    const config = mapeo[campo];
+    if (!config) return;
+    
+    const inputEl = document.getElementById(config.input);
+    const errorEl = document.getElementById(config.error);
+    const valor = inputEl.value.trim();
+    let error = '';
+    
+    // Validación instantánea en frontend
+    switch(campo) {
+        case 'codigo':
+            if (!valor) {
+                error = 'El código es requerido';
+            } else if (valor.length < REGLAS_LAB.codigo.min || valor.length > REGLAS_LAB.codigo.max) {
+                error = `El código debe tener entre ${REGLAS_LAB.codigo.min} y ${REGLAS_LAB.codigo.max} caracteres`;
+            } else {
+                // Solo para código único: consultar backend (con debounce)
+                if (timeoutCodigoUnico) clearTimeout(timeoutCodigoUnico);
+                timeoutCodigoUnico = setTimeout(() => {
+                    fetch('/api/laboratorios/validar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ codigo: valor })
+                    })
+                    .then(r => r.json())
+                    .then(result => {
+                        if (result.errores && result.errores.codigo) {
+                            errorEl.textContent = result.errores.codigo;
+                            errorEl.classList.remove('d-none');
+                            inputEl.classList.add('is-invalid');
+                            inputEl.classList.remove('is-valid');
+                        }
+                    });
+                }, 400);
+            }
+            break;
+        case 'tipo':
+            if (!valor) {
+                error = 'El tipo es requerido';
+            }
+            break;
+        case 'nombre':
+            if (!valor) {
+                error = 'El nombre es requerido';
+            } else if (valor.length < REGLAS_LAB.nombre.min || valor.length > REGLAS_LAB.nombre.max) {
+                error = `El nombre debe tener entre ${REGLAS_LAB.nombre.min} y ${REGLAS_LAB.nombre.max} caracteres`;
+            }
+            break;
+        case 'capacidad':
+            if (valor) {
+                const cap = parseInt(valor);
+                if (isNaN(cap) || cap < REGLAS_LAB.capacidad.min || cap > REGLAS_LAB.capacidad.max) {
+                    error = `La capacidad debe estar entre ${REGLAS_LAB.capacidad.min} y ${REGLAS_LAB.capacidad.max}`;
+                }
+            }
+            break;
+    }
+    
+    // Mostrar/ocultar error
+    if (error) {
+        errorEl.textContent = error;
+        errorEl.classList.remove('d-none');
+        inputEl.classList.add('is-invalid');
+        inputEl.classList.remove('is-valid');
+    } else {
+        errorEl.textContent = '';
+        errorEl.classList.add('d-none');
+        inputEl.classList.remove('is-invalid');
+        if (valor) inputEl.classList.add('is-valid');
+    }
+}
+
+// Funciones para mostrar errores en campos
+function limpiarErroresNuevo() {
+    ['errorGeneral', 'errorCodigo', 'errorTipo', 'errorNombre', 'errorCapacidad'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.add('d-none'); el.textContent = ''; }
+    });
+    ['nuevoCodigo', 'nuevoTipo', 'nuevoNombre', 'nuevoCapacidad'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('is-invalid');
+    });
+}
+
+function mostrarErroresNuevo(errores) {
+    limpiarErroresNuevo();
+    
+    // Mapeo de campos del backend a IDs del frontend
+    const mapeo = {
+        'codigo': { error: 'errorCodigo', input: 'nuevoCodigo' },
+        'tipo': { error: 'errorTipo', input: 'nuevoTipo' },
+        'nombre': { error: 'errorNombre', input: 'nuevoNombre' },
+        'capacidad': { error: 'errorCapacidad', input: 'nuevoCapacidad' }
+    };
+    
+    for (const [campo, mensaje] of Object.entries(errores)) {
+        if (mapeo[campo]) {
+            const errorEl = document.getElementById(mapeo[campo].error);
+            const inputEl = document.getElementById(mapeo[campo].input);
+            if (errorEl) {
+                errorEl.textContent = mensaje;
+                errorEl.classList.remove('d-none');
+            }
+            if (inputEl) inputEl.classList.add('is-invalid');
+        } else {
+            // Error general
+            const general = document.getElementById('errorGeneral');
+            if (general) {
+                general.textContent = mensaje;
+                general.classList.remove('d-none');
+            }
+        }
+    }
+}
+
+function mostrarErrorGeneralNuevo(mensaje) {
+    limpiarErroresNuevo();
+    document.getElementById('errorGeneral').textContent = mensaje;
+    document.getElementById('errorGeneral').classList.remove('d-none');
+}
+
+// Funciones CRUD de Laboratorios (solo se usan si el usuario tiene permisos)
+function crearLaboratorio() {
+    limpiarErroresNuevo();
+    const form = document.getElementById('formNuevoLaboratorio');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    fetch('/api/laboratorios', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ Laboratorio creado exitosamente');
+            location.reload();
+        } else if (result.errores) {
+            mostrarErroresNuevo(result.errores);
+        } else {
+            mostrarErrorGeneralNuevo(result.message || 'Error desconocido');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarErrorGeneralNuevo('Error de conexión: ' + error.message);
+    });
+}
+
+/**
+ * Abre el modal de edición y precarga los datos del laboratorio
+ * @param {number} labId - ID del laboratorio a editar
+ * 
+ * NOTA: Los backdrops se manejan automáticamente por modal-manager.js
+ */
+function abrirModalEditar(labId) {
+    // Obtener datos del laboratorio desde la API
+    fetch(`/api/laboratorios/${labId}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success && result.laboratorio) {
+                const lab = result.laboratorio;
+                
+                // Llenar el formulario con los datos del laboratorio
+                const setVal = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = val;
+                };
+                
+                setVal('editLabId', lab.id);
+                setVal('editCodigo', lab.codigo || lab.codigo_lab || '');
+                setVal('editNombre', lab.nombre || '');
+                setVal('editTipo', lab.tipo || 'general');
+                setVal('editUbicacion', lab.ubicacion || '');
+                setVal('editCapacidad', lab.capacidad_personas || lab.capacidad_estudiantes || '');
+                setVal('editArea', lab.area_m2 || '');
+                
+                // Responsable con nuevo dropdown
+                setVal('editResponsableIdInput', lab.responsable_id || '');
+                setVal('buscarResponsableEdit', lab.responsable || '');
+                
+                setVal('editEstado', lab.estado || 'disponible');
+                
+                // Limpiar validación previa y ocultar opciones
+                const form = document.getElementById('formEditarLaboratorio');
+                if (form) form.classList.remove('was-validated');
+                const opciones = document.getElementById('opcionesResponsableEdit');
+                if (opciones) opciones.classList.add('d-none');
+                
+                // Abrir modal
+                const modalElement = document.getElementById('modalEditarLaboratorio');
+                const modal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static',
+                    keyboard: true
+                });
+                modal.show();
+            } else {
+                alert('❌ Error al cargar los datos: ' + (result.message || 'Laboratorio no encontrado'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ Error al obtener datos del laboratorio: ' + error.message);
+        });
+}
+
+// Validación híbrida para formulario editar
+let timeoutCodigoUnicoEdit = null;
+
+function validarCampoEdit(campo) {
+    const mapeo = {
+        'codigo': { input: 'editCodigo', error: 'errorCodigoEdit' },
+        'tipo': { input: 'editTipo', error: 'errorTipoEdit' },
+        'nombre': { input: 'editNombre', error: 'errorNombreEdit' },
+        'capacidad': { input: 'editCapacidad', error: 'errorCapacidadEdit' }
+    };
+    
+    const config = mapeo[campo];
+    if (!config) return;
+    
+    const inputEl = document.getElementById(config.input);
+    const errorEl = document.getElementById(config.error);
+    const valor = inputEl.value.trim();
+    const labId = document.getElementById('editLabId').value;
+    let error = '';
+    
+    // Validación instantánea en frontend
+    switch(campo) {
+        case 'codigo':
+            if (!valor) {
+                error = 'El código es requerido';
+            } else if (valor.length < REGLAS_LAB.codigo.min || valor.length > REGLAS_LAB.codigo.max) {
+                error = `El código debe tener entre ${REGLAS_LAB.codigo.min} y ${REGLAS_LAB.codigo.max} caracteres`;
+            } else {
+                // Solo para código único: consultar backend (con debounce)
+                if (timeoutCodigoUnicoEdit) clearTimeout(timeoutCodigoUnicoEdit);
+                timeoutCodigoUnicoEdit = setTimeout(() => {
+                    fetch('/api/laboratorios/validar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ codigo: valor, excluir_id: labId })
+                    })
+                    .then(r => r.json())
+                    .then(result => {
+                        if (result.errores && result.errores.codigo) {
+                            errorEl.textContent = result.errores.codigo;
+                            errorEl.classList.remove('d-none');
+                            inputEl.classList.add('is-invalid');
+                            inputEl.classList.remove('is-valid');
+                        }
+                    });
+                }, 400);
+            }
+            break;
+        case 'tipo':
+            if (!valor) {
+                error = 'El tipo es requerido';
+            }
+            break;
+        case 'nombre':
+            if (!valor) {
+                error = 'El nombre es requerido';
+            } else if (valor.length < REGLAS_LAB.nombre.min || valor.length > REGLAS_LAB.nombre.max) {
+                error = `El nombre debe tener entre ${REGLAS_LAB.nombre.min} y ${REGLAS_LAB.nombre.max} caracteres`;
+            }
+            break;
+        case 'capacidad':
+            if (valor) {
+                const cap = parseInt(valor);
+                if (isNaN(cap) || cap < REGLAS_LAB.capacidad.min || cap > REGLAS_LAB.capacidad.max) {
+                    error = `La capacidad debe estar entre ${REGLAS_LAB.capacidad.min} y ${REGLAS_LAB.capacidad.max}`;
+                }
+            }
+            break;
+    }
+    
+    // Mostrar/ocultar error
+    if (error) {
+        errorEl.textContent = error;
+        errorEl.classList.remove('d-none');
+        inputEl.classList.add('is-invalid');
+        inputEl.classList.remove('is-valid');
+    } else {
+        errorEl.textContent = '';
+        errorEl.classList.add('d-none');
+        inputEl.classList.remove('is-invalid');
+        if (valor) inputEl.classList.add('is-valid');
+    }
+}
+
+// Funciones para mostrar errores en formulario editar
+function limpiarErroresEdit() {
+    ['errorGeneralEdit', 'errorCodigoEdit', 'errorTipoEdit', 'errorNombreEdit', 'errorCapacidadEdit'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.add('d-none'); el.textContent = ''; }
+    });
+    ['editCodigo', 'editTipo', 'editNombre', 'editCapacidad'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('is-invalid');
+    });
+}
+
+function mostrarErroresEdit(errores) {
+    limpiarErroresEdit();
+    
+    const mapeo = {
+        'codigo': { error: 'errorCodigoEdit', input: 'editCodigo' },
+        'tipo': { error: 'errorTipoEdit', input: 'editTipo' },
+        'nombre': { error: 'errorNombreEdit', input: 'editNombre' },
+        'capacidad': { error: 'errorCapacidadEdit', input: 'editCapacidad' }
+    };
+    
+    for (const [campo, mensaje] of Object.entries(errores)) {
+        if (mapeo[campo]) {
+            const errorEl = document.getElementById(mapeo[campo].error);
+            const inputEl = document.getElementById(mapeo[campo].input);
+            if (errorEl) {
+                errorEl.textContent = mensaje;
+                errorEl.classList.remove('d-none');
+            }
+            if (inputEl) inputEl.classList.add('is-invalid');
+        } else {
+            const general = document.getElementById('errorGeneralEdit');
+            if (general) {
+                general.textContent = mensaje;
+                general.classList.remove('d-none');
+            }
+        }
+    }
+}
+
+function mostrarErrorGeneralEdit(mensaje) {
+    limpiarErroresEdit();
+    document.getElementById('errorGeneralEdit').textContent = mensaje;
+    document.getElementById('errorGeneralEdit').classList.remove('d-none');
+}
+
+function actualizarLaboratorio() {
+    limpiarErroresEdit();
+    const form = document.getElementById('formEditarLaboratorio');
+    const labId = document.getElementById('editLabId').value;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    fetch(`/api/laboratorios/${labId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ Laboratorio actualizado exitosamente');
+            location.reload();
+        } else if (result.errores) {
+            mostrarErroresEdit(result.errores);
+        } else {
+            mostrarErrorGeneralEdit(result.message || 'Error desconocido');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarErrorGeneralEdit('Error de conexión: ' + error.message);
+    });
+}
+
+</script>
+{% endblock %}

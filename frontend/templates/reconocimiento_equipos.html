@@ -1,0 +1,1044 @@
+{% extends "base.html" %}
+
+{% block title %}Reconocimiento de Equipos - IA{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+            <h2 class="mb-2 mb-md-0">
+                <i class="fas fa-camera me-2"></i>Reconocimiento de Equipos
+            </h2>
+            <div class="text-muted small">
+                <i class="fas fa-info-circle me-1"></i>
+                Sistema de identificación automática con IA
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Interfaz principal -->
+<div class="row g-3">
+    <div class="col-12 col-xl-8">
+        <div class="card">
+            <div class="card-body">
+                <!-- Vista de cámara y controles -->
+                <div class="row g-3">
+                    <div class="col-12 col-lg-8">
+                        <div class="camera-container position-relative">
+                            <video id="videoElement" class="w-100 rounded" autoplay playsinline></video>
+                            <canvas id="canvasElement" style="display: none;"></canvas>
+                            
+                            <!-- Overlay de estado -->
+                            <div id="cameraOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.7); display:none !important;">
+                                <div class="text-center text-white">
+                                    <i class="fas fa-video-slash fa-3x mb-3"></i>
+                                    <p>Cámara no iniciada</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Preview de imagen capturada -->
+                        <div id="capturedPreview" class="mt-3" style="display:none;">
+                            <h6><i class="fas fa-image me-2"></i>Imagen Capturada</h6>
+                            <img id="capturedImage" class="img-fluid rounded" style="max-height:200px;">
+                        </div>
+                    </div>
+                    
+                    <div class="col-12 col-lg-4">
+                        <!-- Controles -->
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-sliders-h me-2"></i>Controles
+                                </h5>
+                                
+                                <div class="mb-3">
+                                    <button id="btnStartCamera" class="btn btn-primary w-100 mb-2">
+                                        <i class="fas fa-video me-2"></i>Iniciar Cámara
+                                    </button>
+                                    <button id="btnStopCamera" class="btn btn-danger w-100 mb-2" disabled>
+                                        <i class="fas fa-stop me-2"></i>Detener Cámara
+                                    </button>
+                                    <button id="btnCapture" class="btn btn-success w-100 mb-2" disabled>
+                                        <i class="fas fa-camera me-2"></i>Capturar e Identificar
+                                    </button>
+                                    <button id="btnScanQR" class="btn btn-info w-100 mb-2" disabled>
+                                        <i class="fas fa-qrcode me-2"></i>Escanear QR (Cámara)
+                                    </button>
+                                    <hr>
+                                    <button id="btnUpload" class="btn btn-outline-primary w-100 mb-2">
+                                        <i class="fas fa-upload me-2"></i>Subir Imagen (IA)
+                                    </button>
+                                    <button id="btnUploadQR" class="btn btn-outline-info w-100">
+                                        <i class="fas fa-qrcode me-2"></i>Subir Imagen QR
+                                    </button>
+                                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                                </div>
+                                
+                                <hr>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-percentage me-1"></i>
+                                        Umbral de Confianza: <strong id="thresholdValue">85%</strong>
+                                    </label>
+                                    <input type="range" class="form-range" id="confidenceThreshold" 
+                                           min="50" max="100" value="85" step="5">
+                                    <small class="text-muted">Objetivo MGA: ≥85%</small>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Resultados de detección -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-search me-2"></i>Resultados de Identificación
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="detectionResults">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-microscope fa-3x mb-3"></i>
+                                        <p>Captura una imagen o sube un archivo para identificar el equipo</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12 col-xl-4">
+        <!-- Panel de equipo identificado -->
+        <div id="equipoIdentificado" class="card border-success mb-3" style="display:none;">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Equipo Identificado</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-flask fa-4x text-success mb-2" id="equipoIcono"></i>
+                    <h4 id="equipoNombre">-</h4>
+                    <span class="badge bg-primary" id="equipoCodigo">-</span>
+                </div>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Categoría:</span>
+                        <strong id="equipoCategoria">-</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Confianza:</span>
+                        <strong id="equipoConfianza" class="text-success">-</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Tiempo:</span>
+                        <strong id="equipoTiempo">-</strong>
+                    </li>
+                </ul>
+                <a href="#" id="btnVerDetalle" class="btn btn-success w-100 mb-2">
+                    <i class="fas fa-eye me-2"></i>Ver Detalle del Equipo
+                </a>
+                <button id="btnNuevaIdentificacion" class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-redo me-2"></i>Nueva Identificación
+                </button>
+            </div>
+        </div>
+        
+        <!-- Historial de reconocimientos -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Historial Reciente
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div id="recognitionHistory" class="list-group list-group-flush" style="max-height:250px; overflow-y:auto;">
+                    <div class="list-group-item text-muted text-center py-3">
+                        No hay reconocimientos recientes
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Estadísticas -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Estadísticas de Sesión
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary mb-0" id="statTotal">0</h4>
+                        <small class="text-muted">Identificaciones</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success mb-0" id="statExitosas">0</h4>
+                        <small class="text-muted" id="statExitosasLabel">Exitosas (≥85%)</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-info mb-0" id="statPromedio">0%</h4>
+                        <small class="text-muted">Confianza Prom.</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning mb-0" id="statTiempo">0ms</h4>
+                        <small class="text-muted">Tiempo Prom.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Información -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Consejos
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li class="mb-2">Asegúrate de tener <strong>buena iluminación</strong></li>
+                    <li class="mb-2">El equipo debe estar <strong>completamente visible</strong></li>
+                    <li class="mb-2">Evita <strong>reflejos y sombras</strong> fuertes</li>
+                    <li>Mantén la cámara <strong>estable</strong> al capturar</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para subir imagen (IA) -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-upload me-2"></i>Subir Imagen para IA</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Selecciona una imagen del equipo</label>
+                    <input type="file" class="form-control" id="modalFileInput" accept="image/*">
+                </div>
+                <div id="imagePreviewContainer" style="display:none;">
+                    <img id="imagePreview" class="img-fluid rounded" style="max-height:300px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnProcessUpload" disabled>
+                    <i class="fas fa-search me-2"></i>Identificar Equipo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para subir imagen QR -->
+<div class="modal fade" id="uploadQRModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-qrcode me-2"></i>Subir Imagen de Código QR</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Sube una imagen que contenga el código QR del equipo. El sistema lo detectará automáticamente.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Selecciona la imagen del código QR</label>
+                    <input type="file" class="form-control" id="modalQRFileInput" accept="image/*">
+                </div>
+                <div id="qrImagePreviewContainer" class="text-center" style="display:none;">
+                    <p class="text-muted mb-2"><i class="fas fa-image me-1"></i>Vista previa:</p>
+                    <img id="qrImagePreview" class="img-fluid rounded border" style="max-height:250px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-info" id="btnProcessQRUpload" disabled>
+                    <i class="fas fa-qrcode me-2"></i>Escanear QR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.camera-container {
+    min-height: 300px;
+    background: #000;
+    border-radius: 0.375rem;
+}
+
+.camera-container video {
+    transform: scaleX(-1); /* Espejo para mejor UX */
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    object-fit: cover;
+}
+
+.detection-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.detection-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.detection-card.success {
+    border-left: 4px solid #28a745;
+}
+
+.detection-card.warning {
+    border-left: 4px solid #ffc107;
+}
+
+.detection-card.danger {
+    border-left: 4px solid #dc3545;
+}
+
+.confidence-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: #e9ecef;
+    overflow: hidden;
+}
+
+.confidence-bar .progress {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.history-item {
+    border-left: 3px solid #007bff;
+    transition: background 0.2s;
+}
+
+.history-item:hover {
+    background: #f8f9fa;
+}
+
+.history-item.success {
+    border-left-color: #28a745;
+}
+
+.history-item.fail {
+    border-left-color: #dc3545;
+}
+
+.pulse-animation {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Responsive styles */
+
+/* XL y menor - panel lateral debajo del principal */
+@media (max-width: 1199.98px) {
+    .col-xl-4 {
+        margin-top: 1rem;
+    }
+    
+    /* En tablet, mostrar historial y estadísticas en fila */
+    .col-xl-4 > .card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* LG y menor - controles debajo de la cámara */
+@media (max-width: 991.98px) {
+    .col-lg-4 {
+        margin-top: 1rem;
+    }
+    
+    .camera-container {
+        min-height: 280px;
+    }
+    
+    .camera-container video {
+        min-height: 280px;
+    }
+}
+
+/* MD y menor */
+@media (max-width: 767.98px) {
+    .camera-container {
+        min-height: 250px;
+    }
+    
+    .camera-container video {
+        min-height: 250px;
+    }
+    
+    /* Botones más compactos */
+    .card-body .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Estadísticas más compactas */
+    .card-body h4 {
+        font-size: 1.25rem;
+    }
+    
+    /* Historial más pequeño */
+    #recognitionHistory {
+        max-height: 150px !important;
+    }
+}
+
+/* SM y menor - móvil */
+@media (max-width: 575.98px) {
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    .camera-container {
+        min-height: 200px;
+    }
+    
+    .camera-container video {
+        min-height: 200px;
+    }
+    
+    #equipoIdentificado .fa-4x {
+        font-size: 2.5rem !important;
+    }
+    
+    #equipoIdentificado h4 {
+        font-size: 1.1rem;
+    }
+    
+    /* Ocultar consejos en móvil pequeño */
+    .card:has(.fa-lightbulb) {
+        display: none;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Librería jsQR para decodificar códigos QR -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elementos DOM
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('canvasElement');
+    const ctx = canvas.getContext('2d');
+    
+    // Estado
+    let stream = null;
+    let stats = { total: 0, exitosas: 0, confianzaSum: 0, tiempoSum: 0 };
+    let scanningQR = false;
+    let qrAnimationId = null;
+    
+    // Configuración
+    const UMBRAL_OBJETIVO = 85; // Objetivo MGA
+    
+    // === CONTROLES DE CÁMARA ===
+    document.getElementById('btnStartCamera').addEventListener('click', startCamera);
+    document.getElementById('btnStopCamera').addEventListener('click', stopCamera);
+    document.getElementById('btnCapture').addEventListener('click', captureAndIdentify);
+    document.getElementById('btnScanQR').addEventListener('click', toggleQRScan);
+    document.getElementById('btnUpload').addEventListener('click', () => {
+        new bootstrap.Modal(document.getElementById('uploadModal')).show();
+    });
+    
+    // Botón subir imagen QR - Abrir modal
+    document.getElementById('btnUploadQR').addEventListener('click', () => {
+        // Limpiar modal antes de abrir
+        document.getElementById('modalQRFileInput').value = '';
+        document.getElementById('qrImagePreviewContainer').style.display = 'none';
+        document.getElementById('btnProcessQRUpload').disabled = true;
+        new bootstrap.Modal(document.getElementById('uploadQRModal')).show();
+    });
+    
+    // Preview de imagen QR en modal
+    document.getElementById('modalQRFileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('qrImagePreview').src = e.target.result;
+                document.getElementById('qrImagePreviewContainer').style.display = 'block';
+                document.getElementById('btnProcessQRUpload').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Procesar imagen QR desde modal
+    document.getElementById('btnProcessQRUpload').addEventListener('click', function() {
+        const imgSrc = document.getElementById('qrImagePreview').src;
+        if (imgSrc) {
+            bootstrap.Modal.getInstance(document.getElementById('uploadQRModal')).hide();
+            processQRFromImage(imgSrc);
+        }
+    });
+    
+    // Umbral de confianza
+    document.getElementById('confidenceThreshold').addEventListener('input', function() {
+        document.getElementById('thresholdValue').textContent = this.value + '%';
+    });
+    
+    // Upload modal
+    document.getElementById('modalFileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('imagePreview').src = e.target.result;
+                document.getElementById('imagePreviewContainer').style.display = 'block';
+                document.getElementById('btnProcessUpload').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    document.getElementById('btnProcessUpload').addEventListener('click', function() {
+        const imgSrc = document.getElementById('imagePreview').src;
+        if (imgSrc) {
+            bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+            identifyEquipment(imgSrc);
+        }
+    });
+    
+    // Nueva identificación
+    document.getElementById('btnNuevaIdentificacion').addEventListener('click', function() {
+        document.getElementById('equipoIdentificado').style.display = 'none';
+        document.getElementById('capturedPreview').style.display = 'none';
+        document.getElementById('detectionResults').innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-microscope fa-3x mb-3"></i>
+                <p>Captura una imagen o sube un archivo para identificar el equipo</p>
+            </div>
+        `;
+    });
+    
+    // === FUNCIONES DE CÁMARA ===
+    async function startCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: 'environment' // Cámara trasera en móviles
+                } 
+            });
+            video.srcObject = stream;
+            
+            document.getElementById('btnStartCamera').disabled = true;
+            document.getElementById('btnStopCamera').disabled = false;
+            document.getElementById('btnCapture').disabled = false;
+            document.getElementById('btnScanQR').disabled = false;
+            document.getElementById('cameraOverlay').style.display = 'none';
+            
+        } catch (err) {
+            console.error('Error al acceder a la cámara:', err);
+            alert('No se pudo acceder a la cámara. Verifica los permisos del navegador.');
+        }
+    }
+    
+    function stopCamera() {
+        // Detener escaneo QR si está activo
+        stopQRScan();
+        
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
+            stream = null;
+        }
+        
+        document.getElementById('btnStartCamera').disabled = false;
+        document.getElementById('btnStopCamera').disabled = true;
+        document.getElementById('btnCapture').disabled = true;
+        document.getElementById('btnScanQR').disabled = true;
+    }
+    
+    function captureAndIdentify() {
+        // Configurar canvas con dimensiones del video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Dibujar frame actual (sin espejo)
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
+        
+        // Obtener imagen como base64
+        const imageData = canvas.toDataURL('image/jpeg', 0.9);
+        
+        // Mostrar preview
+        document.getElementById('capturedImage').src = imageData;
+        document.getElementById('capturedPreview').style.display = 'block';
+        
+        // Identificar
+        identifyEquipment(imageData);
+    }
+    
+    // === ESCANEO DE CÓDIGO QR ===
+    function toggleQRScan() {
+        if (scanningQR) {
+            stopQRScan();
+        } else {
+            startQRScan();
+        }
+    }
+    
+    function startQRScan() {
+        scanningQR = true;
+        const btnScanQR = document.getElementById('btnScanQR');
+        btnScanQR.classList.remove('btn-info');
+        btnScanQR.classList.add('btn-warning');
+        btnScanQR.innerHTML = '<i class="fas fa-stop me-2"></i>Detener Escaneo QR';
+        
+        // Deshabilitar captura IA mientras escanea QR
+        document.getElementById('btnCapture').disabled = true;
+        
+        // Mostrar mensaje de escaneo
+        document.getElementById('detectionResults').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-info mb-3" role="status"></div>
+                <p class="pulse-animation"><i class="fas fa-qrcode me-2"></i>Buscando código QR...</p>
+                <small class="text-muted">Apunta la cámara hacia el código QR del equipo</small>
+            </div>
+        `;
+        
+        // Iniciar loop de escaneo
+        scanQRFrame();
+    }
+    
+    function stopQRScan() {
+        scanningQR = false;
+        if (qrAnimationId) {
+            cancelAnimationFrame(qrAnimationId);
+            qrAnimationId = null;
+        }
+        
+        const btnScanQR = document.getElementById('btnScanQR');
+        btnScanQR.classList.remove('btn-warning');
+        btnScanQR.classList.add('btn-info');
+        btnScanQR.innerHTML = '<i class="fas fa-qrcode me-2"></i>Escanear QR';
+        
+        // Rehabilitar captura IA
+        if (stream) {
+            document.getElementById('btnCapture').disabled = false;
+        }
+    }
+    
+    function scanQRFrame() {
+        if (!scanningQR || !stream) return;
+        
+        // Configurar canvas con dimensiones del video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Dibujar frame actual (sin espejo para QR)
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Obtener datos de imagen para jsQR
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Intentar decodificar QR
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert"
+        });
+        
+        if (code && code.data) {
+            // QR detectado!
+            console.log('QR detectado:', code.data);
+            stopQRScan();
+            processQRCode(code.data);
+            return;
+        }
+        
+        // Continuar escaneando
+        qrAnimationId = requestAnimationFrame(scanQRFrame);
+    }
+    
+    // Procesar QR desde imagen subida
+    function processQRFromImage(imageDataUrl) {
+        // Mostrar loading
+        document.getElementById('detectionResults').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-info mb-3" role="status"></div>
+                <p class="pulse-animation"><i class="fas fa-qrcode me-2"></i>Analizando imagen QR...</p>
+            </div>
+        `;
+        
+        // Crear imagen temporal para procesar
+        const img = new Image();
+        img.onload = function() {
+            // Dibujar en canvas
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            // Obtener datos de imagen para jsQR
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // Intentar decodificar QR
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "attemptBoth"
+            });
+            
+            if (code && code.data) {
+                console.log('QR detectado en imagen:', code.data);
+                processQRCode(code.data);
+            } else {
+                showQRError('No se detectó ningún código QR en la imagen. Asegúrate de que la imagen contenga un código QR válido y sea clara.');
+            }
+        };
+        
+        img.onerror = function() {
+            showQRError('Error al cargar la imagen. Intenta con otro archivo.');
+        };
+        
+        img.src = imageDataUrl;
+    }
+    
+    async function processQRCode(qrData) {
+        // Mostrar loading
+        document.getElementById('detectionResults').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-success mb-3" role="status"></div>
+                <p class="pulse-animation"><i class="fas fa-check-circle me-2"></i>QR detectado! Buscando equipo...</p>
+            </div>
+        `;
+        
+        // El formato del QR es: EQUIPO:{codigo}|{nombre}|{ubicacion}
+        let codigoEquipo = qrData;
+        
+        // Intentar extraer código del formato estándar
+        const match = qrData.match(/EQUIPO:([^|]+)/);
+        if (match) {
+            codigoEquipo = match[1];
+        }
+        
+        try {
+            const response = await fetch(`/api/equipos/buscar-qr?codigo=${encodeURIComponent(codigoEquipo)}`, {
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.equipo) {
+                displayQRResult(data.equipo);
+                // Agregar al historial con 100% confianza
+                addToHistory({
+                    nombre_objeto: data.equipo.nombre,
+                    codigo_equipo: data.equipo.codigo_interno,
+                    categoria: data.equipo.categoria,
+                    confianza: 1,
+                    confianza_porcentaje: '100%'
+                }, true);
+                
+                // Actualizar estadísticas
+                stats.total++;
+                stats.exitosas++;
+                stats.confianzaSum += 100;
+                updateStatsDisplay();
+            } else {
+                showQRError(data.error || 'Equipo no encontrado');
+            }
+            
+        } catch (error) {
+            console.error('Error buscando equipo:', error);
+            showQRError('Error de conexión: ' + error.message);
+        }
+    }
+    
+    function displayQRResult(equipo) {
+        // Mostrar panel de equipo identificado
+        document.getElementById('equipoIdentificado').style.display = 'block';
+        document.getElementById('equipoNombre').textContent = equipo.nombre;
+        document.getElementById('equipoCodigo').textContent = equipo.codigo_interno;
+        document.getElementById('equipoCategoria').textContent = equipo.categoria || 'General';
+        document.getElementById('equipoConfianza').textContent = '100% (QR)';
+        document.getElementById('equipoConfianza').classList.remove('text-success', 'text-warning');
+        document.getElementById('equipoConfianza').classList.add('text-info');
+        document.getElementById('equipoTiempo').textContent = 'Instantáneo';
+        
+        // Configurar botón de detalle
+        document.getElementById('btnVerDetalle').href = `/equipos?buscar=${encodeURIComponent(equipo.codigo_interno)}`;
+        
+        // Mostrar resultado en el área principal
+        document.getElementById('detectionResults').innerHTML = `
+            <div class="alert alert-info">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-qrcode fa-3x me-3"></i>
+                    <div>
+                        <strong>¡Equipo identificado por código QR!</strong>
+                        <p class="mb-0">Identificación instantánea con 100% de precisión.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card border-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="text-info"><i class="fas fa-flask me-2"></i>${equipo.nombre}</h5>
+                            <p class="mb-1"><strong>Código:</strong> <code>${equipo.codigo_interno}</code></p>
+                            <p class="mb-1"><strong>Categoría:</strong> ${equipo.categoria || 'General'}</p>
+                            <p class="mb-1"><strong>Laboratorio:</strong> ${equipo.laboratorio || 'Sin asignar'}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Marca:</strong> ${equipo.marca || 'N/A'}</p>
+                            <p class="mb-1"><strong>Modelo:</strong> ${equipo.modelo || 'N/A'}</p>
+                            <p class="mb-1"><strong>Estado:</strong> 
+                                <span class="badge ${equipo.estado === 'disponible' ? 'bg-success' : 'bg-warning'}">${equipo.estado}</span>
+                            </p>
+                            <p class="mb-0"><strong>Ubicación:</strong> ${equipo.ubicacion || 'No especificada'}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    function showQRError(mensaje) {
+        document.getElementById('equipoIdentificado').style.display = 'none';
+        document.getElementById('detectionResults').innerHTML = `
+            <div class="alert alert-warning">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                    <div>
+                        <strong>No se pudo identificar el equipo</strong>
+                        <p class="mb-0">${mensaje}</p>
+                    </div>
+                </div>
+            </div>
+            <p class="text-muted text-center">
+                <i class="fas fa-info-circle me-1"></i>
+                Asegúrate de que el código QR corresponda a un equipo registrado en el sistema.
+            </p>
+        `;
+    }
+    
+    function updateStatsDisplay() {
+        document.getElementById('statTotal').textContent = stats.total;
+        document.getElementById('statExitosas').textContent = stats.exitosas;
+        document.getElementById('statPromedio').textContent = stats.total > 0 ? (stats.confianzaSum / stats.total).toFixed(1) + '%' : '0%';
+    }
+    
+    // === IDENTIFICACIÓN ===
+    async function identifyEquipment(imageData) {
+        const umbral = parseInt(document.getElementById('confidenceThreshold').value) / 100;
+        
+        // Mostrar loading
+        document.getElementById('detectionResults').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status"></div>
+                <p class="pulse-animation">Analizando imagen con IA...</p>
+            </div>
+        `;
+        
+        try {
+            const response = await fetch('/api/reconocimiento/identificar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ 
+                    imagen: imageData,
+                    top_n: 5
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.resultados && data.resultados.length > 0) {
+                // Filtrar resultados que estén por encima del umbral
+                const resultadosFiltrados = data.resultados.filter(r => r.confianza >= umbral);
+                
+                if (resultadosFiltrados.length > 0) {
+                    displayResults(resultadosFiltrados, data.tiempo_procesamiento_ms, umbral);
+                    updateStats(resultadosFiltrados, data.tiempo_procesamiento_ms, umbral);
+                } else {
+                    // Mostrar mensaje indicando que no hay coincidencias por encima del umbral
+                    showNoResults(`No se encontraron coincidencias con confianza ≥ ${umbral * 100}%. El mejor resultado fue ${data.resultados[0].confianza_porcentaje}`);
+                }
+            } else {
+                showNoResults(data.error || 'No se pudo identificar el equipo');
+            }
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showError('Error de conexión: ' + error.message);
+        }
+    }
+    
+    function displayResults(resultados, tiempoMs, umbral) {
+        const mejor = resultados[0];
+        const confianza = mejor.confianza;
+        const esExitoso = confianza >= umbral;
+        
+        // Mostrar panel de equipo identificado si es exitoso
+        if (esExitoso) {
+            document.getElementById('equipoIdentificado').style.display = 'block';
+            document.getElementById('equipoNombre').textContent = mejor.nombre_objeto;
+            document.getElementById('equipoCodigo').textContent = mejor.codigo_equipo;
+            document.getElementById('equipoCategoria').textContent = mejor.categoria || 'General';
+            document.getElementById('equipoConfianza').textContent = mejor.confianza_porcentaje;
+            document.getElementById('equipoTiempo').textContent = tiempoMs.toFixed(0) + 'ms';
+            
+            // Configurar botón de detalle
+            document.getElementById('btnVerDetalle').href = `/equipos?buscar=${encodeURIComponent(mejor.codigo_equipo)}`;
+        } else {
+            document.getElementById('equipoIdentificado').style.display = 'none';
+        }
+        
+        // Mostrar todos los resultados
+        let html = '<div class="row">';
+        
+        resultados.forEach((result, idx) => {
+            const conf = result.confianza * 100;
+            const colorClass = conf >= 85 ? 'success' : (conf >= 60 ? 'warning' : 'danger');
+            const bgColor = conf >= 85 ? 'bg-success' : (conf >= 60 ? 'bg-warning' : 'bg-danger');
+            
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="card detection-card ${colorClass}" onclick="window.location.href='/equipos?buscar=${encodeURIComponent(result.codigo_equipo)}'">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">${result.nombre_objeto}</h6>
+                                    <small class="text-muted">${result.codigo_equipo}</small>
+                                </div>
+                                ${idx === 0 ? '<span class="badge bg-primary">Mejor Match</span>' : ''}
+                            </div>
+                            <div class="confidence-bar mb-2">
+                                <div class="progress ${bgColor}" style="width: ${conf}%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="badge ${bgColor}">${result.confianza_porcentaje}</span>
+                                <small class="text-muted">${result.categoria || 'General'}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        
+        // Info adicional
+        html += `
+            <div class="alert ${esExitoso ? 'alert-success' : 'alert-warning'} mt-3">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${esExitoso ? 'check-circle' : 'exclamation-triangle'} fa-2x me-3"></i>
+                    <div>
+                        <strong>${esExitoso ? '¡Equipo identificado exitosamente!' : 'Identificación con baja confianza'}</strong>
+                        <p class="mb-0 small">
+                            ${esExitoso 
+                                ? 'La confianza supera el umbral del ' + (umbral*100) + '%. Haz clic en el equipo para ver su detalle.' 
+                                : 'La confianza es menor al umbral. Intenta con mejor iluminación o ángulo diferente.'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('detectionResults').innerHTML = html;
+        
+        // Agregar al historial
+        addToHistory(mejor, esExitoso);
+    }
+    
+    function showNoResults(mensaje) {
+        document.getElementById('equipoIdentificado').style.display = 'none';
+        document.getElementById('detectionResults').innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-question-circle fa-3x text-warning mb-3"></i>
+                <h5>No se encontraron coincidencias</h5>
+                <p class="text-muted">${mensaje}</p>
+                <p class="small">Asegúrate de que el equipo esté registrado en el sistema y que la imagen sea clara.</p>
+            </div>
+        `;
+    }
+    
+    function showError(mensaje) {
+        document.getElementById('detectionResults').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${mensaje}
+            </div>
+        `;
+    }
+    
+    function addToHistory(resultado, exitoso) {
+        const historyDiv = document.getElementById('recognitionHistory');
+        
+        // Limpiar mensaje inicial
+        if (historyDiv.querySelector('.text-muted')) {
+            historyDiv.innerHTML = '';
+        }
+        
+        const item = document.createElement('div');
+        item.className = `list-group-item history-item ${exitoso ? 'success' : 'fail'}`;
+        item.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong class="d-block">${resultado.nombre_objeto}</strong>
+                    <small class="text-muted">${resultado.codigo_equipo}</small>
+                </div>
+                <div class="text-end">
+                    <span class="badge ${exitoso ? 'bg-success' : 'bg-warning'}">${resultado.confianza_porcentaje}</span>
+                    <small class="d-block text-muted">${new Date().toLocaleTimeString()}</small>
+                </div>
+            </div>
+        `;
+        
+        historyDiv.insertBefore(item, historyDiv.firstChild);
+        
+        // Limitar a 10 elementos
+        while (historyDiv.children.length > 10) {
+            historyDiv.removeChild(historyDiv.lastChild);
+        }
+    }
+    
+    function updateStats(resultados, tiempoMs, umbral) {
+        const mejor = resultados[0];
+        const esExitoso = mejor.confianza >= umbral;
+        
+        stats.total++;
+        if (esExitoso) stats.exitosas++;
+        stats.confianzaSum += mejor.confianza * 100;
+        stats.tiempoSum += tiempoMs;
+        
+        document.getElementById('statTotal').textContent = stats.total;
+        document.getElementById('statExitosas').textContent = stats.exitosas;
+        document.getElementById('statExitosasLabel').textContent = `Exitosas (≥${Math.round(umbral * 100)}%)`;
+        document.getElementById('statPromedio').textContent = (stats.confianzaSum / stats.total).toFixed(1) + '%';
+        document.getElementById('statTiempo').textContent = (stats.tiempoSum / stats.total).toFixed(0) + 'ms';
+    }
+});
+</script>
+{% endblock %}

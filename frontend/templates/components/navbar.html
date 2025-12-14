@@ -1,0 +1,401 @@
+<!-- Navbar/FAB Component -->
+
+<!-- Overlay para cerrar sidebar en móvil -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Botón toggle para mobile -->
+<button class="btn-toggle d-lg-none" id="toggleSidebar">
+  <i class="bi bi-list"></i>
+</button>
+
+<!-- FAB (Floating Action Button) -->
+<div class="fab-container">
+  <button class="fab-btn" id="fabMain" title="Comandos de voz">
+    <i class="bi bi-mic-fill"></i>
+  </button>
+  <div class="fab-menu" id="fabMenu">
+    <button class="fab-menu-item" id="btnAyudaMicrofono" data-bs-toggle="modal" data-bs-target="#modalAyudaMicrofono">
+      <i class="bi bi-question-circle-fill"></i>
+      <span>Ayuda</span>
+    </button>
+    <button class="fab-menu-item" id="btnAccesibilidad" data-bs-toggle="modal" data-bs-target="#modalAccesibilidad">
+      <i class="bi bi-universal-access-circle"></i>
+      <span>Accesibilidad</span>
+    </button>
+    <button class="fab-menu-item" id="btnVoice" onclick="abrirAsistenteLucia()">
+      <i class="bi bi-mic-fill"></i>
+      <span>Comandos de Voz</span>
+    </button>
+    <a class="fab-menu-item" href="/asistente" style="text-decoration: none;">
+      <i class="bi bi-robot"></i>
+      <span>Asistente LUCIA</span>
+    </a>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Toggle Sidebar
+  const toggleBtn = document.getElementById('toggleSidebar');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  let isOpen = false;
+  
+  console.log('Toggle btn:', toggleBtn);
+  console.log('Sidebar:', sidebar);
+  console.log('Overlay:', overlay);
+  
+  function openSidebar() {
+    isOpen = true;
+    if (sidebar) {
+      sidebar.classList.add('show');
+      sidebar.style.transform = 'translateX(0)';
+      sidebar.style.visibility = 'visible';
+    }
+    if (overlay) {
+      overlay.style.display = 'block';
+      overlay.style.opacity = '1';
+    }
+    if (toggleBtn) toggleBtn.querySelector('i').className = 'bi bi-x-lg';
+    console.log('Sidebar abierto, isOpen:', isOpen);
+  }
+  
+  function closeSidebar() {
+    isOpen = false;
+    if (sidebar) {
+      sidebar.classList.remove('show');
+      sidebar.style.transform = 'translateX(-100%)';
+    }
+    if (overlay) {
+      overlay.style.display = 'none';
+      overlay.style.opacity = '0';
+    }
+    if (toggleBtn) toggleBtn.querySelector('i').className = 'bi bi-list';
+    console.log('Sidebar cerrado, isOpen:', isOpen);
+  }
+  
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Click en toggle, isOpen antes:', isOpen);
+      if (isOpen) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+  }
+  
+  // Cerrar sidebar al hacer clic en overlay
+  if (overlay) {
+    overlay.addEventListener('click', closeSidebar);
+  }
+
+  // FAB Menu
+  const fabMain = document.getElementById('fabMain');
+  const fabMenu = document.getElementById('fabMenu');
+  
+  if (fabMain && fabMenu) {
+    fabMain.addEventListener('click', function(e) {
+      e.stopPropagation();
+      fabMenu.classList.toggle('show');
+    });
+    
+    // Close FAB menu when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!document.querySelector('.fab-container')?.contains(e.target)) {
+        fabMenu.classList.remove('show');
+      }
+    });
+  }
+});
+
+// === ASISTENTE DE VOZ LUCIA - WEB SPEECH API ===
+let navRecognition = null;
+let navIsListening = false;
+let navListeningTimeout = null;
+const NAV_LISTENING_DURATION = 10 * 60 * 1000; // 10 minutos en milisegundos
+
+function abrirAsistenteLucia() {
+  // Cerrar FAB menu
+  const fabMenu = document.getElementById('fabMenu');
+  if (fabMenu) fabMenu.classList.remove('show');
+  
+  // Iniciar reconocimiento de voz con Web Speech API
+  iniciarReconocimientoVoz();
+}
+
+function iniciarReconocimientoVoz() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  
+  if (!SpeechRecognition) {
+    mostrarNotificacionVoz('Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.', 'error');
+    return;
+  }
+  
+  if (navIsListening) {
+    detenerReconocimientoVoz();
+    return;
+  }
+  
+  navRecognition = new SpeechRecognition();
+  navRecognition.lang = 'es-ES';
+  navRecognition.continuous = true;  // Escucha continua (hasta 10 minutos)
+  navRecognition.interimResults = true;
+  navRecognition.maxAlternatives = 1;
+  
+  navRecognition.onstart = function() {
+    navIsListening = true;
+    mostrarIndicadorGrabacion(true);
+    console.log('🎤 Navbar: Escuchando... (máximo 10 minutos)');
+    
+    // Timeout de 10 minutos
+    if (navListeningTimeout) clearTimeout(navListeningTimeout);
+    navListeningTimeout = setTimeout(() => {
+      if (navIsListening) {
+        console.log('⏱️ Navbar: Tiempo de escucha agotado (10 min)');
+        navRecognition.stop();
+        mostrarNotificacionVoz('Tiempo de escucha agotado (10 min). Haz clic para continuar.', 'info');
+      }
+    }, NAV_LISTENING_DURATION);
+  };
+  
+  navRecognition.onresult = function(event) {
+    let textoFinal = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        textoFinal += event.results[i][0].transcript;
+      }
+    }
+    
+    if (textoFinal) {
+      console.log('🎤 Navbar: Texto reconocido:', textoFinal);
+      mostrarIndicadorGrabacion(false);
+      procesarComandoVozRapido(textoFinal);
+    }
+  };
+  
+  navRecognition.onend = function() {
+    navIsListening = false;
+    mostrarIndicadorGrabacion(false);
+    console.log('🎤 Navbar: Fin de escucha');
+    
+    // Limpiar timeout
+    if (navListeningTimeout) {
+      clearTimeout(navListeningTimeout);
+      navListeningTimeout = null;
+    }
+  };
+  
+  navRecognition.onerror = function(event) {
+    navIsListening = false;
+    mostrarIndicadorGrabacion(false);
+    console.error('Error de reconocimiento:', event.error);
+    
+    if (event.error === 'no-speech') {
+      mostrarNotificacionVoz('No detecté ninguna voz. Intenta de nuevo.', 'warning');
+    } else if (event.error === 'not-allowed') {
+      mostrarNotificacionVoz('Permiso de micrófono denegado.', 'error');
+    } else {
+      mostrarNotificacionVoz('Error de reconocimiento. Intenta de nuevo.', 'error');
+    }
+  };
+  
+  try {
+    navRecognition.start();
+  } catch (e) {
+    console.error('Error iniciando reconocimiento:', e);
+    mostrarNotificacionVoz('Error iniciando reconocimiento de voz.', 'error');
+  }
+}
+
+function detenerReconocimientoVoz() {
+  if (navRecognition && navIsListening) {
+    navRecognition.stop();
+    navIsListening = false;
+    mostrarIndicadorGrabacion(false);
+  }
+}
+
+function mostrarIndicadorGrabacion(mostrar) {
+  let indicator = document.getElementById('vozRecordingIndicator');
+  
+  if (mostrar) {
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.id = 'vozRecordingIndicator';
+      indicator.innerHTML = `
+        <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;
+                    background:rgba(0,0,0,0.9);color:white;padding:30px 50px;border-radius:20px;
+                    text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+          <div style="width:80px;height:80px;margin:0 auto 15px;border-radius:50%;
+                      background:linear-gradient(135deg,#7c3aed,#a855f7);display:flex;
+                      align-items:center;justify-content:center;animation:pulse 1s infinite;">
+            <i class="bi bi-mic-fill" style="font-size:2rem;"></i>
+          </div>
+          <p style="margin:0;font-size:1.1rem;">Escuchando...</p>
+          <small style="opacity:0.7;">Di "lucia" seguido de tu comando</small>
+          <br><button onclick="detenerReconocimientoVoz()" class="btn btn-outline-light btn-sm mt-3">Cancelar</button>
+        </div>
+        <style>@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}</style>
+      `;
+      document.body.appendChild(indicator);
+    }
+  } else {
+    if (indicator) indicator.remove();
+  }
+}
+
+async function procesarComandoVozRapido(texto) {
+  // Mostrar indicador de procesamiento
+  mostrarNotificacionVoz(`"${texto}" - Procesando...`, 'info');
+  
+  try {
+    const response = await fetch('/api/voz/procesar-texto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ texto: texto })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      // Ejecutar redirección según intención
+      ejecutarRedireccionVoz(data.intencion, data.respuesta, texto, data.accion, data.datos);
+    } else {
+      mostrarNotificacionVoz('No entendí el comando. Intenta de nuevo.', 'warning');
+    }
+    
+  } catch (error) {
+    console.error('Error procesando texto:', error);
+    mostrarNotificacionVoz('Error de conexión', 'error');
+  }
+}
+
+function ejecutarRedireccionVoz(intencion, respuesta, textoReconocido, accion, datos) {
+  console.log('🔄 Navbar ejecutando redirección:', intencion, accion, datos);
+  
+  // Comando especial: apagar micrófono
+  if (intencion === 'apagar_microfono') {
+    console.log('🔇 Navbar: Apagando micrófono por comando de voz');
+    mostrarNotificacionVoz(respuesta, 'info');
+    hablar(respuesta);
+    setTimeout(() => {
+      detenerReconocimientoVoz();
+    }, 2000); // Esperar a que LUCIA termine de hablar
+    return;
+  }
+  
+  // Si el backend envía una URL directa
+  if (accion === 'redirect' && datos && datos.url) {
+    hablarYRedirigir(respuesta, datos.url, textoReconocido);
+    return;
+  }
+  
+  // Mapeo completo de intenciones a rutas
+  const rutas = {
+    // Gestión
+    'ir_dashboard': '/dashboard',
+    'ir_buscador': '/inventario',
+    'ir_usuarios': '/usuarios',
+    'ir_roles': '/roles',
+    'ir_programas': '/programas',
+    'listar_equipos': '/equipos',
+    'consultar_equipo': '/equipos',
+    'consultar_laboratorio': '/laboratorios',
+    'ir_practicas': '/practicas',
+    'listar_reservas': '/reservas',
+    'crear_reserva': '/reservas',
+    'cancelar_reserva': '/reservas',
+    'consultar_mantenimiento': '/mantenimiento',
+    'ir_capacitaciones': '/capacitaciones',
+    'reporte': '/reportes',
+    // IA
+    'ir_reconocimiento': '/reconocimiento',
+    'ir_registro_facial': '/registro-facial',
+    'ir_asistente': '/asistente',
+    'ir_ia_visual': '/entrenamiento-ia',
+    'ir_nuevo_equipo_ia': '/registro-equipos-ia',
+    'ir_gestionar_registros': '/registros-gestion',
+    // Admin
+    'ir_backup': '/backup',
+    'ir_configuracion': '/configuracion',
+    // Usuario
+    'ir_perfil': '/perfil',
+    'ir_ayuda': '/ayuda',
+    'cerrar_sesion': '/logout'
+  };
+  
+  const ruta = rutas[intencion];
+  
+  if (ruta) {
+    hablarYRedirigir(respuesta, ruta, textoReconocido);
+  } else if (intencion === 'ayuda') {
+    mostrarNotificacionVoz(respuesta, 'info', 5000);
+    hablar(respuesta);
+  } else if (intencion === 'saludo' || intencion === 'despedida') {
+    mostrarNotificacionVoz(respuesta, 'success');
+    hablar(respuesta);
+  } else {
+    // Para otras intenciones, mostrar respuesta
+    mostrarNotificacionVoz(respuesta, 'info', 4000);
+    hablar(respuesta);
+  }
+}
+
+function hablarYRedirigir(respuesta, ruta, textoReconocido) {
+  mostrarNotificacionVoz(`"${textoReconocido}" → Redirigiendo...`, 'success');
+  
+  if ('speechSynthesis' in window) {
+    const utterance = new SpeechSynthesisUtterance(respuesta);
+    utterance.lang = 'es-ES';
+    utterance.rate = 1.1;
+    speechSynthesis.speak(utterance);
+  }
+  
+  setTimeout(() => {
+    window.location.href = ruta;
+  }, 1500);
+}
+
+function hablar(texto) {
+  if ('speechSynthesis' in window) {
+    const utterance = new SpeechSynthesisUtterance(texto);
+    utterance.lang = 'es-ES';
+    utterance.rate = 1.0;
+    speechSynthesis.speak(utterance);
+  }
+}
+
+function mostrarNotificacionVoz(mensaje, tipo = 'info', duracion = 3000) {
+  // Remover notificación anterior
+  const prev = document.getElementById('vozNotification');
+  if (prev) prev.remove();
+  
+  const colores = {
+    'success': '#10b981',
+    'error': '#ef4444',
+    'warning': '#f59e0b',
+    'info': '#7c3aed'
+  };
+  
+  const notif = document.createElement('div');
+  notif.id = 'vozNotification';
+  notif.innerHTML = `
+    <div style="position:fixed;top:20px;right:20px;z-index:9999;max-width:400px;
+                background:${colores[tipo]};color:white;padding:15px 20px;border-radius:12px;
+                box-shadow:0 4px 20px rgba(0,0,0,0.3);animation:slideIn 0.3s ease;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <i class="bi bi-mic-fill"></i>
+        <span style="white-space:pre-wrap;">${mensaje}</span>
+      </div>
+    </div>
+    <style>@keyframes slideIn{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}</style>
+  `;
+  document.body.appendChild(notif);
+  
+  setTimeout(() => notif.remove(), duracion);
+}
+</script>

@@ -1,0 +1,650 @@
+{% extends 'base.html' %}
+{% set title = 'Usuarios' %}
+{% block content %}
+<!-- Estilos compartidos ahora en modules.css -->
+
+<!-- Header -->
+<div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h4 class="mb-1 text-white fw-bold"><i class="bi bi-people me-2"></i>Gestión de Usuarios</h4>
+        <p class="mb-0 text-white opacity-90">Administra los usuarios del sistema</p>
+      </div>
+      <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario">
+        <i class="bi bi-person-plus me-1"></i>Nuevo Usuario
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-search me-1"></i>Buscar</label>
+        <input type="text" class="form-control" id="filtroUsuarios" placeholder="Buscar por nombre, ID o email...">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-person-badge me-1"></i>Rol</label>
+        <select class="form-select" id="filtroRol">
+          <option value="">Todos los roles</option>
+          <option value="Administrador">Administrador</option>
+          <option value="Instructor">Instructor</option>
+          <option value="Funcionario">Funcionario</option>
+          <option value="Aprendiz">Aprendiz</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-1"><i class="bi bi-toggle-on me-1"></i>Estado</label>
+        <select class="form-select" id="filtroEstado">
+          <option value="">Todos</option>
+          <option value="activo">Activos</option>
+          <option value="inactivo">Inactivos</option>
+        </select>
+      </div>
+      <div class="col-md-1">
+        <button class="btn btn-outline-secondary w-100" onclick="limpiarFiltros()" title="Limpiar filtros">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabla de Usuarios -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header border-0" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+    <h6 class="mb-0 text-white fw-bold"><i class="bi bi-list-ul me-2"></i>Lista de Usuarios <span id="contadorUsuarios" class="badge bg-light text-dark ms-2"></span></h6>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="tablaUsuarios">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th><i class="bi bi-person me-1"></i>Nombre</th>
+            <th><i class="bi bi-person-badge me-1"></i>Rol</th>
+            <th><i class="bi bi-shield me-1"></i>Nivel</th>
+            <th>Activo</th>
+            <th><i class="bi bi-envelope me-1"></i>Email</th>
+            <th><i class="bi bi-calendar me-1"></i>Registro</th>
+            <th><i class="bi bi-camera me-1"></i>Rostro</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in usuarios %}
+          <tr data-id="{{ u.id }}" data-nombre="{{ u.nombre|lower }}" data-rol="{{ u.rol or u.tipo }}" data-estado="{{ 'activo' if u.activo else 'inactivo' }}" data-email="{{ u.email|lower if u.email else '' }}">
+            <td class="text-muted small">{{ u.id }}</td>
+            <td class="fw-semibold" style="color: #2d6a4f;">{{ u.nombre }}</td>
+            <td><span class="badge rounded-pill" style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);">{{ u.rol or u.tipo }}</span></td>
+            <td><span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #00b894 0%, #009b7d 100%);">{{ u.nivel_acceso }}</span></td>
+            <td>
+              {% if u.activo %}
+              <span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+                <i class="bi bi-check-circle me-1"></i>Sí
+              </span>
+              {% else %}
+              <span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                <i class="bi bi-x-circle me-1"></i>No
+              </span>
+              {% endif %}
+            </td>
+            <td class="small text-muted">{{ u.email or '-' }}</td>
+            <td class="small">{{ u.registro }}</td>
+            <td>
+              {% if u.tiene_rostro == 'Sí' %}
+              <span class="badge rounded-pill" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+                <i class="bi bi-check-circle"></i>
+              </span>
+              {% else %}
+              <span class="badge rounded-pill" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
+                <i class="bi bi-x-circle"></i>
+              </span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="btn-group btn-group-sm border rounded" role="group">
+                <button class="btn btn-outline-primary border-0" onclick="verDetalleUsuario('{{ u.id }}')" title="Ver Detalle">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-outline-warning border-0 border-start" onclick="editarUsuario('{{ u.id }}')" title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-{{ 'danger' if u.activo else 'success' }} border-0 border-start" onclick="toggleActivoUsuario('{{ u.id }}', {{ 0 if u.activo else 1 }})" title="{{ 'Desactivar' if u.activo else 'Activar' }}">
+                  <i class="bi bi-{{ 'x-circle' if u.activo else 'check-circle' }}"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <!-- Paginación -->
+    <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center py-3">
+      <div class="d-flex align-items-center gap-2">
+        <label class="small text-muted mb-0">Mostrar:</label>
+        <select class="form-select form-select-sm" id="itemsPorPagina" style="width:auto">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <span class="small text-muted">por página</span>
+      </div>
+      <nav>
+        <ul class="pagination pagination-sm mb-0" id="paginacion"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nuevo Usuario -->
+<div class="modal fade" id="modalNuevoUsuario" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+        <h5 class="modal-title text-white"><i class="bi bi-person-plus me-2"></i>Nuevo Usuario</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formNuevoUsuario" class="needs-validation" novalidate>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Documento <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="nuevoDocumento" required maxlength="20" minlength="5" pattern="[0-9A-Za-z]+" placeholder="Ej: 1234567890">
+              <div class="invalid-feedback">Documento requerido (5-20 caracteres alfanuméricos)</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Rol <span class="text-danger">*</span></label>
+              <select class="form-select" id="nuevoRol" required>
+                <option value="">Seleccionar rol...</option>
+                {% for rol in roles %}
+                <option value="{{ rol.id }}">{{ rol.nombre_rol }}</option>
+                {% endfor %}
+              </select>
+              <div class="invalid-feedback">Debe seleccionar un rol</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Nombres <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="nuevoNombres" required maxlength="100" minlength="2" placeholder="Nombres">
+              <div class="invalid-feedback">Nombres requeridos (2-100 caracteres)</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Apellidos <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="nuevoApellidos" required maxlength="100" minlength="2" placeholder="Apellidos">
+              <div class="invalid-feedback">Apellidos requeridos (2-100 caracteres)</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" id="nuevoEmail" maxlength="150" placeholder="correo@ejemplo.com">
+              <div class="invalid-feedback">Formato de email inválido</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Teléfono</label>
+              <input type="tel" class="form-control" id="nuevoTelefono" maxlength="15" pattern="[0-9]{7,15}" placeholder="3001234567">
+              <div class="invalid-feedback">Teléfono: solo números (7-15 dígitos)</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contraseña <span class="text-danger">*</span></label>
+              <input type="password" class="form-control" id="nuevoPassword" required minlength="4" maxlength="50" placeholder="Mínimo 4 caracteres">
+              <div class="invalid-feedback">Contraseña requerida (mínimo 4 caracteres)</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Estado</label>
+              <select class="form-select" id="nuevoEstado">
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" onclick="crearUsuario()">
+          <i class="bi bi-check-circle me-1"></i>Crear Usuario
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalle Usuario -->
+<div class="modal fade" id="modalDetalleUsuario" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+        <h5 class="modal-title text-white"><i class="bi bi-person-circle me-2"></i>Detalle del Usuario</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-3">
+        <div class="d-flex gap-3 mb-3">
+          <div class="bg-light rounded d-flex align-items-center justify-content-center flex-shrink-0" style="width:100px;height:100px">
+            <i class="bi bi-person-circle display-4 text-muted"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h4 id="detalleUsuarioNombre" class="mb-1 fw-bold"></h4>
+            <p class="mb-2"><code id="detalleUsuarioId" class="text-primary"></code></p>
+            <div class="d-flex gap-2 flex-wrap">
+              <span id="detalleUsuarioRol" class="badge rounded-pill" style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);"></span>
+              <span id="detalleUsuarioNivel" class="badge rounded-pill" style="background: linear-gradient(135deg, #00b894 0%, #009b7d 100%);"></span>
+              <span id="detalleUsuarioEstado" class="badge rounded-pill"></span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card border-0 bg-light">
+              <div class="card-body py-2 px-3">
+                <h6 class="card-title text-muted mb-2"><i class="bi bi-info-circle me-1"></i>Información Personal</h6>
+                <div class="small">
+                  <div class="mb-1"><span class="text-muted">Documento:</span> <strong id="detalleUsuarioDocumento"></strong></div>
+                  <div class="mb-1"><span class="text-muted">Email:</span> <strong id="detalleUsuarioEmail"></strong></div>
+                  <div class="mb-1"><span class="text-muted">Teléfono:</span> <strong id="detalleUsuarioTelefono"></strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card border-0 bg-light">
+              <div class="card-body py-2 px-3">
+                <h6 class="card-title text-muted mb-2"><i class="bi bi-calendar me-1"></i>Registro</h6>
+                <div class="small">
+                  <div class="mb-1"><span class="text-muted">Fecha Registro:</span> <strong id="detalleUsuarioRegistro"></strong></div>
+                  <div class="mb-1"><span class="text-muted">Último Acceso:</span> <strong id="detalleUsuarioUltimoAcceso"></strong></div>
+                  <div><span class="text-muted">Rostro Registrado:</span> <strong id="detalleUsuarioRostro"></strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar Usuario -->
+<div class="modal fade" id="modalEditarUsuario" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+        <h5 class="modal-title text-white"><i class="bi bi-pencil me-2"></i>Editar Usuario</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formEditarUsuario" class="needs-validation" novalidate>
+          <input type="hidden" id="editId">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Documento <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="editDocumento" required maxlength="20" minlength="5" pattern="[0-9A-Za-z]+">
+              <div class="invalid-feedback">Documento requerido (5-20 caracteres alfanuméricos)</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Rol <span class="text-danger">*</span></label>
+              <select class="form-select" id="editRol" required>
+                <option value="">Seleccionar rol...</option>
+                {% for rol in roles %}
+                <option value="{{ rol.id }}">{{ rol.nombre_rol }}</option>
+                {% endfor %}
+              </select>
+              <div class="invalid-feedback">Debe seleccionar un rol</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Nombres <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="editNombres" required maxlength="100" minlength="2">
+              <div class="invalid-feedback">Nombres requeridos (2-100 caracteres)</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Apellidos <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="editApellidos" required maxlength="100" minlength="2">
+              <div class="invalid-feedback">Apellidos requeridos (2-100 caracteres)</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" id="editEmail" maxlength="150">
+              <div class="invalid-feedback">Formato de email inválido</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Teléfono</label>
+              <input type="tel" class="form-control" id="editTelefono" maxlength="15" pattern="[0-9]{7,15}">
+              <div class="invalid-feedback">Teléfono: solo números (7-15 dígitos)</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Estado</label>
+              <select class="form-select" id="editEstado">
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+                <option value="suspendido">Suspendido</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarEdicion()">
+          <i class="bi bi-save me-1"></i>Guardar Cambios
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Filtros y paginación de usuarios
+const inputFiltro = document.getElementById('filtroUsuarios');
+const selectRol = document.getElementById('filtroRol');
+const selectEstado = document.getElementById('filtroEstado');
+const selectItemsPorPagina = document.getElementById('itemsPorPagina');
+const tbody = document.querySelector('#tablaUsuarios tbody');
+const paginacionEl = document.getElementById('paginacion');
+
+let paginaActual = 1;
+let itemsPorPagina = 10;
+let filasFiltradas = [];
+
+function filtrarUsuarios() {
+  const texto = (inputFiltro.value || '').toLowerCase();
+  const rol = selectRol.value;
+  const estado = selectEstado.value;
+  
+  filasFiltradas = [...tbody.rows].filter(row => {
+    const id = (row.dataset.id || '').toLowerCase();
+    const nombre = row.dataset.nombre || '';
+    const email = row.dataset.email || '';
+    const rowRol = row.dataset.rol || '';
+    const rowEstado = row.dataset.estado || '';
+    
+    const okTexto = !texto || id.includes(texto) || nombre.includes(texto) || email.includes(texto);
+    const okRol = !rol || rowRol.toLowerCase().includes(rol.toLowerCase());
+    const okEstado = !estado || rowEstado === estado;
+    
+    return okTexto && okRol && okEstado;
+  });
+  
+  paginaActual = 1;
+  mostrarPagina();
+}
+
+function mostrarPagina() {
+  const totalPaginas = Math.ceil(filasFiltradas.length / itemsPorPagina) || 1;
+  const inicio = (paginaActual - 1) * itemsPorPagina;
+  const fin = inicio + itemsPorPagina;
+  
+  // Ocultar todas las filas
+  [...tbody.rows].forEach(row => row.classList.add('d-none'));
+  
+  // Mostrar solo las filas de la página actual
+  filasFiltradas.slice(inicio, fin).forEach(row => row.classList.remove('d-none'));
+  
+  // Actualizar contador
+  const mostrandoDesde = filasFiltradas.length > 0 ? inicio + 1 : 0;
+  const mostrandoHasta = Math.min(fin, filasFiltradas.length);
+  document.getElementById('contadorUsuarios').textContent = 
+    `${mostrandoDesde}-${mostrandoHasta} de ${filasFiltradas.length}`;
+  
+  // Generar paginación
+  renderizarPaginacion(totalPaginas);
+}
+
+function renderizarPaginacion(totalPaginas) {
+  let html = '';
+  
+  // Botón anterior
+  html += `<li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+    <a class="page-link" href="#" onclick="irAPagina(${paginaActual - 1}); return false;">&laquo;</a>
+  </li>`;
+  
+  // Páginas
+  const maxPaginas = 5;
+  let inicioP = Math.max(1, paginaActual - Math.floor(maxPaginas / 2));
+  let finP = Math.min(totalPaginas, inicioP + maxPaginas - 1);
+  if (finP - inicioP < maxPaginas - 1) {
+    inicioP = Math.max(1, finP - maxPaginas + 1);
+  }
+  
+  if (inicioP > 1) {
+    html += `<li class="page-item"><a class="page-link" href="#" onclick="irAPagina(1); return false;">1</a></li>`;
+    if (inicioP > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+  }
+  
+  for (let i = inicioP; i <= finP; i++) {
+    html += `<li class="page-item ${i === paginaActual ? 'active' : ''}">
+      <a class="page-link" href="#" onclick="irAPagina(${i}); return false;">${i}</a>
+    </li>`;
+  }
+  
+  if (finP < totalPaginas) {
+    if (finP < totalPaginas - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    html += `<li class="page-item"><a class="page-link" href="#" onclick="irAPagina(${totalPaginas}); return false;">${totalPaginas}</a></li>`;
+  }
+  
+  // Botón siguiente
+  html += `<li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+    <a class="page-link" href="#" onclick="irAPagina(${paginaActual + 1}); return false;">&raquo;</a>
+  </li>`;
+  
+  paginacionEl.innerHTML = html;
+}
+
+function irAPagina(pagina) {
+  const totalPaginas = Math.ceil(filasFiltradas.length / itemsPorPagina) || 1;
+  if (pagina < 1 || pagina > totalPaginas) return;
+  paginaActual = pagina;
+  mostrarPagina();
+}
+
+function limpiarFiltros() {
+  inputFiltro.value = '';
+  selectRol.value = '';
+  selectEstado.value = '';
+  filtrarUsuarios();
+}
+
+// Event listeners
+inputFiltro.addEventListener('input', filtrarUsuarios);
+selectRol.addEventListener('change', filtrarUsuarios);
+selectEstado.addEventListener('change', filtrarUsuarios);
+selectItemsPorPagina.addEventListener('change', () => {
+  itemsPorPagina = parseInt(selectItemsPorPagina.value);
+  paginaActual = 1;
+  mostrarPagina();
+});
+
+// Inicializar
+filtrarUsuarios();
+
+// Ver detalle del usuario
+function verDetalleUsuario(id) {
+  fetch(`/api/usuarios/${id}`, {
+    method: 'GET',
+    headers: {'Content-Type': 'application/json'}
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success && data.usuario) {
+      const u = data.usuario;
+      document.getElementById('detalleUsuarioNombre').textContent = u.nombre || '-';
+      document.getElementById('detalleUsuarioId').textContent = 'ID: ' + u.id;
+      document.getElementById('detalleUsuarioRol').textContent = u.rol || u.tipo || '-';
+      document.getElementById('detalleUsuarioNivel').textContent = 'Nivel ' + (u.nivel_acceso || '-');
+      
+      const estadoEl = document.getElementById('detalleUsuarioEstado');
+      if (u.activo) {
+        estadoEl.textContent = 'Activo';
+        estadoEl.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
+      } else {
+        estadoEl.textContent = 'Inactivo';
+        estadoEl.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+      }
+      
+      document.getElementById('detalleUsuarioDocumento').textContent = u.documento || '-';
+      document.getElementById('detalleUsuarioEmail').textContent = u.email || '-';
+      document.getElementById('detalleUsuarioTelefono').textContent = u.telefono || '-';
+      document.getElementById('detalleUsuarioRegistro').textContent = u.fecha_registro || u.registro || '-';
+      document.getElementById('detalleUsuarioUltimoAcceso').textContent = u.ultimo_acceso || '-';
+      document.getElementById('detalleUsuarioRostro').textContent = u.tiene_rostro || 'No';
+      
+      const modal = new bootstrap.Modal(document.getElementById('modalDetalleUsuario'));
+      modal.show();
+    } else {
+      alert('Error: ' + (data.message || 'No se pudo obtener el usuario'));
+    }
+  })
+  .catch(err => alert('Error: ' + err.message));
+}
+
+// Crear nuevo usuario
+function crearUsuario() {
+  const form = document.getElementById('formNuevoUsuario');
+  
+  // Activar validación Bootstrap
+  form.classList.add('was-validated');
+  if (!form.checkValidity()) {
+    return;
+  }
+  
+  const documento = document.getElementById('nuevoDocumento').value.trim();
+  const nombres = document.getElementById('nuevoNombres').value.trim();
+  const apellidos = document.getElementById('nuevoApellidos').value.trim();
+  const email = document.getElementById('nuevoEmail').value.trim();
+  const telefono = document.getElementById('nuevoTelefono').value.trim();
+  const id_rol = document.getElementById('nuevoRol').value;
+  const password = document.getElementById('nuevoPassword').value;
+  const estado = document.getElementById('nuevoEstado').value;
+  
+  fetch('/api/usuarios/create', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      documento: documento,
+      nombres: nombres,
+      apellidos: apellidos,
+      email: email,
+      telefono: telefono,
+      id_rol: parseInt(id_rol),
+      password: password,
+      estado: estado
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      alert('Usuario creado exitosamente');
+      location.reload();
+    } else {
+      alert('Error: ' + (data.message || 'No se pudo crear el usuario'));
+    }
+  })
+  .catch(err => alert('Error: ' + err.message));
+}
+
+// Abrir modal de edición
+function editarUsuario(id) {
+  fetch(`/api/usuarios/${id}`)
+  .then(res => res.json())
+  .then(data => {
+    if (data.success && data.usuario) {
+      const u = data.usuario;
+      document.getElementById('editId').value = u.id;
+      document.getElementById('editDocumento').value = u.documento || '';
+      document.getElementById('editNombres').value = u.nombres || '';
+      document.getElementById('editApellidos').value = u.apellidos || '';
+      document.getElementById('editEmail').value = u.email || '';
+      document.getElementById('editTelefono').value = u.telefono || '';
+      document.getElementById('editEstado').value = u.estado || (u.activo ? 'activo' : 'inactivo');
+      
+      // Seleccionar el rol correcto
+      const selectRol = document.getElementById('editRol');
+      if (u.id_rol) {
+        selectRol.value = u.id_rol;
+      }
+      
+      const modal = new bootstrap.Modal(document.getElementById('modalEditarUsuario'));
+      modal.show();
+    } else {
+      alert('Error: ' + (data.message || 'No se pudo cargar el usuario'));
+    }
+  })
+  .catch(err => alert('Error: ' + err.message));
+}
+
+// Guardar edición
+function guardarEdicion() {
+  const form = document.getElementById('formEditarUsuario');
+  
+  // Activar validación Bootstrap
+  form.classList.add('was-validated');
+  if (!form.checkValidity()) {
+    return;
+  }
+  
+  const id = document.getElementById('editId').value;
+  const documento = document.getElementById('editDocumento').value.trim();
+  const nombres = document.getElementById('editNombres').value.trim();
+  const apellidos = document.getElementById('editApellidos').value.trim();
+  const email = document.getElementById('editEmail').value.trim();
+  const telefono = document.getElementById('editTelefono').value.trim();
+  const id_rol = document.getElementById('editRol').value;
+  const estado = document.getElementById('editEstado').value;
+  
+  const data = {
+    documento: documento,
+    nombres: nombres,
+    apellidos: apellidos,
+    email: email,
+    telefono: telefono,
+    id_rol: parseInt(id_rol),
+    estado: estado
+  };
+  
+  fetch(`/api/usuarios/${id}/update`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      alert('Usuario actualizado exitosamente');
+      location.reload();
+    } else {
+      alert('Error: ' + (data.message || 'No se pudo actualizar el usuario'));
+    }
+  })
+  .catch(err => alert('Error: ' + err.message));
+}
+
+// Toggle activo/inactivo
+function toggleActivoUsuario(id, nuevoEstado) {
+  const accion = nuevoEstado == 1 ? 'activar' : 'desactivar';
+  if (!confirm(`¿Estás seguro de ${accion} este usuario?`)) return;
+  
+  fetch(`/api/usuarios/${id}/toggle`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ activo: nuevoEstado })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      alert(`Usuario ${accion === 'activar' ? 'activado' : 'desactivado'} exitosamente`);
+      location.reload();
+    } else {
+      alert('Error: ' + (data.message || 'No se pudo cambiar el estado'));
+    }
+  })
+  .catch(err => alert('Error: ' + err.message));
+}
+
+</script>
+{% endblock %}

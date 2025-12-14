@@ -1,0 +1,339 @@
+/* ===========================================
+   MODULES.CSS - Estilos para módulos específicos
+   Centro Minero SENA
+   =========================================== */
+
+/* ==========================================
+   TABLES
+   ========================================== */
+
+.table-modern {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-modern thead th {
+  background: #f8f9fa;
+  border: none;
+  padding: 15px;
+  font-weight: 600;
+  color: #333;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+.table-modern tbody td {
+  padding: 15px;
+  vertical-align: middle;
+  border-bottom: 1px solid #eee;
+}
+
+.table-modern tbody tr:hover {
+  background: #f8f9fa;
+}
+
+/* ==========================================
+   CARDS
+   ========================================== */
+
+.card-modern {
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-modern:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+/* ==========================================
+   FORMS
+   ========================================== */
+
+.form-control-modern {
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  padding: 12px 15px;
+  transition: all 0.3s ease;
+}
+
+.form-control-modern:focus {
+  border-color: var(--sena-green);
+  box-shadow: 0 0 0 3px rgba(57, 169, 0, 0.1);
+}
+
+.form-label-modern {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+/* ==========================================
+   BADGES
+   ========================================== */
+
+.badge-disponible {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-prestado,
+.badge-en-uso {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-mantenimiento {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.badge-reparacion {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.badge-dado-baja {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+/* ==========================================
+   EMPTY STATE
+   ========================================== */
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 15px;
+}
+
+.empty-state i {
+  font-size: 4rem;
+  color: #dee2e6;
+  margin-bottom: 20px;
+}
+
+.empty-state h4 {
+  color: #495057;
+  margin-bottom: 10px;
+}
+
+.empty-state p {
+  color: #6c757d;
+}
+
+/* ==========================================
+   LOADING
+   ========================================== */
+
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.spinner-border-sena {
+  color: var(--sena-green);
+}
+
+/* ==========================================
+   ALERTS CUSTOM
+   ========================================== */
+
+.alert-sena {
+  background: linear-gradient(135deg, rgba(57, 169, 0, 0.1), rgba(76, 175, 80, 0.1));
+  border: 1px solid rgba(57, 169, 0, 0.2);
+  color: #2e7d32;
+  border-radius: 10px;
+}
+
+/* ==========================================
+   PAGINATION
+   ========================================== */
+
+.pagination-modern .page-link {
+  border: none;
+  border-radius: 8px;
+  margin: 0 3px;
+  color: #333;
+}
+
+.pagination-modern .page-item.active .page-link {
+  background: var(--sena-green);
+  color: white;
+}
+
+.pagination-modern .page-link:hover {
+  background: #e9ecef;
+}
+
+/* ==========================================
+   SEARCH BOX
+   ========================================== */
+
+.search-box {
+  position: relative;
+}
+
+.search-box input {
+  padding-left: 45px;
+  border-radius: 25px;
+  border: 2px solid #e9ecef;
+}
+
+.search-box i {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+}
+
+.search-box input:focus {
+  border-color: var(--sena-green);
+  box-shadow: none;
+}
+
+/* ==========================================
+   FILTERS
+   ========================================== */
+
+.filter-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 2px solid #e9ecef;
+  background: white;
+  color: #333;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.filter-btn:hover,
+.filter-btn.active {
+  border-color: var(--sena-green);
+  background: var(--sena-green);
+  color: white;
+}
+
+/* ==========================================
+   TIMELINE
+   ========================================== */
+
+.timeline {
+  position: relative;
+  padding-left: 30px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e9ecef;
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: 20px;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -24px;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sena-green);
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px var(--sena-green);
+}
+
+/* ==========================================
+   PROGRESS BARS
+   ========================================== */
+
+.progress-modern {
+  height: 10px;
+  border-radius: 5px;
+  background: #e9ecef;
+  overflow: hidden;
+}
+
+.progress-modern .progress-bar {
+  background: linear-gradient(90deg, var(--sena-green), #4CAF50);
+  border-radius: 5px;
+}
+
+/* ==========================================
+   TOOLTIPS CUSTOM
+   ========================================== */
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  background: #333;
+  color: white;
+  font-size: 0.75rem;
+  border-radius: 5px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ==========================================
+   ACCESSIBILITY
+   ========================================== */
+
+.alto-contraste {
+  filter: contrast(1.2);
+}
+
+.modo-oscuro {
+  background: #1a1a1a !important;
+  color: #fff !important;
+}
+
+.modo-oscuro .card,
+.modo-oscuro .modal-content {
+  background: #2d2d2d !important;
+  color: #fff !important;
+}
+
+.modo-oscuro .sidebar {
+  background: #000 !important;
+}
+
+.animaciones-reducidas * {
+  animation: none !important;
+  transition: none !important;
+}
