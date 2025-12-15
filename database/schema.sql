@@ -250,12 +250,24 @@ CREATE TABLE IF NOT EXISTS practicas_laboratorio (
 -- Tabla de Capacitaciones
 CREATE TABLE IF NOT EXISTS capacitaciones (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    id_usuario INT NOT NULL,
-    tema VARCHAR(200) NOT NULL,
-    fecha DATE NOT NULL,
-    duracion_horas INT NOT NULL,
-    calificacion INT CHECK (calificacion BETWEEN 0 AND 100),
-    FOREIGN KEY (id_usuario) REFERENCES usuarios(id)
+    titulo VARCHAR(300) NOT NULL,
+    descripcion TEXT,
+    tipo_capacitacion ENUM('modulo_formativo', 'taller', 'material_didactico', 'gestion_cambio') DEFAULT 'taller',
+    producto VARCHAR(200),
+    medicion VARCHAR(200),
+    cantidad_meta INT,
+    cantidad_actual INT DEFAULT 0,
+    actividad VARCHAR(300),
+    porcentaje_avance DECIMAL(5,2) DEFAULT 0.00,
+    recursos_asociados TEXT,
+    participantes TEXT,
+    duracion_horas INT,
+    fecha_inicio DATE,
+    fecha_fin DATE,
+    estado ENUM('programada', 'activo', 'finalizada', 'cancelada') DEFAULT 'programada',
+    id_instructor INT,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_instructor) REFERENCES usuarios(id) ON DELETE SET NULL
 );
 
 -- Tabla de Encuestas
@@ -399,6 +411,26 @@ CREATE TABLE IF NOT EXISTS logs_cambios (
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id)
 );
+
+-- =========================================================
+-- MÓDULO 10: RECUPERACIÓN DE CONTRASEÑAS
+-- =========================================================
+
+-- Tabla de Tokens de Restablecimiento de Contraseña
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    id_usuario INT NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL,
+    expira_en DATETIME NOT NULL,
+    usado BOOLEAN DEFAULT FALSE,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ip_solicitud VARCHAR(45),
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id) ON DELETE CASCADE,
+    INDEX idx_token (token),
+    INDEX idx_expira (expira_en),
+    INDEX idx_usuario (id_usuario)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================================================
 -- VISTAS DEL SISTEMA

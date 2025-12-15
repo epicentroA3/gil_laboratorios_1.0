@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Cuenta - Centro Minero SENA</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="row g-0">
+                <div class="col-lg-6">
+                    <div class="login-left slide-in">
+                        <div class="logo-container">
+                            <div class="logo">
+                                <img src="{{ url_for('static', filename='img/logo-sena.jpg') }}" alt="Logo">
+                            </div>
+                            <h2 class="h3 mb-0">Centro Minero</h2>
+                            <p class="mb-0 opacity-75">Sistema de Laboratorio</p>
+                        </div>
+                        
+                        <div class="welcome-text">
+                            <h4 class="mb-4">Registro de Usuario</h4>
+                            <ul class="features-list">
+                                <li>
+                                    <i class="bi bi-shield-check"></i>
+                                    Proceso de Registro Seguro
+                                </li>
+                                <li>
+                                    <i class="bi bi-person-check"></i>
+                                    Validación por Administrador
+                                </li>
+                                <li>
+                                    <i class="bi bi-clock-history"></i>
+                                    Activación en 24-48 horas
+                                </li>
+                                <li>
+                                    <i class="bi bi-envelope"></i>
+                                    Notificación por Email
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="login-right fade-in">
+                        <div class="text-center mb-4">
+                            <h3 class="fw-bold text-dark">Crear Cuenta</h3>
+                            <p class="text-muted">Complete el formulario para registrarse</p>
+                        </div>
+
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                        <i class="bi bi-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }} me-2"></i>
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        <form method="POST" id="registerForm">
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="documento" name="documento" placeholder="Documento" required pattern="[0-9]+" minlength="6" maxlength="20">
+                                <label for="documento">
+                                    <i class="bi bi-person-badge me-2"></i>Número de Documento
+                                </label>
+                                <div class="invalid-feedback" id="documento-error">
+                                    El documento debe tener entre 6 y 20 dígitos
+                                </div>
+                                <div class="valid-feedback">
+                                    ¡Documento válido!
+                                </div>
+                                <div class="form-text">Solo números, sin puntos ni espacios</div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control" id="nombres" name="nombres" placeholder="Nombres" required minlength="2" maxlength="100">
+                                        <label for="nombres">
+                                            <i class="bi bi-person me-2"></i>Nombres
+                                        </label>
+                                        <div class="invalid-feedback" id="nombres-error">
+                                            Solo letras y espacios (2-100 caracteres)
+                                        </div>
+                                        <div class="valid-feedback">
+                                            ¡Correcto!
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control" id="apellidos" name="apellidos" placeholder="Apellidos" required minlength="2" maxlength="100">
+                                        <label for="apellidos">
+                                            <i class="bi bi-person me-2"></i>Apellidos
+                                        </label>
+                                        <div class="invalid-feedback" id="apellidos-error">
+                                            Solo letras y espacios (2-100 caracteres)
+                                        </div>
+                                        <div class="valid-feedback">
+                                            ¡Correcto!
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-floating mb-3">
+                                <input type="email" class="form-control" id="email" name="email" placeholder="correo@ejemplo.com" required>
+                                <label for="email">
+                                    <i class="bi bi-envelope me-2"></i>Correo Electrónico
+                                </label>
+                                <div class="invalid-feedback" id="email-error">
+                                    Ingrese un email válido (ejemplo@dominio.com)
+                                </div>
+                                <div class="valid-feedback">
+                                    ¡Email válido!
+                                </div>
+                            </div>
+
+                            <div class="form-floating mb-3">
+                                <input type="tel" class="form-control" id="telefono" name="telefono" placeholder="Teléfono" pattern="[0-9]+" minlength="7" maxlength="15">
+                                <label for="telefono">
+                                    <i class="bi bi-telephone me-2"></i>Teléfono (Opcional)
+                                </label>
+                                <div class="invalid-feedback" id="telefono-error">
+                                    El teléfono debe tener entre 7 y 15 dígitos
+                                </div>
+                                <div class="valid-feedback">
+                                    ¡Teléfono válido!
+                                </div>
+                            </div>
+
+                            <div class="form-floating mb-3 password-field">
+                                <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required minlength="8" autocomplete="new-password">
+                                <label for="password">
+                                    <i class="bi bi-lock me-2"></i>Contraseña
+                                </label>
+                                <button type="button" class="btn btn-link password-toggle" onclick="togglePassword('password')">
+                                    <i class="bi bi-eye" id="toggleIcon1"></i>
+                                </button>
+                                <div class="invalid-feedback" id="password-error">
+                                    Debe contener: mínimo 8 caracteres, mayúscula, minúscula, número y carácter especial
+                                </div>
+                                <div class="valid-feedback">
+                                    ¡Contraseña segura!
+                                </div>
+                                <div class="form-text">Mínimo 8 caracteres: mayúscula, minúscula, número y carácter especial</div>
+                            </div>
+
+                            <div class="form-floating mb-3 password-field">
+                                <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="Confirmar Contraseña" required minlength="8" autocomplete="new-password">
+                                <label for="password_confirm">
+                                    <i class="bi bi-lock-fill me-2"></i>Confirmar Contraseña
+                                </label>
+                                <button type="button" class="btn btn-link password-toggle" onclick="togglePassword('password_confirm')">
+                                    <i class="bi bi-eye" id="toggleIcon2"></i>
+                                </button>
+                                <div class="invalid-feedback" id="password_confirm-error">
+                                    Las contraseñas no coinciden
+                                </div>
+                                <div class="valid-feedback">
+                                    ¡Las contraseñas coinciden!
+                                </div>
+                            </div>
+
+                            <div class="alert alert-warning py-2 mb-3">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <small>Su cuenta quedará en estado <strong>inactivo</strong> hasta que un administrador la valide y active.</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-login btn-primary w-100 mb-3" id="submitBtn">
+                                <i class="bi bi-person-plus me-2"></i>
+                                Crear Cuenta
+                            </button>
+                        </form>
+
+                        <div class="text-center mt-3">
+                            <p class="text-muted mb-0">
+                                ¿Ya tiene una cuenta?
+                                <a href="{{ url_for('login') }}" class="text-decoration-none fw-bold">
+                                    Iniciar Sesión
+                                </a>
+                            </p>
+                        </div>
+
+                        <div class="login-footer mt-4">
+                            <small>
+                                © 2024 <a href="https://www.sena.edu.co" target="_blank">SENA</a> - Centro Minero de Sogamoso<br>
+                                Sistema de Gestión Integral de Laboratorios v1.0
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Validaciones híbridas - Frontend
+        const validaciones = {
+            documento: {
+                regex: /^[0-9]{6,20}$/,
+                mensaje: 'El documento debe tener entre 6 y 20 dígitos'
+            },
+            nombres: {
+                regex: /^[a-záéíóúñA-ZÁÉÍÓÚÑ\s]{2,100}$/,
+                mensaje: 'Los nombres solo pueden contener letras y espacios (2-100 caracteres)'
+            },
+            apellidos: {
+                regex: /^[a-záéíóúñA-ZÁÉÍÓÚÑ\s]{2,100}$/,
+                mensaje: 'Los apellidos solo pueden contener letras y espacios (2-100 caracteres)'
+            },
+            email: {
+                regex: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                mensaje: 'Formato de email inválido'
+            },
+            telefono: {
+                regex: /^[0-9]{7,15}$/,
+                mensaje: 'El teléfono debe tener entre 7 y 15 dígitos'
+            },
+            password: {
+                validar: function(password) {
+                    const errores = [];
+                    if (password.length < 8) errores.push('mínimo 8 caracteres');
+                    if (!/[A-Z]/.test(password)) errores.push('una mayúscula');
+                    if (!/[a-z]/.test(password)) errores.push('una minúscula');
+                    if (!/[0-9]/.test(password)) errores.push('un número');
+                    if (!/[!@#$%^&*(),.?":{}|<>_\-]/.test(password)) errores.push('un carácter especial');
+                    return errores;
+                },
+                mensaje: 'La contraseña debe contener: '
+            }
+        };
+
+        function togglePassword(fieldId) {
+            const passwordInput = document.getElementById(fieldId);
+            const toggleIcon = document.getElementById(fieldId === 'password' ? 'toggleIcon1' : 'toggleIcon2');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            }
+        }
+
+        // Validación en tiempo real con mensajes de error
+        function validarCampo(campo, valor) {
+            const input = document.getElementById(campo);
+            const validacion = validaciones[campo];
+            const errorDiv = document.getElementById(campo + '-error');
+            
+            // Campo vacío (excepto teléfono que es opcional)
+            if (!valor && campo !== 'telefono') {
+                input.classList.remove('is-valid');
+                input.classList.add('is-invalid');
+                if (errorDiv) {
+                    errorDiv.textContent = 'Este campo es obligatorio';
+                }
+                return false;
+            }
+            
+            // Validación de contraseña con mensajes específicos
+            if (campo === 'password') {
+                const errores = validacion.validar(valor);
+                if (errores.length > 0) {
+                    input.classList.remove('is-valid');
+                    input.classList.add('is-invalid');
+                    if (errorDiv) {
+                        errorDiv.textContent = 'Falta: ' + errores.join(', ');
+                    }
+                    return false;
+                }
+            } 
+            // Validación con regex
+            else if (validacion && validacion.regex && !validacion.regex.test(valor)) {
+                if (valor) {
+                    input.classList.remove('is-valid');
+                    input.classList.add('is-invalid');
+                    if (errorDiv) {
+                        errorDiv.textContent = validacion.mensaje;
+                    }
+                }
+                return false;
+            }
+            
+            // Campo válido
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            return true;
+        }
+
+        // Agregar listeners para validación en tiempo real
+        document.addEventListener('DOMContentLoaded', function() {
+            ['documento', 'nombres', 'apellidos', 'email', 'telefono', 'password'].forEach(campo => {
+                const input = document.getElementById(campo);
+                if (input) {
+                    input.addEventListener('blur', function() {
+                        validarCampo(campo, this.value.trim());
+                    });
+                    input.addEventListener('input', function() {
+                        if (this.classList.contains('is-invalid')) {
+                            validarCampo(campo, this.value.trim());
+                        }
+                    });
+                }
+            });
+
+            // Validación especial para confirmación de contraseña
+            const passwordConfirmInput = document.getElementById('password_confirm');
+            const passwordConfirmError = document.getElementById('password_confirm-error');
+            
+            passwordConfirmInput.addEventListener('input', function() {
+                const password = document.getElementById('password').value;
+                if (this.value && this.value !== password) {
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                    if (passwordConfirmError) {
+                        passwordConfirmError.textContent = 'Las contraseñas no coinciden';
+                    }
+                } else if (this.value === password && password) {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                }
+            });
+            
+            passwordConfirmInput.addEventListener('blur', function() {
+                const password = document.getElementById('password').value;
+                if (this.value && this.value !== password) {
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                    if (passwordConfirmError) {
+                        passwordConfirmError.textContent = 'Las contraseñas no coinciden';
+                    }
+                } else if (this.value === password && password) {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                }
+            });
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const documento = document.getElementById('documento').value.trim();
+            const nombres = document.getElementById('nombres').value.trim();
+            const apellidos = document.getElementById('apellidos').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const telefono = document.getElementById('telefono').value.trim();
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('password_confirm').value;
+            
+            // Validar campos obligatorios
+            if (!documento || !nombres || !apellidos || !email || !password) {
+                showAlert('Por favor complete todos los campos obligatorios', 'danger');
+                return;
+            }
+            
+            // Validar documento
+            if (!validaciones.documento.regex.test(documento)) {
+                showAlert(validaciones.documento.mensaje, 'danger');
+                document.getElementById('documento').focus();
+                return;
+            }
+            
+            // Validar nombres
+            if (!validaciones.nombres.regex.test(nombres)) {
+                showAlert(validaciones.nombres.mensaje, 'danger');
+                document.getElementById('nombres').focus();
+                return;
+            }
+            
+            // Validar apellidos
+            if (!validaciones.apellidos.regex.test(apellidos)) {
+                showAlert(validaciones.apellidos.mensaje, 'danger');
+                document.getElementById('apellidos').focus();
+                return;
+            }
+            
+            // Validar email
+            if (!validaciones.email.regex.test(email)) {
+                showAlert(validaciones.email.mensaje, 'danger');
+                document.getElementById('email').focus();
+                return;
+            }
+            
+            // Validar teléfono (opcional pero si se ingresa debe ser válido)
+            if (telefono && !validaciones.telefono.regex.test(telefono)) {
+                showAlert(validaciones.telefono.mensaje, 'danger');
+                document.getElementById('telefono').focus();
+                return;
+            }
+            
+            // Validar contraseña segura
+            const erroresPassword = validaciones.password.validar(password);
+            if (erroresPassword.length > 0) {
+                showAlert(validaciones.password.mensaje + erroresPassword.join(', '), 'danger');
+                document.getElementById('password').focus();
+                return;
+            }
+            
+            // Validar confirmación de contraseña
+            if (password !== passwordConfirm) {
+                showAlert('Las contraseñas no coinciden', 'danger');
+                document.getElementById('password_confirm').focus();
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registrando...';
+            submitBtn.disabled = true;
+            
+            const formData = {
+                documento: documento,
+                nombres: nombres,
+                apellidos: apellidos,
+                email: email,
+                telefono: telefono,
+                password: password
+            };
+            
+            fetch('/api/v1/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else {
+                    showAlert(data.message || 'Error en el registro', 'danger');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                showAlert('Error de conexión: ' + error.message, 'danger');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <i class="bi bi-${type === 'danger' ? 'exclamation-triangle' : 'check-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const form = document.querySelector('form');
+            form.parentNode.insertBefore(alertDiv, form);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert-dismissible');
+            alerts.forEach(alert => {
+                if (alert.classList.contains('show')) {
+                    bootstrap.Alert.getOrCreateInstance(alert).close();
+                }
+            });
+        }, 5000);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('documento').focus();
+        });
+    </script>
+</body>
+</html>

@@ -67,18 +67,190 @@
     </div>
   </div>
   <div class="card-footer border-0" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-    <small>
-      <i class="bi bi-info-circle me-1" style="color: #00b894;"></i>
-      <strong style="color: #2d6a4f;">Nota:</strong> Para modificar estos valores, contacte al administrador del sistema
-    </small>
+    <div class="row align-items-center">
+      <div class="col-md-6">
+        <small>
+          <i class="bi bi-info-circle me-1" style="color: #00b894;"></i>
+          <strong style="color: #2d6a4f;">Nota:</strong> Para modificar estos valores, contacte al administrador del sistema
+        </small>
+      </div>
+      <div class="col-md-6">
+        <nav aria-label="Paginación de configuraciones">
+          <ul class="pagination pagination-sm justify-content-end mb-0" id="paginacion">
+            <!-- Se genera dinámicamente con JavaScript -->
+          </ul>
+        </nav>
+      </div>
+    </div>
   </div>
 </div>
 
+<style>
+/* Estilos para paginación moderna */
+.pagination {
+  gap: 5px;
+}
+
+.pagination .page-item .page-link {
+  border-radius: 8px;
+  border: 2px solid rgba(45, 106, 79, 0.2);
+  color: #2d6a4f;
+  font-weight: 600;
+  padding: 8px 14px;
+  transition: all 0.3s ease;
+}
+
+.pagination .page-item .page-link:hover {
+  background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);
+  color: white;
+  border-color: #2d6a4f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 106, 79, 0.3);
+}
+
+.pagination .page-item.active .page-link {
+  background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);
+  border-color: #2d6a4f;
+  color: white;
+  box-shadow: 0 4px 12px rgba(45, 106, 79, 0.3);
+}
+
+.pagination .page-item.disabled .page-link {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: rgba(45, 106, 79, 0.1);
+}
+
+#infoRegistros {
+  color: #6c757d;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+</style>
+
 <script>
-// Filtro de búsqueda
+// Sistema de paginación y filtrado
 const filtro = document.getElementById('filtroConfig');
 const tbody = document.querySelector('#tablaConfig tbody');
+const paginacionContainer = document.getElementById('paginacion');
 
+let paginaActual = 1;
+const registrosPorPagina = 10;
+let filasFiltradas = [];
+
+// Función para obtener todas las filas visibles
+function obtenerFilasVisibles() {
+  return [...tbody.rows].filter(row => !row.classList.contains('d-none'));
+}
+
+// Función para renderizar la tabla con paginación
+function renderizarTabla() {
+  const filasVisibles = obtenerFilasVisibles();
+  const totalPaginas = Math.ceil(filasVisibles.length / registrosPorPagina);
+  
+  // Ocultar todas las filas
+  [...tbody.rows].forEach(row => {
+    if (!row.classList.contains('filtrado-oculto')) {
+      row.style.display = 'none';
+    }
+  });
+  
+  // Mostrar solo las filas de la página actual
+  const inicio = (paginaActual - 1) * registrosPorPagina;
+  const fin = inicio + registrosPorPagina;
+  
+  filasVisibles.slice(inicio, fin).forEach(row => {
+    row.style.display = '';
+  });
+  
+  // Actualizar controles de paginación
+  renderizarPaginacion(totalPaginas, filasVisibles.length);
+}
+
+// Función para renderizar los controles de paginación
+function renderizarPaginacion(totalPaginas, totalRegistros) {
+  if (totalPaginas <= 1) {
+    paginacionContainer.innerHTML = '';
+    return;
+  }
+  
+  let html = '';
+  
+  // Botón anterior
+  html += `
+    <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+      <a class="page-link" href="#" onclick="cambiarPagina(${paginaActual - 1}); return false;">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+    </li>
+  `;
+  
+  // Páginas
+  const maxBotones = 5;
+  let inicio = Math.max(1, paginaActual - Math.floor(maxBotones / 2));
+  let fin = Math.min(totalPaginas, inicio + maxBotones - 1);
+  
+  if (fin - inicio < maxBotones - 1) {
+    inicio = Math.max(1, fin - maxBotones + 1);
+  }
+  
+  if (inicio > 1) {
+    html += `
+      <li class="page-item">
+        <a class="page-link" href="#" onclick="cambiarPagina(1); return false;">1</a>
+      </li>
+    `;
+    if (inicio > 2) {
+      html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+  }
+  
+  for (let i = inicio; i <= fin; i++) {
+    html += `
+      <li class="page-item ${i === paginaActual ? 'active' : ''}">
+        <a class="page-link" href="#" onclick="cambiarPagina(${i}); return false;">${i}</a>
+      </li>
+    `;
+  }
+  
+  if (fin < totalPaginas) {
+    if (fin < totalPaginas - 1) {
+      html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+    html += `
+      <li class="page-item">
+        <a class="page-link" href="#" onclick="cambiarPagina(${totalPaginas}); return false;">${totalPaginas}</a>
+      </li>
+    `;
+  }
+  
+  // Botón siguiente
+  html += `
+    <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+      <a class="page-link" href="#" onclick="cambiarPagina(${paginaActual + 1}); return false;">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    </li>
+  `;
+  
+  paginacionContainer.innerHTML = html;
+}
+
+// Función para cambiar de página
+function cambiarPagina(nuevaPagina) {
+  const filasVisibles = obtenerFilasVisibles();
+  const totalPaginas = Math.ceil(filasVisibles.length / registrosPorPagina);
+  
+  if (nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+  
+  paginaActual = nuevaPagina;
+  renderizarTabla();
+  
+  // Scroll suave hacia arriba
+  document.querySelector('#tablaConfig').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Filtro de búsqueda con paginación
 filtro.addEventListener('input', () => {
   const termino = filtro.value.toLowerCase();
   
@@ -86,8 +258,24 @@ filtro.addEventListener('input', () => {
     const clave = row.dataset.clave || '';
     const desc = row.dataset.desc || '';
     const coincide = clave.includes(termino) || desc.includes(termino);
-    row.classList.toggle('d-none', !coincide);
+    
+    if (coincide) {
+      row.classList.remove('filtrado-oculto');
+      row.classList.remove('d-none');
+    } else {
+      row.classList.add('filtrado-oculto');
+      row.classList.add('d-none');
+    }
   });
+  
+  // Resetear a la primera página después de filtrar
+  paginaActual = 1;
+  renderizarTabla();
+});
+
+// Inicializar paginación al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+  renderizarTabla();
 });
 </script>
 

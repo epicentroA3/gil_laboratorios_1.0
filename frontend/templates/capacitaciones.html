@@ -1,74 +1,979 @@
-{% extends "base.html" %}
-
-{% block title %}Capacitaciones - GIL{% endblock %}
-
+{% extends 'base.html' %}
+{% set title = 'Programa Formativo en IA' %}
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+
+<style>
+/* Estilos modernos para capacitaciones */
+.capacitaciones-header {
+    background: linear-gradient(135deg, #2d6a4f 0%, #40916c 50%, #52b788 100%);
+    border-radius: 20px;
+    padding: 35px 40px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 40px rgba(45, 106, 79, 0.3);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.capacitaciones-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+.stats-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border-left: 5px solid;
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+
+.stats-card.modulo { border-left-color: #2d6a4f; }
+.stats-card.taller { border-left-color: #0d6efd; }
+.stats-card.material { border-left-color: #ffc107; }
+.stats-card.cambio { border-left-color: #dc3545; }
+
+.capacitacion-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+    border-left: 5px solid;
+    transition: all 0.3s ease;
+}
+
+.capacitacion-card:hover {
+    box-shadow: 0 5px 25px rgba(0,0,0,0.12);
+    transform: translateX(5px);
+}
+
+.capacitacion-card.modulo_formativo { border-left-color: #2d6a4f; }
+.capacitacion-card.taller { border-left-color: #0d6efd; }
+.capacitacion-card.material_didactico { border-left-color: #ffc107; }
+.capacitacion-card.gestion_cambio { border-left-color: #dc3545; }
+
+.progress-modern {
+    height: 25px;
+    border-radius: 12px;
+    background: #e9ecef;
+    overflow: hidden;
+}
+
+.progress-modern .progress-bar {
+    background: linear-gradient(135deg, #2d6a4f 0%, #52b788 100%);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-tipo {
+    padding: 8px 15px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.tab-modern {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6c757d;
+    font-weight: 600;
+    padding: 12px 25px;
+    transition: all 0.3s ease;
+}
+
+.tab-modern:hover {
+    color: #2d6a4f;
+    border-bottom-color: rgba(45, 106, 79, 0.3);
+}
+
+.tab-modern.active {
+    color: #2d6a4f;
+    border-bottom-color: #2d6a4f;
+    background: transparent;
+}
+</style>
+
+<!-- Header -->
+<div class="capacitaciones-header">
+    <div class="d-flex align-items-center justify-content-between">
         <div>
-            <h2 class="mb-1"><i class="bi bi-award me-2"></i>Capacitaciones</h2>
-            <p class="text-muted mb-0">Gestión de capacitaciones y entrenamientos</p>
+            <h1><i class="bi bi-mortarboard-fill me-3"></i>Programa Formativo en Tecnologías IA</h1>
+            <p class="mb-0 opacity-90">Fortalecimiento de capacidades técnicas del personal - Centro Minero SENA</p>
         </div>
         {% if puede_editar %}
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevaCapacitacion">
+        <button class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#modalNuevaCapacitacion" style="border-radius: 12px; font-weight: 600;">
             <i class="bi bi-plus-circle me-2"></i>Nueva Capacitación
         </button>
         {% endif %}
     </div>
+</div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Título</th>
-                            <th>Instructor</th>
-                            <th>Duración</th>
-                            <th>Fecha Inicio</th>
-                            <th>Fecha Fin</th>
-                            <th>Estado</th>
-                            {% if puede_editar %}<th class="text-center">Acciones</th>{% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for cap in capacitaciones %}
-                        <tr>
-                            <td><strong>{{ cap.titulo }}</strong></td>
-                            <td>{{ cap.instructor or 'Sin asignar' }}</td>
-                            <td>{{ cap.duracion_horas }} horas</td>
-                            <td>{{ cap.fecha_inicio or 'N/A' }}</td>
-                            <td>{{ cap.fecha_fin or 'N/A' }}</td>
-                            <td>
-                                {% if cap.estado == 'activo' %}
-                                <span class="badge bg-success">Activa</span>
-                                {% elif cap.estado == 'programada' %}
-                                <span class="badge bg-info">Programada</span>
-                                {% elif cap.estado == 'finalizada' %}
-                                <span class="badge bg-secondary">Finalizada</span>
-                                {% else %}
-                                <span class="badge bg-secondary">{{ cap.estado }}</span>
-                                {% endif %}
-                            </td>
-                            {% if puede_editar %}
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-outline-info" title="Ver"><i class="bi bi-eye"></i></button>
-                                <button class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></button>
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">
-                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                No hay capacitaciones registradas
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+<!-- Estadísticas Generales -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stats-card modulo">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="mb-0" style="color: #2d6a4f;">Módulos Formativos</h6>
+                <i class="bi bi-book-fill fs-3" style="color: #2d6a4f;"></i>
+            </div>
+            <h2 class="mb-0" style="color: #2d6a4f;">5/5</h2>
+            <small class="text-muted">Meta: 5 módulos</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card taller">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="mb-0" style="color: #0d6efd;">Personal Capacitado</h6>
+                <i class="bi bi-people-fill fs-3" style="color: #0d6efd;"></i>
+            </div>
+            <h2 class="mb-0" style="color: #0d6efd;">0/33</h2>
+            <small class="text-muted">Meta: 33 personas</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card material">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="mb-0" style="color: #ffc107;">Recursos Creados</h6>
+                <i class="bi bi-file-earmark-text-fill fs-3" style="color: #ffc107;"></i>
+            </div>
+            <h2 class="mb-0" style="color: #ffc107;">10/20</h2>
+            <small class="text-muted">Meta: 20 recursos</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card cambio">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="mb-0" style="color: #dc3545;">Adopción Tecnológica</h6>
+                <i class="bi bi-graph-up-arrow fs-3" style="color: #dc3545;"></i>
+            </div>
+            <h2 class="mb-0" style="color: #dc3545;">42%</h2>
+            <small class="text-muted">Meta: >90%</small>
+        </div>
+    </div>
+</div>
+
+<!-- Filtro de Búsqueda -->
+<div class="card mb-4" style="border-radius: 15px; border: 1px solid rgba(45, 106, 79, 0.2);">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-10">
+                <div class="input-group">
+                    <span class="input-group-text" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); border: none;">
+                        <i class="bi bi-search text-white"></i>
+                    </span>
+                    <input type="text" class="form-control" id="filtroCapacitaciones" placeholder="Buscar por título, descripción, producto o actividad..." style="border-left: none;">
+                </div>
+            </div>
+            <div class="col-md-2 text-end">
+                <span class="badge bg-secondary" id="contadorResultados" style="font-size: 0.9rem; padding: 10px 15px;">
+                    <i class="bi bi-list-check me-1"></i><span id="totalResultados">{{ capacitaciones|length }}</span> resultados
+                </span>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Tabs de Filtrado -->
+<ul class="nav nav-tabs mb-4" id="capacitacionesTabs">
+    <li class="nav-item">
+        <button class="nav-link tab-modern active" data-bs-toggle="tab" data-bs-target="#todas" onclick="aplicarFiltros()">Todas</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link tab-modern" data-bs-toggle="tab" data-bs-target="#modulos" onclick="aplicarFiltros()">Módulos Formativos</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link tab-modern" data-bs-toggle="tab" data-bs-target="#talleres" onclick="aplicarFiltros()">Talleres</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link tab-modern" data-bs-toggle="tab" data-bs-target="#materiales" onclick="aplicarFiltros()">Material Didáctico</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link tab-modern" data-bs-toggle="tab" data-bs-target="#gestion" onclick="aplicarFiltros()">Gestión del Cambio</button>
+    </li>
+</ul>
+
+<!-- Contenido de Tabs -->
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="todas">
+        {% for cap in capacitaciones %}
+        <div class="capacitacion-card {{ cap.tipo_capacitacion }}">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <span class="badge-tipo" style="background: {% if cap.tipo_capacitacion == 'modulo_formativo' %}#2d6a4f{% elif cap.tipo_capacitacion == 'taller' %}#0d6efd{% elif cap.tipo_capacitacion == 'material_didactico' %}#ffc107{% else %}#dc3545{% endif %}; color: white;">
+                            {% if cap.tipo_capacitacion == 'modulo_formativo' %}Módulo Formativo
+                            {% elif cap.tipo_capacitacion == 'taller' %}Taller
+                            {% elif cap.tipo_capacitacion == 'material_didactico' %}Material Didáctico
+                            {% else %}Gestión del Cambio{% endif %}
+                        </span>
+                        {% if cap.estado == 'activo' %}
+                        <span class="badge bg-success">Activo</span>
+                        {% elif cap.estado == 'programada' %}
+                        <span class="badge bg-info">Programada</span>
+                        {% elif cap.estado == 'finalizada' %}
+                        <span class="badge bg-secondary">Finalizada</span>
+                        {% endif %}
+                    </div>
+                    <h5 class="mb-2">{{ cap.titulo }}</h5>
+                    <p class="text-muted mb-2">{{ cap.descripcion }}</p>
+                    <div class="row g-3 mt-2">
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ cap.duracion_horas }} horas</small>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>{{ cap.fecha_inicio }} - {{ cap.fecha_fin }}</small>
+                        </div>
+                        {% if cap.producto %}
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="bi bi-bullseye me-1"></i>{{ cap.producto }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center mb-3">
+                        <h3 class="mb-0" style="color: #2d6a4f;">{{ cap.cantidad_actual }}/{{ cap.cantidad_meta }}</h3>
+                        <small class="text-muted">{{ cap.medicion }}</small>
+                    </div>
+                    <div class="progress-modern">
+                        <div class="progress-bar" style="width: {{ cap.porcentaje_avance }}%">
+                            {{ cap.porcentaje_avance }}%
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-2"><i class="bi bi-info-circle me-1"></i>{{ cap.actividad }}</small>
+                    {% if puede_editar %}
+                    <div class="mt-3 d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-info" onclick="verDetalle({{ cap.id }})" title="Ver Detalle">
+                            <i class="bi bi-eye"></i> Ver
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editarCapacitacion({{ cap.id }})" title="Editar">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 5rem; color: #dee2e6;"></i>
+            <h5 class="mt-3 text-muted">No hay capacitaciones registradas</h5>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Tab: Módulos Formativos -->
+    <div class="tab-pane fade" id="modulos">
+        {% for cap in capacitaciones if cap.tipo_capacitacion == 'modulo_formativo' %}
+        <div class="capacitacion-card {{ cap.tipo_capacitacion }}">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <span class="badge-tipo" style="background: #2d6a4f; color: white;">Módulo Formativo</span>
+                        {% if cap.estado == 'activo' %}
+                        <span class="badge bg-success">Activo</span>
+                        {% elif cap.estado == 'programada' %}
+                        <span class="badge bg-info">Programada</span>
+                        {% elif cap.estado == 'finalizada' %}
+                        <span class="badge bg-secondary">Finalizada</span>
+                        {% endif %}
+                    </div>
+                    <h5 class="mb-2">{{ cap.titulo }}</h5>
+                    <p class="text-muted mb-2">{{ cap.descripcion }}</p>
+                    <div class="row g-3 mt-2">
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ cap.duracion_horas }} horas</small>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>{{ cap.fecha_inicio }} - {{ cap.fecha_fin }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center mb-3">
+                        <h3 class="mb-0" style="color: #2d6a4f;">{{ cap.cantidad_actual }}/{{ cap.cantidad_meta }}</h3>
+                        <small class="text-muted">{{ cap.medicion }}</small>
+                    </div>
+                    <div class="progress-modern">
+                        <div class="progress-bar" style="width: {{ cap.porcentaje_avance }}%">
+                            {{ cap.porcentaje_avance }}%
+                        </div>
+                    </div>
+                    {% if puede_editar %}
+                    <div class="mt-3 d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-info" onclick="verDetalle({{ cap.id }})" title="Ver Detalle">
+                            <i class="bi bi-eye"></i> Ver
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editarCapacitacion({{ cap.id }})" title="Editar">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 5rem; color: #dee2e6;"></i>
+            <h5 class="mt-3 text-muted">No hay módulos formativos</h5>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Tab: Talleres -->
+    <div class="tab-pane fade" id="talleres">
+        {% for cap in capacitaciones if cap.tipo_capacitacion == 'taller' %}
+        <div class="capacitacion-card {{ cap.tipo_capacitacion }}">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <span class="badge-tipo" style="background: #0d6efd; color: white;">Taller</span>
+                        {% if cap.estado == 'activo' %}
+                        <span class="badge bg-success">Activo</span>
+                        {% elif cap.estado == 'programada' %}
+                        <span class="badge bg-info">Programada</span>
+                        {% elif cap.estado == 'finalizada' %}
+                        <span class="badge bg-secondary">Finalizada</span>
+                        {% endif %}
+                    </div>
+                    <h5 class="mb-2">{{ cap.titulo }}</h5>
+                    <p class="text-muted mb-2">{{ cap.descripcion }}</p>
+                    <div class="row g-3 mt-2">
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ cap.duracion_horas }} horas</small>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>{{ cap.fecha_inicio }} - {{ cap.fecha_fin }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center mb-3">
+                        <h3 class="mb-0" style="color: #0d6efd;">{{ cap.cantidad_actual }}/{{ cap.cantidad_meta }}</h3>
+                        <small class="text-muted">{{ cap.medicion }}</small>
+                    </div>
+                    <div class="progress-modern">
+                        <div class="progress-bar" style="width: {{ cap.porcentaje_avance }}%">
+                            {{ cap.porcentaje_avance }}%
+                        </div>
+                    </div>
+                    {% if puede_editar %}
+                    <div class="mt-3 d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-info" onclick="verDetalle({{ cap.id }})" title="Ver Detalle">
+                            <i class="bi bi-eye"></i> Ver
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editarCapacitacion({{ cap.id }})" title="Editar">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 5rem; color: #dee2e6;"></i>
+            <h5 class="mt-3 text-muted">No hay talleres</h5>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Tab: Material Didáctico -->
+    <div class="tab-pane fade" id="materiales">
+        {% for cap in capacitaciones if cap.tipo_capacitacion == 'material_didactico' %}
+        <div class="capacitacion-card {{ cap.tipo_capacitacion }}">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <span class="badge-tipo" style="background: #ffc107; color: white;">Material Didáctico</span>
+                        {% if cap.estado == 'activo' %}
+                        <span class="badge bg-success">Activo</span>
+                        {% elif cap.estado == 'programada' %}
+                        <span class="badge bg-info">Programada</span>
+                        {% elif cap.estado == 'finalizada' %}
+                        <span class="badge bg-secondary">Finalizada</span>
+                        {% endif %}
+                    </div>
+                    <h5 class="mb-2">{{ cap.titulo }}</h5>
+                    <p class="text-muted mb-2">{{ cap.descripcion }}</p>
+                    <div class="row g-3 mt-2">
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ cap.duracion_horas }} horas</small>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>{{ cap.fecha_inicio }} - {{ cap.fecha_fin }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center mb-3">
+                        <h3 class="mb-0" style="color: #ffc107;">{{ cap.cantidad_actual }}/{{ cap.cantidad_meta }}</h3>
+                        <small class="text-muted">{{ cap.medicion }}</small>
+                    </div>
+                    <div class="progress-modern">
+                        <div class="progress-bar" style="width: {{ cap.porcentaje_avance }}%">
+                            {{ cap.porcentaje_avance }}%
+                        </div>
+                    </div>
+                    {% if puede_editar %}
+                    <div class="mt-3 d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-info" onclick="verDetalle({{ cap.id }})" title="Ver Detalle">
+                            <i class="bi bi-eye"></i> Ver
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editarCapacitacion({{ cap.id }})" title="Editar">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 5rem; color: #dee2e6;"></i>
+            <h5 class="mt-3 text-muted">No hay material didáctico</h5>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Tab: Gestión del Cambio -->
+    <div class="tab-pane fade" id="gestion">
+        {% for cap in capacitaciones if cap.tipo_capacitacion == 'gestion_cambio' %}
+        <div class="capacitacion-card {{ cap.tipo_capacitacion }}">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <span class="badge-tipo" style="background: #dc3545; color: white;">Gestión del Cambio</span>
+                        {% if cap.estado == 'activo' %}
+                        <span class="badge bg-success">Activo</span>
+                        {% elif cap.estado == 'programada' %}
+                        <span class="badge bg-info">Programada</span>
+                        {% elif cap.estado == 'finalizada' %}
+                        <span class="badge bg-secondary">Finalizada</span>
+                        {% endif %}
+                    </div>
+                    <h5 class="mb-2">{{ cap.titulo }}</h5>
+                    <p class="text-muted mb-2">{{ cap.descripcion }}</p>
+                    <div class="row g-3 mt-2">
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ cap.duracion_horas }} horas</small>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>{{ cap.fecha_inicio }} - {{ cap.fecha_fin }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center mb-3">
+                        <h3 class="mb-0" style="color: #dc3545;">{{ cap.cantidad_actual }}/{{ cap.cantidad_meta }}</h3>
+                        <small class="text-muted">{{ cap.medicion }}</small>
+                    </div>
+                    <div class="progress-modern">
+                        <div class="progress-bar" style="width: {{ cap.porcentaje_avance }}%">
+                            {{ cap.porcentaje_avance }}%
+                        </div>
+                    </div>
+                    {% if puede_editar %}
+                    <div class="mt-3 d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-info" onclick="verDetalle({{ cap.id }})" title="Ver Detalle">
+                            <i class="bi bi-eye"></i> Ver
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editarCapacitacion({{ cap.id }})" title="Editar">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 5rem; color: #dee2e6;"></i>
+            <h5 class="mt-3 text-muted">No hay actividades de gestión del cambio</h5>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal: Nueva Capacitación -->
+<div class="modal fade" id="modalNuevaCapacitacion" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title text-white"><i class="bi bi-plus-circle me-2"></i>Nueva Capacitación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('capacitaciones') }}">
+                <div class="modal-body" style="padding: 30px;">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Título <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="titulo" name="titulo" required minlength="5" maxlength="300">
+                            <div class="invalid-feedback">El título debe tener entre 5 y 300 caracteres</div>
+                            <div class="valid-feedback">¡Título válido!</div>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Descripción</label>
+                            <textarea class="form-control" id="descripcion" name="descripcion" rows="3" maxlength="1000"></textarea>
+                            <div class="form-text">Máximo 1000 caracteres</div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Tipo de Capacitación <span class="text-danger">*</span></label>
+                            <select class="form-select" name="tipo_capacitacion" required>
+                                <option value="">Seleccione...</option>
+                                <option value="modulo_formativo">Módulo Formativo</option>
+                                <option value="taller">Taller</option>
+                                <option value="material_didactico">Material Didáctico</option>
+                                <option value="gestion_cambio">Gestión del Cambio</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Estado <span class="text-danger">*</span></label>
+                            <select class="form-select" name="estado" required>
+                                <option value="programada">Programada</option>
+                                <option value="activo">Activo</option>
+                                <option value="finalizada">Finalizada</option>
+                                <option value="cancelada">Cancelada</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Producto</label>
+                            <input type="text" class="form-control" name="producto" placeholder="Ej: Programa formativo en tecnologías IA">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Medición</label>
+                            <input type="text" class="form-control" name="medicion" placeholder="Ej: Número de módulos formativos">
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Meta</label>
+                            <input type="number" class="form-control" id="cantidad_meta" name="cantidad_meta" min="0" max="1000">
+                            <div class="invalid-feedback">Debe ser un número entre 0 y 1000</div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Actual</label>
+                            <input type="number" class="form-control" id="cantidad_actual" name="cantidad_actual" min="0" max="1000" value="0">
+                            <div class="invalid-feedback">No puede ser mayor que la meta</div>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Actividad Asociada</label>
+                            <input type="text" class="form-control" id="actividad" name="actividad" placeholder="Ej: Actividad 1: Diseñar programa de formación" maxlength="300">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Duración (horas) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="duracion_horas" name="duracion_horas" min="1" max="500" required>
+                            <div class="invalid-feedback">Debe ser entre 1 y 500 horas</div>
+                            <div class="valid-feedback">¡Duración válida!</div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Fecha Inicio <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+                            <div class="invalid-feedback">Fecha de inicio requerida</div>
+                            <div class="valid-feedback">¡Fecha válida!</div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Fecha Fin <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
+                            <div class="invalid-feedback">La fecha fin debe ser posterior a la fecha inicio</div>
+                            <div class="valid-feedback">¡Fecha válida!</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 20px 30px;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 10px;">Cancelar</button>
+                    <button type="submit" class="btn btn-success" style="border-radius: 10px; background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); border: none;">
+                        <i class="bi bi-save me-2"></i>Guardar Capacitación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Ver Detalle -->
+<div class="modal fade" id="modalVerDetalle" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="border-radius: 20px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title text-white"><i class="bi bi-eye me-2"></i>Detalle de Capacitación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding: 30px;" id="detalleContent">
+                <!-- Se llena dinámicamente -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editar Capacitación -->
+<div class="modal fade" id="modalEditarCapacitacion" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="border-radius: 20px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title text-white"><i class="bi bi-pencil me-2"></i>Editar Capacitación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('capacitaciones') }}" id="formEditar">
+                <input type="hidden" name="action" value="editar">
+                <input type="hidden" name="id" id="edit_id">
+                <div class="modal-body" style="padding: 30px;">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Título <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="edit_titulo" name="titulo" required minlength="5" maxlength="300">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Descripción</label>
+                            <textarea class="form-control" id="edit_descripcion" name="descripcion" rows="3" maxlength="1000"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Tipo <span class="text-danger">*</span></label>
+                            <select class="form-select" id="edit_tipo" name="tipo_capacitacion" required>
+                                <option value="modulo_formativo">Módulo Formativo</option>
+                                <option value="taller">Taller</option>
+                                <option value="material_didactico">Material Didáctico</option>
+                                <option value="gestion_cambio">Gestión del Cambio</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Estado <span class="text-danger">*</span></label>
+                            <select class="form-select" id="edit_estado" name="estado" required>
+                                <option value="programada">Programada</option>
+                                <option value="activo">Activo</option>
+                                <option value="finalizada">Finalizada</option>
+                                <option value="cancelada">Cancelada</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Producto</label>
+                            <input type="text" class="form-control" id="edit_producto" name="producto">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Medición</label>
+                            <input type="text" class="form-control" id="edit_medicion" name="medicion">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Meta</label>
+                            <input type="number" class="form-control" id="edit_cantidad_meta" name="cantidad_meta" min="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Actual</label>
+                            <input type="number" class="form-control" id="edit_cantidad_actual" name="cantidad_actual" min="0">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Actividad</label>
+                            <input type="text" class="form-control" id="edit_actividad" name="actividad" maxlength="300">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Duración (horas) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="edit_duracion" name="duracion_horas" min="1" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Fecha Inicio <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="edit_fecha_inicio" name="fecha_inicio" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Fecha Fin <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="edit_fecha_fin" name="fecha_fin" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); border: none;">
+                        <i class="bi bi-save me-2"></i>Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Datos de capacitaciones para JavaScript
+const capacitacionesData = {{ capacitaciones|tojson|safe }};
+
+// Función para ver detalle
+function verDetalle(id) {
+    const cap = capacitacionesData.find(c => c.id === id);
+    if (!cap) return;
+    
+    const tipoLabels = {
+        'modulo_formativo': 'Módulo Formativo',
+        'taller': 'Taller',
+        'material_didactico': 'Material Didáctico',
+        'gestion_cambio': 'Gestión del Cambio'
+    };
+    
+    const estadoColors = {
+        'programada': 'info',
+        'activo': 'success',
+        'finalizada': 'secondary',
+        'cancelada': 'danger'
+    };
+    
+    const html = `
+        <div class="row g-4">
+            <div class="col-12">
+                <h4>${cap.titulo}</h4>
+                <div class="d-flex gap-2 mb-3">
+                    <span class="badge bg-${estadoColors[cap.estado] || 'secondary'}">${cap.estado}</span>
+                    <span class="badge" style="background: #2d6a4f;">${tipoLabels[cap.tipo_capacitacion]}</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <strong>Descripción:</strong>
+                <p class="text-muted">${cap.descripcion || 'N/A'}</p>
+            </div>
+            <div class="col-md-6">
+                <strong>Producto:</strong>
+                <p class="text-muted">${cap.producto || 'N/A'}</p>
+            </div>
+            <div class="col-md-6">
+                <strong>Medición:</strong>
+                <p class="text-muted">${cap.medicion || 'N/A'}</p>
+            </div>
+            <div class="col-md-3">
+                <strong>Meta:</strong>
+                <p class="text-muted">${cap.cantidad_meta || 0}</p>
+            </div>
+            <div class="col-md-3">
+                <strong>Actual:</strong>
+                <p class="text-muted">${cap.cantidad_actual || 0}</p>
+            </div>
+            <div class="col-12">
+                <strong>Actividad:</strong>
+                <p class="text-muted">${cap.actividad || 'N/A'}</p>
+            </div>
+            <div class="col-md-4">
+                <strong>Duración:</strong>
+                <p class="text-muted">${cap.duracion_horas} horas</p>
+            </div>
+            <div class="col-md-4">
+                <strong>Fecha Inicio:</strong>
+                <p class="text-muted">${cap.fecha_inicio}</p>
+            </div>
+            <div class="col-md-4">
+                <strong>Fecha Fin:</strong>
+                <p class="text-muted">${cap.fecha_fin}</p>
+            </div>
+            <div class="col-12">
+                <strong>Progreso:</strong>
+                <div class="progress" style="height: 25px;">
+                    <div class="progress-bar bg-success" style="width: ${cap.porcentaje_avance}%">
+                        ${cap.porcentaje_avance}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('detalleContent').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('modalVerDetalle')).show();
+}
+
+// Función para editar
+function editarCapacitacion(id) {
+    const cap = capacitacionesData.find(c => c.id === id);
+    if (!cap) return;
+    
+    // Llenar formulario
+    document.getElementById('edit_id').value = cap.id;
+    document.getElementById('edit_titulo').value = cap.titulo;
+    document.getElementById('edit_descripcion').value = cap.descripcion || '';
+    document.getElementById('edit_tipo').value = cap.tipo_capacitacion;
+    document.getElementById('edit_estado').value = cap.estado;
+    document.getElementById('edit_producto').value = cap.producto || '';
+    document.getElementById('edit_medicion').value = cap.medicion || '';
+    document.getElementById('edit_cantidad_meta').value = cap.cantidad_meta || 0;
+    document.getElementById('edit_cantidad_actual').value = cap.cantidad_actual || 0;
+    document.getElementById('edit_actividad').value = cap.actividad || '';
+    document.getElementById('edit_duracion').value = cap.duracion_horas;
+    
+    // Convertir fechas de DD/MM/YYYY a YYYY-MM-DD
+    const convertirFecha = (fecha) => {
+        if (!fecha) return '';
+        const partes = fecha.split('/');
+        if (partes.length === 3) {
+            return `${partes[2]}-${partes[1]}-${partes[0]}`;
+        }
+        return fecha;
+    };
+    
+    document.getElementById('edit_fecha_inicio').value = convertirFecha(cap.fecha_inicio);
+    document.getElementById('edit_fecha_fin').value = convertirFecha(cap.fecha_fin);
+    
+    new bootstrap.Modal(document.getElementById('modalEditarCapacitacion')).show();
+}
+
+// Validaciones híbridas en tiempo real
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('#modalNuevaCapacitacion form');
+    
+    if (form) {
+        // Validación del título
+        const titulo = document.getElementById('titulo');
+        if (titulo) {
+            titulo.addEventListener('input', function() {
+                validarCampo(this, this.value.length >= 5 && this.value.length <= 300);
+            });
+        }
+        
+        // Validación de duración
+        const duracion = document.getElementById('duracion_horas');
+        if (duracion) {
+            duracion.addEventListener('input', function() {
+                const valor = parseInt(this.value);
+                validarCampo(this, valor >= 1 && valor <= 500);
+            });
+        }
+        
+        // Validación de cantidad actual vs meta
+        const cantidadMeta = document.getElementById('cantidad_meta');
+        const cantidadActual = document.getElementById('cantidad_actual');
+        
+        if (cantidadActual && cantidadMeta) {
+            cantidadActual.addEventListener('input', function() {
+                const meta = parseInt(cantidadMeta.value) || 0;
+                const actual = parseInt(this.value) || 0;
+                validarCampo(this, actual <= meta);
+            });
+            
+            cantidadMeta.addEventListener('input', function() {
+                const meta = parseInt(this.value) || 0;
+                const actual = parseInt(cantidadActual.value) || 0;
+                validarCampo(cantidadActual, actual <= meta);
+            });
+        }
+        
+        // Validación de fechas
+        const fechaInicio = document.getElementById('fecha_inicio');
+        const fechaFin = document.getElementById('fecha_fin');
+        
+        if (fechaInicio && fechaFin) {
+            fechaFin.addEventListener('change', function() {
+                if (fechaInicio.value && this.value) {
+                    const inicio = new Date(fechaInicio.value);
+                    const fin = new Date(this.value);
+                    validarCampo(this, fin >= inicio);
+                }
+            });
+            
+            fechaInicio.addEventListener('change', function() {
+                if (fechaFin.value && this.value) {
+                    const inicio = new Date(this.value);
+                    const fin = new Date(fechaFin.value);
+                    validarCampo(fechaFin, fin >= inicio);
+                }
+            });
+        }
+        
+        // Validación al enviar
+        form.addEventListener('submit', function(e) {
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    }
+});
+
+// Función auxiliar para validar campos
+function validarCampo(campo, esValido) {
+    if (esValido) {
+        campo.classList.remove('is-invalid');
+        campo.classList.add('is-valid');
+    } else {
+        campo.classList.remove('is-valid');
+        campo.classList.add('is-invalid');
+    }
+}
+
+// Sistema de filtrado de capacitaciones
+const filtroInput = document.getElementById('filtroCapacitaciones');
+if (filtroInput) {
+    filtroInput.addEventListener('input', function() {
+        aplicarFiltros();
+    });
+}
+
+function aplicarFiltros() {
+    const termino = document.getElementById('filtroCapacitaciones')?.value.toLowerCase() || '';
+    const tabActivo = document.querySelector('.tab-modern.active')?.getAttribute('data-bs-target') || '#todas';
+    
+    const cards = document.querySelectorAll('.capacitacion-card');
+    let visibles = 0;
+    
+    cards.forEach(card => {
+        const titulo = card.querySelector('h5')?.textContent.toLowerCase() || '';
+        const descripcion = card.querySelector('p')?.textContent.toLowerCase() || '';
+        const tipo = card.classList[1] || ''; // modulo_formativo, taller, etc.
+        
+        // Filtro por búsqueda
+        const coincideBusqueda = titulo.includes(termino) || descripcion.includes(termino);
+        
+        // Filtro por tab
+        let coincideTab = true;
+        if (tabActivo === '#modulos') {
+            coincideTab = tipo === 'modulo_formativo';
+        } else if (tabActivo === '#talleres') {
+            coincideTab = tipo === 'taller';
+        } else if (tabActivo === '#materiales') {
+            coincideTab = tipo === 'material_didactico';
+        } else if (tabActivo === '#gestion') {
+            coincideTab = tipo === 'gestion_cambio';
+        }
+        
+        // Mostrar u ocultar
+        if (coincideBusqueda && coincideTab) {
+            card.style.display = '';
+            visibles++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Actualizar contador
+    const contador = document.getElementById('totalResultados');
+    if (contador) {
+        contador.textContent = visibles;
+    }
+}
+</script>
+
 {% endblock %}

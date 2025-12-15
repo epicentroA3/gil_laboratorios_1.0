@@ -169,17 +169,15 @@ INSERT IGNORE INTO practicas_laboratorio (codigo, nombre, id_programa, id_labora
 -- CAPACITACIONES
 -- =========================================================
 
-INSERT IGNORE INTO capacitaciones (id_usuario, tema, fecha, duracion_horas, calificacion) VALUES
-(3, 'Uso del asistente de voz Lucia', '2024-08-10', 4, 95),
-(4, 'Reconocimiento de imágenes con MobileNet', '2024-08-12', 6, 88),
-(5, 'Mantenimiento predictivo con ML', '2024-08-15', 5, 91),
-(6, 'Gestión de prácticas con IA', '2024-09-05', 3, 85),
-(7, 'Uso de dashboards en tiempo real', '2024-09-10', 2, 90),
-(8, 'Seguridad y privacidad en IA', '2024-09-12', 4, 93),
-(9, 'Resolución de conflictos con IA', '2024-09-20', 3, 87),
-(10, 'Etiquetado de datos para entrenamiento', '2024-10-01', 5, 89),
-(11, 'Evaluación de modelos de IA', '2024-10-05', 4, 92),
-(12, 'Gestión del cambio tecnológico', '2024-10-10', 3, 86);
+INSERT IGNORE INTO capacitaciones (titulo, descripcion, tipo_capacitacion, producto, medicion, cantidad_meta, cantidad_actual, actividad, porcentaje_avance, duracion_horas, fecha_inicio, fecha_fin, estado, id_instructor) VALUES
+('Módulo Formativo: Inteligencia Artificial Aplicada', 'Capacitación en uso de herramientas de IA para gestión de laboratorios', 'modulo_formativo', 'Instructores capacitados en IA', 'Número de instructores', 15, 12, 'Talleres teórico-prácticos sobre IA', 80.00, 40, '2024-08-01', '2024-08-31', 'completada', 3),
+('Taller: Reconocimiento de Imágenes con MobileNet', 'Taller práctico sobre implementación de reconocimiento de equipos', 'taller', 'Sistema de reconocimiento implementado', 'Equipos registrados', 50, 28, 'Entrenamiento del modelo MobileNet', 56.00, 16, '2024-09-01', '2024-09-15', 'completada', 4),
+('Material Didáctico: Guías de Uso del Sistema', 'Creación de material didáctico para usuarios del sistema', 'material_didactico', 'Guías digitales publicadas', 'Número de guías', 10, 7, 'Diseño y redacción de guías', 70.00, 24, '2024-09-10', '2024-10-10', 'en_curso', 3),
+('Gestión del Cambio: Adopción del Sistema GIL', 'Programa de gestión del cambio para adopción del nuevo sistema', 'gestion_cambio', 'Personal capacitado', 'Porcentaje de adopción', 100, 85, 'Sesiones de sensibilización y capacitación', 85.00, 32, '2024-08-15', '2024-11-15', 'en_curso', 5),
+('Módulo Formativo: Mantenimiento Predictivo', 'Capacitación en técnicas de mantenimiento predictivo con ML', 'modulo_formativo', 'Técnicos certificados', 'Número de técnicos', 8, 6, 'Curso de machine learning aplicado', 75.00, 48, '2024-10-01', '2024-11-30', 'en_curso', 4),
+('Taller: Comandos de Voz con LUCIA', 'Taller sobre uso efectivo del asistente de voz', 'taller', 'Usuarios entrenados', 'Número de usuarios', 30, 30, 'Sesiones prácticas con LUCIA', 100.00, 8, '2024-09-20', '2024-09-25', 'completada', 3),
+('Material Didáctico: Videos Tutoriales', 'Producción de videos tutoriales para el sistema', 'material_didactico', 'Videos publicados', 'Número de videos', 15, 9, 'Grabación y edición de tutoriales', 60.00, 40, '2024-10-15', '2024-12-15', 'en_curso', 5),
+('Gestión del Cambio: Cultura de Innovación', 'Programa para fomentar cultura de innovación tecnológica', 'gestion_cambio', 'Eventos realizados', 'Número de eventos', 6, 4, 'Charlas y talleres motivacionales', 66.67, 20, '2024-09-01', '2024-12-31', 'en_curso', 3);
 
 -- =========================================================
 -- ENCUESTAS DE SATISFACCIÓN

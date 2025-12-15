@@ -49,7 +49,7 @@ def listar_laboratorios():
                 'capacidad_estudiantes': lab['capacidad_personas'],
                 'area_m2': float(lab['area_m2']) if lab['area_m2'] else None,
                 'responsable_id': lab['responsable_id'],
-                'responsable': lab['responsable_nombre'],
+                'responsable_nombre': lab['responsable_nombre'],
                 'estado': lab['estado'],
                 'fecha_creacion': lab['fecha_creacion'],
                 'total_equipos': 0,

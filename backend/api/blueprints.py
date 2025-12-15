@@ -31,6 +31,9 @@ reconocimiento_bp = Blueprint('reconocimiento', __name__, url_prefix='/api/recon
 # Blueprint para usuarios (usado por backend/api/usuarios.py)
 usuarios_bp = Blueprint('usuarios', __name__, url_prefix='/api/usuarios')
 
+# Blueprint para backups (usado por backend/api/backups.py) - SOLO ADMINISTRADORES
+backups_bp = Blueprint('backups', __name__, url_prefix='/api/backups')
+
 # Instancia de base de datos
 db = DatabaseManager()
 
@@ -641,5 +644,15 @@ def registrar_blueprints(app):
         print("✅ API Predictivo (IA) registrada en /api/predictivo")
     except Exception as e:
         print(f"⚠️  Error registrando predictivo_bp: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    # Registrar blueprint de backups - SOLO ADMINISTRADORES (id_rol = 1)
+    try:
+        from backend.api.backups import backups_bp
+        app.register_blueprint(backups_bp)
+        print("✅ API Backups registrada en /api/backups (SOLO ADMINISTRADORES)")
+    except Exception as e:
+        print(f"⚠️  Error registrando backups_bp: {e}")
         import traceback
         traceback.print_exc()

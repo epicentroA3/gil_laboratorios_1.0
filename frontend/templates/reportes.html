@@ -1,0 +1,657 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes y Estadísticas - GIL{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        border: 1px solid #e9ecef;
+        height: 100%;
+    }
+    
+    .report-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    
+    .report-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-bottom: 15px;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 10px 0;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+        height: 350px;
+        position: relative;
+    }
+    
+    .chart-container canvas {
+        max-height: 280px !important;
+    }
+    
+    .filter-section {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .btn-export {
+        background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-export:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(45, 106, 79, 0.3);
+        color: white;
+    }
+    
+    .report-table {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .report-table table {
+        margin-bottom: 0;
+    }
+    
+    .report-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .badge-custom {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .tab-custom {
+        border: none;
+        background: transparent;
+        color: #6c757d;
+        font-weight: 600;
+        padding: 12px 24px;
+        border-radius: 10px 10px 0 0;
+        transition: all 0.3s ease;
+    }
+    
+    .tab-custom.active {
+        background: white;
+        color: #667eea;
+        box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .progress-modern {
+        height: 8px;
+        border-radius: 10px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+    
+    .progress-modern .progress-bar {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        transition: width 0.6s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-graph-up me-2"></i>Reportes y Estadísticas</h2>
+            <p class="text-muted mb-0">Análisis completo del sistema de gestión de laboratorios</p>
+        </div>
+        <div>
+            <button class="btn btn-export me-2" onclick="exportarPDF()">
+                <i class="bi bi-file-pdf me-2"></i>Exportar PDF
+            </button>
+            <button class="btn btn-export" onclick="exportarExcel()">
+                <i class="bi bi-file-excel me-2"></i>Exportar Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-section">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Fecha Inicio</label>
+                <input type="date" class="form-control" id="fecha_inicio" value="{{ fecha_inicio }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Fecha Fin</label>
+                <input type="date" class="form-control" id="fecha_fin" value="{{ fecha_fin }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Tipo de Reporte</label>
+                <select class="form-select" id="tipo_reporte">
+                    <option value="general" {% if tipo_reporte == 'general' %}selected{% endif %}>General</option>
+                    <option value="equipos" {% if tipo_reporte == 'equipos' %}selected{% endif %}>Equipos</option>
+                    <option value="prestamos" {% if tipo_reporte == 'prestamos' %}selected{% endif %}>Préstamos</option>
+                    <option value="mantenimiento" {% if tipo_reporte == 'mantenimiento' %}selected{% endif %}>Mantenimiento</option>
+                    <option value="practicas" {% if tipo_reporte == 'practicas' %}selected{% endif %}>Prácticas</option>
+                    <option value="capacitaciones" {% if tipo_reporte == 'capacitaciones' %}selected{% endif %}>Capacitaciones</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">&nbsp;</label>
+                <button class="btn btn-primary w-100" onclick="aplicarFiltros()">
+                    <i class="bi bi-funnel me-2"></i>Aplicar Filtros
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs Principales -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="stat-label">Total Equipos</div>
+                <div class="stat-value">{{ stats.total_equipos }}</div>
+                <small><i class="bi bi-arrow-up me-1"></i>{{ stats.equipos_disponibles }} disponibles</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="stat-label">Préstamos Activos</div>
+                <div class="stat-value">{{ stats.prestamos_activos }}</div>
+                <small><i class="bi bi-clock me-1"></i>{{ stats.prestamos_vencidos }} vencidos</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="stat-label">Mantenimientos</div>
+                <div class="stat-value">{{ stats.mantenimientos_mes }}</div>
+                <small><i class="bi bi-tools me-1"></i>Este mes</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <div class="stat-label">Reservas de Laboratorio</div>
+                <div class="stat-value">{{ stats.practicas_mes }}</div>
+                <small><i class="bi bi-journal-text me-1"></i>Este mes</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs de Reportes -->
+    <ul class="nav nav-tabs mb-3" id="reportTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link tab-custom active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button">
+                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link tab-custom" id="equipos-tab" data-bs-toggle="tab" data-bs-target="#equipos" type="button">
+                <i class="bi bi-cpu me-2"></i>Equipos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link tab-custom" id="prestamos-tab" data-bs-toggle="tab" data-bs-target="#prestamos" type="button">
+                <i class="bi bi-box-arrow-right me-2"></i>Préstamos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link tab-custom" id="mantenimiento-tab" data-bs-toggle="tab" data-bs-target="#mantenimiento" type="button">
+                <i class="bi bi-tools me-2"></i>Mantenimiento
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link tab-custom" id="practicas-tab" data-bs-toggle="tab" data-bs-target="#practicas" type="button">
+                <i class="bi bi-journal-text me-2"></i>Reservas
+            </button>
+        </li>
+    </ul>
+
+    <!-- Contenido de Tabs -->
+    <div class="tab-content" id="reportTabsContent">
+        <!-- Tab: Dashboard -->
+        <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+            <div class="row g-3">
+                <!-- Gráfico de Equipos por Estado -->
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h5 class="mb-3"><i class="bi bi-pie-chart me-2"></i>Equipos por Estado</h5>
+                        <canvas id="chartEquiposEstado"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Gráfico de Préstamos por Mes -->
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h5 class="mb-3"><i class="bi bi-bar-chart me-2"></i>Préstamos Mensuales</h5>
+                        <canvas id="chartPrestamosMes"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Gráfico de Mantenimientos -->
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h5 class="mb-3"><i class="bi bi-tools me-2"></i>Mantenimientos por Tipo</h5>
+                        <canvas id="chartMantenimientos"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Gráfico de Uso de Laboratorios -->
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h5 class="mb-3"><i class="bi bi-building me-2"></i>Uso de Laboratorios</h5>
+                        <canvas id="chartLaboratorios"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Equipos -->
+        <div class="tab-pane fade" id="equipos" role="tabpanel">
+            <div class="report-table">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Laboratorio</th>
+                            <th>Estado</th>
+                            <th>Estado Físico</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for equipo in equipos %}
+                        <tr>
+                            <td><strong>{{ equipo.codigo_interno }}</strong></td>
+                            <td>{{ equipo.nombre }}</td>
+                            <td>{{ equipo.categoria }}</td>
+                            <td>{{ equipo.laboratorio }}</td>
+                            <td>
+                                {% if equipo.estado == 'disponible' %}
+                                <span class="badge-custom bg-success">Disponible</span>
+                                {% elif equipo.estado == 'prestado' %}
+                                <span class="badge-custom bg-warning">Prestado</span>
+                                {% elif equipo.estado == 'mantenimiento' %}
+                                <span class="badge-custom bg-info">Mantenimiento</span>
+                                {% else %}
+                                <span class="badge-custom bg-danger">{{ equipo.estado|capitalize }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if equipo.estado_fisico == 'excelente' %}
+                                <span class="badge-custom bg-success">Excelente</span>
+                                {% elif equipo.estado_fisico == 'bueno' %}
+                                <span class="badge-custom bg-primary">Bueno</span>
+                                {% elif equipo.estado_fisico == 'regular' %}
+                                <span class="badge-custom bg-warning">Regular</span>
+                                {% else %}
+                                <span class="badge-custom bg-danger">Malo</span>
+                                {% endif %}
+                            </td>
+                            <td>${{ "{:,.2f}".format(equipo.valor_adquisicion) if equipo.valor_adquisicion else '0.00' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Préstamos -->
+        <div class="tab-pane fade" id="prestamos" role="tabpanel">
+            <div class="report-table">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Equipo</th>
+                            <th>Solicitante</th>
+                            <th>Fecha Préstamo</th>
+                            <th>Fecha Devolución</th>
+                            <th>Estado</th>
+                            <th>Días</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for prestamo in prestamos %}
+                        <tr>
+                            <td><strong>{{ prestamo.codigo }}</strong></td>
+                            <td>{{ prestamo.equipo_nombre }}</td>
+                            <td>{{ prestamo.solicitante }}</td>
+                            <td>{{ prestamo.fecha_prestamo }}</td>
+                            <td>{{ prestamo.fecha_devolucion_programada }}</td>
+                            <td>
+                                {% if prestamo.estado == 'activo' %}
+                                <span class="badge-custom bg-primary">Activo</span>
+                                {% elif prestamo.estado == 'devuelto' %}
+                                <span class="badge-custom bg-success">Devuelto</span>
+                                {% elif prestamo.estado == 'vencido' %}
+                                <span class="badge-custom bg-danger">Vencido</span>
+                                {% else %}
+                                <span class="badge-custom bg-secondary">{{ prestamo.estado|capitalize }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ prestamo.dias_prestamo }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Mantenimiento -->
+        <div class="tab-pane fade" id="mantenimiento" role="tabpanel">
+            <div class="report-table">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Equipo</th>
+                            <th>Tipo</th>
+                            <th>Técnico</th>
+                            <th>Fecha Inicio</th>
+                            <th>Fecha Fin</th>
+                            <th>Estado</th>
+                            <th>Costo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mant in mantenimientos %}
+                        <tr>
+                            <td><strong>{{ mant.equipo_nombre }}</strong></td>
+                            <td>{{ mant.tipo_mantenimiento }}</td>
+                            <td>{{ mant.tecnico }}</td>
+                            <td>{{ mant.fecha_inicio }}</td>
+                            <td>{{ mant.fecha_fin or 'En proceso' }}</td>
+                            <td>
+                                {% if mant.estado == 'completado' %}
+                                <span class="badge-custom bg-success">Completado</span>
+                                {% elif mant.estado == 'en_proceso' %}
+                                <span class="badge-custom bg-warning">En Proceso</span>
+                                {% else %}
+                                <span class="badge-custom bg-danger">Cancelado</span>
+                                {% endif %}
+                            </td>
+                            <td>${{ "{:,.2f}".format(mant.costo_mantenimiento) if mant.costo_mantenimiento else '0.00' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Reservas de Laboratorio -->
+        <div class="tab-pane fade" id="practicas" role="tabpanel">
+            <div class="report-table">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Programa</th>
+                            <th>Instructor</th>
+                            <th>Laboratorio</th>
+                            <th>Fecha</th>
+                            <th>Estudiantes</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for practica in practicas %}
+                        <tr>
+                            <td><strong>{{ practica.codigo }}</strong></td>
+                            <td>{{ practica.nombre }}</td>
+                            <td>{{ practica.programa }}</td>
+                            <td>{{ practica.instructor }}</td>
+                            <td>{{ practica.laboratorio }}</td>
+                            <td>{{ practica.fecha }}</td>
+                            <td>{{ practica.numero_estudiantes }}</td>
+                            <td>
+                                {% if practica.estado == 'completada' %}
+                                <span class="badge-custom bg-success">Completada</span>
+                                {% elif practica.estado == 'en_curso' %}
+                                <span class="badge-custom bg-primary">En Curso</span>
+                                {% else %}
+                                <span class="badge-custom bg-info">Programada</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// Datos para gráficos
+const datosGraficos = {{ datos_graficos|tojson }};
+
+// Configuración común de gráficos
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    aspectRatio: 2,
+    plugins: {
+        legend: {
+            position: 'bottom',
+            labels: {
+                padding: 10,
+                font: {
+                    size: 11
+                }
+            }
+        }
+    }
+};
+
+// Gráfico: Equipos por Estado
+const ctxEquiposEstado = document.getElementById('chartEquiposEstado');
+if (ctxEquiposEstado) {
+    new Chart(ctxEquiposEstado, {
+        type: 'doughnut',
+        data: {
+            labels: datosGraficos.equipos_estado.labels,
+            datasets: [{
+                data: datosGraficos.equipos_estado.data,
+                backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#6b7280'],
+                borderWidth: 0
+            }]
+        },
+        options: chartOptions
+    });
+}
+
+// Gráfico: Préstamos Mensuales
+const ctxPrestamosMes = document.getElementById('chartPrestamosMes');
+if (ctxPrestamosMes) {
+    new Chart(ctxPrestamosMes, {
+        type: 'bar',
+        data: {
+            labels: datosGraficos.prestamos_mes.labels,
+            datasets: [{
+                label: 'Préstamos',
+                data: datosGraficos.prestamos_mes.data,
+                backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                borderColor: 'rgba(102, 126, 234, 1)',
+                borderWidth: 2,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            ...chartOptions,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Gráfico: Mantenimientos
+const ctxMantenimientos = document.getElementById('chartMantenimientos');
+if (ctxMantenimientos) {
+    new Chart(ctxMantenimientos, {
+        type: 'pie',
+        data: {
+            labels: datosGraficos.mantenimientos.labels,
+            datasets: [{
+                data: datosGraficos.mantenimientos.data,
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'],
+                borderWidth: 0
+            }]
+        },
+        options: chartOptions
+    });
+}
+
+// Gráfico: Uso de Laboratorios
+const ctxLaboratorios = document.getElementById('chartLaboratorios');
+if (ctxLaboratorios) {
+    new Chart(ctxLaboratorios, {
+        type: 'bar',
+        data: {
+            labels: datosGraficos.laboratorios.labels,
+            datasets: [{
+                label: 'Horas de Uso',
+                data: datosGraficos.laboratorios.data,
+                backgroundColor: 'rgba(67, 233, 123, 0.8)',
+                borderColor: 'rgba(67, 233, 123, 1)',
+                borderWidth: 2,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            ...chartOptions,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// Funciones de exportación
+function exportarPDF() {
+    const fechaInicio = document.getElementById('fecha_inicio').value;
+    const fechaFin = document.getElementById('fecha_fin').value;
+    const tipoReporte = document.getElementById('tipo_reporte').value;
+    
+    window.location.href = `/api/reportes/exportar/pdf?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&tipo_reporte=${tipoReporte}`;
+}
+
+function exportarExcel() {
+    const fechaInicio = document.getElementById('fecha_inicio').value;
+    const fechaFin = document.getElementById('fecha_fin').value;
+    const tipoReporte = document.getElementById('tipo_reporte').value;
+    
+    window.location.href = `/api/reportes/exportar/excel?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&tipo_reporte=${tipoReporte}`;
+}
+
+function aplicarFiltros() {
+    const fechaInicio = document.getElementById('fecha_inicio').value;
+    const fechaFin = document.getElementById('fecha_fin').value;
+    const tipoReporte = document.getElementById('tipo_reporte').value;
+    
+    // Validar que las fechas no estén vacías
+    if (!fechaInicio || !fechaFin) {
+        alert('Por favor seleccione ambas fechas');
+        return;
+    }
+    
+    // Validar que fecha_fin sea posterior a fecha_inicio
+    if (fechaFin < fechaInicio) {
+        alert('La fecha fin debe ser posterior a la fecha inicio');
+        return;
+    }
+    
+    window.location.href = `/reportes?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&tipo_reporte=${tipoReporte}`;
+}
+
+// Activar el tab correcto según el tipo de reporte al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    const tipoReporte = '{{ tipo_reporte }}';
+    console.log('Tipo de reporte:', tipoReporte);
+    
+    // Mapeo de tipo_reporte a ID del tab
+    const tabMap = {
+        'general': 'dashboard',
+        'equipos': 'equipos',
+        'prestamos': 'prestamos',
+        'mantenimiento': 'mantenimiento',
+        'practicas': 'practicas',
+        'capacitaciones': 'capacitaciones'
+    };
+    
+    // Obtener el ID del tab correspondiente
+    const tabId = tabMap[tipoReporte] || 'dashboard';
+    console.log('Tab ID a activar:', tabId);
+    
+    // Buscar el botón del tab (Bootstrap 5 usa botones con data-bs-target)
+    const tabButton = document.querySelector(`button[data-bs-target="#${tabId}"]`);
+    console.log('Tab button encontrado:', tabButton);
+    
+    if (tabButton) {
+        // Activar el tab usando Bootstrap 5
+        const tab = new bootstrap.Tab(tabButton);
+        tab.show();
+        console.log('Tab activado:', tabId);
+    } else {
+        console.error('No se encontró el tab button para:', tabId);
+    }
+});
+</script>
+{% endblock %}

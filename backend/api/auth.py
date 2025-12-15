@@ -235,3 +235,109 @@ def get_current_user():
         
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@auth_bp.route('/register', methods=['POST'])
+def register():
+    """
+    POST /api/v1/auth/register
+    Registro de nuevo usuario - Estado inactivo hasta aprobación de administrador
+    Validaciones híbridas (backend)
+    """
+    try:
+        data = request.get_json()
+        
+        # Validar campos requeridos
+        required_fields = ['documento', 'nombres', 'apellidos', 'email', 'password']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'Campo {field} es requerido'}), 400
+        
+        documento = data['documento'].strip()
+        nombres = data['nombres'].strip()
+        apellidos = data['apellidos'].strip()
+        email = data['email'].strip().lower()
+        password = data['password']
+        telefono = data.get('telefono', '').strip()
+        
+        # Validaciones híbridas - Backend
+        import re
+        
+        # Validar documento (6-20 dígitos)
+        if not re.match(r'^[0-9]{6,20}$', documento):
+            return jsonify({'success': False, 'message': 'El documento debe tener entre 6 y 20 dígitos numéricos'}), 400
+        
+        # Validar nombres (solo letras y espacios, 2-100 caracteres)
+        if not re.match(r'^[a-záéíóúñA-ZÁÉÍÓÚÑ\s]{2,100}$', nombres):
+            return jsonify({'success': False, 'message': 'Los nombres solo pueden contener letras y espacios (2-100 caracteres)'}), 400
+        
+        # Validar apellidos (solo letras y espacios, 2-100 caracteres)
+        if not re.match(r'^[a-záéíóúñA-ZÁÉÍÓÚÑ\s]{2,100}$', apellidos):
+            return jsonify({'success': False, 'message': 'Los apellidos solo pueden contener letras y espacios (2-100 caracteres)'}), 400
+        
+        # Validar formato de email
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, email):
+            return jsonify({'success': False, 'message': 'Formato de email inválido'}), 400
+        
+        # Validar teléfono si se proporciona (7-15 dígitos)
+        if telefono and not re.match(r'^[0-9]{7,15}$', telefono):
+            return jsonify({'success': False, 'message': 'El teléfono debe tener entre 7 y 15 dígitos'}), 400
+        
+        # Validar contraseña segura (mínimo 8 caracteres, mayúscula, minúscula, número, carácter especial)
+        if len(password) < 8:
+            return jsonify({'success': False, 'message': 'La contraseña debe tener al menos 8 caracteres'}), 400
+        
+        if not re.search(r'[A-Z]', password):
+            return jsonify({'success': False, 'message': 'La contraseña debe contener al menos una letra mayúscula'}), 400
+        
+        if not re.search(r'[a-z]', password):
+            return jsonify({'success': False, 'message': 'La contraseña debe contener al menos una letra minúscula'}), 400
+        
+        if not re.search(r'[0-9]', password):
+            return jsonify({'success': False, 'message': 'La contraseña debe contener al menos un número'}), 400
+        
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-]', password):
+            return jsonify({'success': False, 'message': 'La contraseña debe contener al menos un carácter especial'}), 400
+        
+        # Verificar si el documento ya existe
+        check_query = "SELECT id FROM usuarios WHERE documento = %s"
+        existing_user = db.obtener_uno(check_query, (documento,))
+        if existing_user:
+            return jsonify({'success': False, 'message': 'El documento ya está registrado'}), 409
+        
+        # Verificar si el email ya existe
+        check_email = "SELECT id FROM usuarios WHERE email = %s"
+        existing_email = db.obtener_uno(check_email, (email,))
+        if existing_email:
+            return jsonify({'success': False, 'message': 'El email ya está registrado'}), 409
+        
+        # Hash de la contraseña con bcrypt
+        import bcrypt
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Insertar usuario con estado 'inactivo' y sin rol asignado (será asignado por admin)
+        insert_query = """
+            INSERT INTO usuarios (documento, nombres, apellidos, email, telefono, password_hash, estado)
+            VALUES (%s, %s, %s, %s, %s, %s, 'inactivo')
+        """
+        db.ejecutar_comando(insert_query, (documento, nombres, apellidos, email, telefono, password_hash))
+        
+        # Registrar en logs
+        try:
+            log_query = """
+                INSERT INTO logs_sistema (modulo, nivel_log, mensaje, ip_address)
+                VALUES ('auth', 'INFO', %s, %s)
+            """
+            mensaje = f'Nuevo registro de usuario: {documento} - {nombres} {apellidos}'
+            db.ejecutar_comando(log_query, (mensaje, request.remote_addr))
+        except:
+            pass
+        
+        return jsonify({
+            'success': True,
+            'message': 'Registro exitoso. Su cuenta será activada por un administrador en breve.'
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error en registro: {str(e)}'}), 500

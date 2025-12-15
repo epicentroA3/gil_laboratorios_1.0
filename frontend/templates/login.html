@@ -127,8 +127,18 @@
                             Reconocimiento Facial
                         </button>
 
+                        <!-- Registration Link -->
+                        <div class="text-center mt-3">
+                            <p class="text-muted mb-0">
+                                ¿No tiene una cuenta?
+                                <a href="{{ url_for('register') }}" class="text-decoration-none fw-bold">
+                                    Crear Cuenta
+                                </a>
+                            </p>
+                        </div>
+
                         <!-- Help Text -->
-                        <div class="text-center mt-4">
+                        <div class="text-center mt-3">
                             <small class="text-muted">
                                 <i class="bi bi-info-circle me-1"></i>
                                 Ingrese su documento y contraseña para acceder
@@ -147,7 +157,7 @@
                                     <ul class="mb-1 ps-3">
                                         <li><code>1098765432</code> - Administrador</li>
                                         <li><code>1076543210</code> - Instructor</li>
-                                        <li><code>1021098765</code> - Aprendiz</li>
+                                        <li><code>1010987654</code> - Aprendiz</li>
                                     </ul>
                                     <strong>Contraseña:</strong> <code>Sena2024*</code>
                                 </div>
@@ -467,17 +477,48 @@
                 return;
             }
             
+            // Validar formato de email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                statusDiv.innerHTML = '<div class="alert alert-danger py-2"><i class="bi bi-exclamation-circle me-2"></i>Ingrese un correo válido</div>';
+                return;
+            }
+            
             // Show loading
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
             submitBtn.disabled = true;
+            statusDiv.innerHTML = '';
             
-            // Simulate API call (replace with actual endpoint)
-            setTimeout(() => {
-                statusDiv.innerHTML = '<div class="alert alert-success py-2"><i class="bi bi-check-circle me-2"></i>Si el correo está registrado, recibirá instrucciones en breve.</div>';
+            // Llamar a la API real
+            fetch('/forgot-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusDiv.innerHTML = '<div class="alert alert-success py-2"><i class="bi bi-check-circle me-2"></i>' + data.message + '</div>';
+                    document.getElementById('recoveryEmail').value = '';
+                    
+                    // Si está en modo debug, mostrar URL
+                    if (data.debug_url) {
+                        statusDiv.innerHTML += '<div class="alert alert-info py-2 mt-2"><small><strong>DEBUG:</strong> <a href="' + data.debug_url + '" target="_blank">Abrir enlace de restablecimiento</a></small></div>';
+                    }
+                } else {
+                    statusDiv.innerHTML = '<div class="alert alert-danger py-2"><i class="bi bi-exclamation-circle me-2"></i>' + data.message + '</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusDiv.innerHTML = '<div class="alert alert-danger py-2"><i class="bi bi-exclamation-circle me-2"></i>Error al procesar solicitud. Intente nuevamente.</div>';
+            })
+            .finally(() => {
                 submitBtn.innerHTML = '<i class="bi bi-send me-2"></i>Enviar Instrucciones';
                 submitBtn.disabled = false;
-                document.getElementById('recoveryEmail').value = '';
-            }, 1500);
+            });
         });
     </script>
 </body>

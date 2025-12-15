@@ -13,8 +13,13 @@ if sys.platform == 'win32':
     sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
     sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
 
-from flask import Flask, render_template, redirect, url_for, request, jsonify, session, flash
+from flask import Flask, render_template, redirect, url_for, request, jsonify, session, flash, send_file
 from flask_cors import CORS
+from flask_mail import Mail, Message
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
 
 # Agregar rutas al path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -49,6 +54,16 @@ if Config.FLASK_DEBUG:
 
 # Habilitar CORS
 CORS(app, origins=APIConfig.API_CORS_ORIGINS)
+
+# Configurar Flask-Mail para envío de emails
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True') == 'True'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@centrominero.edu.co')
+
+mail = Mail(app)
 
 # Inicializar base de datos con Config
 db_manager = DatabaseManager()
@@ -213,6 +228,62 @@ def obtener_estadisticas_sistema():
     
     return stats
 
+def enviar_email_reset(email, reset_url, nombre):
+    """Enviar email con enlace de restablecimiento de contraseña"""
+    try:
+        msg = Message(
+            'Restablecer Contraseña - Centro Minero SENA',
+            recipients=[email]
+        )
+        msg.html = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: #667eea; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ padding: 30px; background: #f9f9f9; }}
+                .button {{ background: #667eea; color: white; padding: 15px 40px; text-decoration: none; 
+                          border-radius: 5px; display: inline-block; font-weight: bold; }}
+                .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+                .warning {{ background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1 style="margin: 0;">🔐 Restablecer Contraseña</h1>
+                </div>
+                <div class="content">
+                    <p>Hola <strong>{nombre}</strong>,</p>
+                    <p>Recibimos una solicitud para restablecer tu contraseña en el Sistema de Gestión Integral de Laboratorios (GIL).</p>
+                    <p style="text-align: center; margin: 30px 0;">
+                        <a href="{reset_url}" class="button">Restablecer Mi Contraseña</a>
+                    </p>
+                    <div class="warning">
+                        <strong>⏰ Este enlace expirará en 1 hora.</strong>
+                    </div>
+                    <p>Si no solicitaste este cambio, ignora este correo y tu contraseña permanecerá sin cambios.</p>
+                    <p style="color: #666; font-size: 14px;">Por seguridad, nunca compartas este enlace con nadie.</p>
+                </div>
+                <div class="footer">
+                    <p><strong>Centro Minero de Sogamoso - SENA</strong></p>
+                    <p>Sistema de Gestión Integral de Laboratorios (GIL)</p>
+                    <p style="color: #999;">Este es un correo automático, por favor no responder.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        '''
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"❌ Error enviando email: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 # ========================================
 # RUTAS PRINCIPALES
 # ========================================
@@ -331,6 +402,326 @@ def login():
             return render_template('login.html')
     
     return render_template('login.html')
+
+@app.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """Solicitar restablecimiento de contraseña"""
+    try:
+        import secrets
+        from datetime import datetime, timedelta
+        
+        email = request.json.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify({'success': False, 'message': 'Email requerido'}), 400
+        
+        # Buscar usuario por email
+        query = "SELECT id, documento, nombres, apellidos, email FROM usuarios WHERE LOWER(email) = %s AND estado = 'activo'"
+        usuario = db_manager.obtener_uno(query, (email,))
+        
+        # Por seguridad, siempre responder lo mismo aunque el email no exista
+        if not usuario:
+            return jsonify({
+                'success': True, 
+                'message': 'Si el correo está registrado, recibirá instrucciones en breve.'
+            })
+        
+        # Generar token único y seguro
+        token = secrets.token_urlsafe(32)
+        expira_en = datetime.now() + timedelta(hours=1)  # Token válido por 1 hora
+        
+        # Guardar token en BD
+        insert_query = """
+            INSERT INTO password_reset_tokens (id_usuario, token, email, expira_en, ip_solicitud)
+            VALUES (%s, %s, %s, %s, %s)
+        """
+        db_manager.ejecutar_comando(insert_query, (
+            usuario['id'],
+            token,
+            email,
+            expira_en,
+            request.remote_addr
+        ))
+        
+        # Construir URL de restablecimiento
+        reset_url = f"{request.url_root}reset-password/{token}"
+        
+        # Enviar email con el enlace
+        email_enviado = enviar_email_reset(
+            email, 
+            reset_url, 
+            f"{usuario['nombres']} {usuario['apellidos']}"
+        )
+        
+        if email_enviado:
+            print(f"✅ Email enviado exitosamente a {email}")
+        else:
+            print(f"⚠️  No se pudo enviar el email, pero el token fue generado")
+            print(f"=== TOKEN DE RESTABLECIMIENTO ===")
+            print(f"Usuario: {usuario['nombres']} {usuario['apellidos']}")
+            print(f"Email: {email}")
+            print(f"URL: {reset_url}")
+            print(f"Expira: {expira_en}")
+            print(f"================================")
+        
+        # Log en sistema
+        log_query = """
+            INSERT INTO logs_sistema (modulo, nivel_log, mensaje, id_usuario, ip_address)
+            VALUES ('auth', 'INFO', %s, %s, %s)
+        """
+        db_manager.ejecutar_comando(log_query, (
+            f'Solicitud de restablecimiento de contraseña para {email}',
+            usuario['id'],
+            request.remote_addr
+        ))
+        
+        return jsonify({
+            'success': True,
+            'message': 'Si el correo está registrado, recibirá instrucciones en breve.',
+            'debug_url': reset_url if app.debug else None  # Solo en desarrollo
+        })
+        
+    except Exception as e:
+        print(f"Error en forgot_password: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': 'Error al procesar solicitud'}), 500
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    """Restablecer contraseña con token"""
+    from datetime import datetime
+    
+    if request.method == 'GET':
+        # Verificar que el token sea válido
+        query = """
+            SELECT t.id, t.id_usuario, t.email, t.expira_en, t.usado,
+                   u.nombres, u.apellidos, u.documento
+            FROM password_reset_tokens t
+            JOIN usuarios u ON t.id_usuario = u.id
+            WHERE t.token = %s AND t.usado = FALSE
+        """
+        token_data = db_manager.obtener_uno(query, (token,))
+        
+        if not token_data:
+            flash('Token inválido o ya utilizado', 'error')
+            return redirect(url_for('login'))
+        
+        # Verificar si expiró
+        if datetime.now() > token_data['expira_en']:
+            flash('El enlace ha expirado. Solicite uno nuevo.', 'error')
+            return redirect(url_for('login'))
+        
+        # Mostrar formulario de nueva contraseña
+        return render_template('reset_password.html', 
+                             token=token,
+                             email=token_data['email'],
+                             nombre=f"{token_data['nombres']} {token_data['apellidos']}")
+    
+    # POST - Cambiar contraseña
+    try:
+        import re
+        
+        nueva_password = request.form.get('nueva_password', '').strip()
+        confirmar_password = request.form.get('confirmar_password', '').strip()
+        
+        # Validación 1: Campos requeridos
+        if not nueva_password or not confirmar_password:
+            flash('Todos los campos son requeridos', 'error')
+            return redirect(url_for('reset_password', token=token))
+        
+        # Validación 2: Coincidencia de contraseñas
+        if nueva_password != confirmar_password:
+            flash('Las contraseñas no coinciden', 'error')
+            return redirect(url_for('reset_password', token=token))
+        
+        # Validación 3: Longitud mínima (8 caracteres)
+        if len(nueva_password) < 8:
+            flash('La contraseña debe tener al menos 8 caracteres', 'error')
+            return redirect(url_for('reset_password', token=token))
+        
+        # Validación 4: Al menos una letra mayúscula
+        if not re.search(r'[A-Z]', nueva_password):
+            flash('La contraseña debe contener al menos una letra mayúscula (A-Z)', 'error')
+            return redirect(url_for('reset_password', token=token))
+        
+        # Validación 5: Al menos una letra minúscula
+        if not re.search(r'[a-z]', nueva_password):
+            flash('La contraseña debe contener al menos una letra minúscula (a-z)', 'error')
+            return redirect(url_for('reset_password', token=token))
+        
+        # Validación 6: Al menos un número
+        if not re.search(r'[0-9]', nueva_password):
+            flash('La contraseña debe contener al menos un número (0-9)', 'error')
+            return redirect(url_for('reset_password', token=token))
+        
+        # Validación 7: Al menos un carácter especial
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-]', nueva_password):
+            flash('La contraseña debe contener al menos un carácter especial (!@#$%^&*...)', 'error')
+            return redirect(url_for('reset_password', token=token))
+        
+        # Verificar token nuevamente
+        query = """
+            SELECT t.id, t.id_usuario, t.email, t.expira_en, t.usado
+            FROM password_reset_tokens t
+            WHERE t.token = %s AND t.usado = FALSE
+        """
+        token_data = db_manager.obtener_uno(query, (token,))
+        
+        if not token_data:
+            flash('Token inválido o ya utilizado', 'error')
+            return redirect(url_for('login'))
+        
+        if datetime.now() > token_data['expira_en']:
+            flash('El enlace ha expirado. Solicite uno nuevo.', 'error')
+            return redirect(url_for('login'))
+        
+        # Hashear nueva contraseña
+        import bcrypt
+        password_hash = bcrypt.hashpw(nueva_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Actualizar contraseña
+        update_query = "UPDATE usuarios SET password_hash = %s WHERE id = %s"
+        db_manager.ejecutar_comando(update_query, (password_hash, token_data['id_usuario']))
+        
+        # Marcar token como usado
+        mark_used_query = "UPDATE password_reset_tokens SET usado = TRUE WHERE id = %s"
+        db_manager.ejecutar_comando(mark_used_query, (token_data['id'],))
+        
+        # Log de seguridad
+        log_query = """
+            INSERT INTO logs_sistema (modulo, nivel_log, mensaje, id_usuario, ip_address)
+            VALUES ('auth', 'INFO', %s, %s, %s)
+        """
+        db_manager.ejecutar_comando(log_query, (
+            f'Contraseña restablecida exitosamente para {token_data["email"]}',
+            token_data['id_usuario'],
+            request.remote_addr
+        ))
+        
+        flash('Contraseña restablecida exitosamente. Ahora puede iniciar sesión.', 'success')
+        return redirect(url_for('login'))
+        
+    except Exception as e:
+        print(f"Error en reset_password: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('Error al restablecer contraseña. Intente nuevamente.', 'error')
+        return redirect(url_for('reset_password', token=token))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """Página de registro de nuevos usuarios - Validaciones híbridas"""
+    if request.method == 'POST':
+        try:
+            documento = request.form.get('documento', '').strip()
+            nombres = request.form.get('nombres', '').strip()
+            apellidos = request.form.get('apellidos', '').strip()
+            email = request.form.get('email', '').strip().lower()
+            telefono = request.form.get('telefono', '').strip()
+            password = request.form.get('password', '')
+            password_confirm = request.form.get('password_confirm', '')
+            
+            # Validar campos obligatorios
+            if not all([documento, nombres, apellidos, email, password]):
+                flash('Por favor complete todos los campos obligatorios', 'error')
+                return render_template('register.html')
+            
+            # Validar confirmación de contraseña
+            if password != password_confirm:
+                flash('Las contraseñas no coinciden', 'error')
+                return render_template('register.html')
+            
+            # Validaciones híbridas - Backend
+            import re
+            
+            # Validar documento (6-20 dígitos)
+            if not re.match(r'^[0-9]{6,20}$', documento):
+                flash('El documento debe tener entre 6 y 20 dígitos numéricos', 'error')
+                return render_template('register.html')
+            
+            # Validar nombres (solo letras y espacios, 2-100 caracteres)
+            if not re.match(r'^[a-záéíóúñA-ZÁÉÍÓÚÑ\s]{2,100}$', nombres):
+                flash('Los nombres solo pueden contener letras y espacios (2-100 caracteres)', 'error')
+                return render_template('register.html')
+            
+            # Validar apellidos (solo letras y espacios, 2-100 caracteres)
+            if not re.match(r'^[a-záéíóúñA-ZÁÉÍÓÚÑ\s]{2,100}$', apellidos):
+                flash('Los apellidos solo pueden contener letras y espacios (2-100 caracteres)', 'error')
+                return render_template('register.html')
+            
+            # Validar formato de email
+            email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_regex, email):
+                flash('Formato de email inválido', 'error')
+                return render_template('register.html')
+            
+            # Validar teléfono si se proporciona (7-15 dígitos)
+            if telefono and not re.match(r'^[0-9]{7,15}$', telefono):
+                flash('El teléfono debe tener entre 7 y 15 dígitos', 'error')
+                return render_template('register.html')
+            
+            # Validar contraseña segura (mínimo 8 caracteres, mayúscula, minúscula, número, carácter especial)
+            if len(password) < 8:
+                flash('La contraseña debe tener al menos 8 caracteres', 'error')
+                return render_template('register.html')
+            
+            if not re.search(r'[A-Z]', password):
+                flash('La contraseña debe contener al menos una letra mayúscula', 'error')
+                return render_template('register.html')
+            
+            if not re.search(r'[a-z]', password):
+                flash('La contraseña debe contener al menos una letra minúscula', 'error')
+                return render_template('register.html')
+            
+            if not re.search(r'[0-9]', password):
+                flash('La contraseña debe contener al menos un número', 'error')
+                return render_template('register.html')
+            
+            if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-]', password):
+                flash('La contraseña debe contener al menos un carácter especial (!@#$%^&*...)', 'error')
+                return render_template('register.html')
+            
+            check_query = "SELECT id FROM usuarios WHERE documento = %s"
+            existing_user = db_manager.obtener_uno(check_query, (documento,))
+            if existing_user:
+                flash('El documento ya está registrado', 'error')
+                return render_template('register.html')
+            
+            check_email = "SELECT id FROM usuarios WHERE email = %s"
+            existing_email = db_manager.obtener_uno(check_email, (email,))
+            if existing_email:
+                flash('El email ya está registrado', 'error')
+                return render_template('register.html')
+            
+            import bcrypt
+            password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            
+            insert_query = """
+                INSERT INTO usuarios (documento, nombres, apellidos, email, telefono, password_hash, estado)
+                VALUES (%s, %s, %s, %s, %s, %s, 'inactivo')
+            """
+            db_manager.ejecutar_comando(insert_query, (documento, nombres, apellidos, email, telefono, password_hash))
+            
+            try:
+                log_query = """
+                    INSERT INTO logs_sistema (modulo, nivel_log, mensaje, ip_address)
+                    VALUES ('auth', 'INFO', %s, %s)
+                """
+                mensaje = f'Nuevo registro de usuario: {documento} - {nombres} {apellidos}'
+                db_manager.ejecutar_comando(log_query, (mensaje, request.remote_addr))
+            except:
+                pass
+            
+            flash('Registro exitoso. Su cuenta será activada por un administrador en breve. Recibirá una notificación cuando pueda acceder.', 'success')
+            return redirect(url_for('login'))
+            
+        except Exception as e:
+            print(f"Error en registro: {e}")
+            flash('Error al registrar usuario. Intente nuevamente.', 'error')
+            return render_template('register.html')
+    
+    return render_template('register.html')
 
 @app.route('/dashboard')
 def dashboard():
@@ -843,9 +1234,9 @@ def mantenimiento():
     
     return render_template('mantenimiento.html', user=get_user_data(), puede_editar=puede_editar('mantenimiento'))
 
-@app.route('/capacitaciones')
+@app.route('/capacitaciones', methods=['GET', 'POST'])
 def capacitaciones():
-    """Página de gestión de capacitaciones"""
+    """Página de gestión de capacitaciones - Programa Formativo en IA"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
@@ -853,20 +1244,188 @@ def capacitaciones():
         flash('No tiene permisos para acceder a capacitaciones.', 'error')
         return redirect(url_for('dashboard'))
     
+    # Manejar POST para crear/editar capacitación
+    if request.method == 'POST':
+        print(f"POST recibido. puede_editar: {puede_editar('capacitaciones')}")
+
+        action = request.form.get('action', 'crear')
+        
+        if not puede_editar('capacitaciones'):
+            flash('No tiene permisos para gestionar capacitaciones', 'error')
+            return redirect(url_for('capacitaciones'))
+        
+        # Editar capacitación existente
+        if action == 'editar':
+            try:
+                cap_id = request.form.get('id')
+                titulo = request.form.get('titulo', '').strip()
+                descripcion = request.form.get('descripcion', '').strip()
+                tipo_capacitacion = request.form.get('tipo_capacitacion')
+                estado = request.form.get('estado')
+                producto = request.form.get('producto', '').strip()
+                medicion = request.form.get('medicion', '').strip()
+                
+                # Convertir campos numéricos vacíos a 0
+                cantidad_meta = request.form.get('cantidad_meta', '0').strip()
+                cantidad_meta = int(cantidad_meta) if cantidad_meta else 0
+                
+                cantidad_actual = request.form.get('cantidad_actual', '0').strip()
+                cantidad_actual = int(cantidad_actual) if cantidad_actual else 0
+                
+                actividad = request.form.get('actividad', '').strip()
+                duracion_horas = request.form.get('duracion_horas')
+                fecha_inicio = request.form.get('fecha_inicio')
+                fecha_fin = request.form.get('fecha_fin')
+                
+                # Calcular porcentaje de avance
+                porcentaje_avance = 0
+                if cantidad_meta and int(cantidad_meta) > 0:
+                    porcentaje_avance = (int(cantidad_actual) / int(cantidad_meta)) * 100
+                
+                query_update = """
+                    UPDATE capacitaciones SET
+                        titulo = %s, descripcion = %s, tipo_capacitacion = %s,
+                        producto = %s, medicion = %s, cantidad_meta = %s,
+                        cantidad_actual = %s, actividad = %s, porcentaje_avance = %s,
+                        duracion_horas = %s, fecha_inicio = %s, fecha_fin = %s, estado = %s
+                    WHERE id = %s
+                """
+                
+                db_manager.ejecutar_comando(query_update, (
+                    titulo, descripcion, tipo_capacitacion, producto, medicion,
+                    cantidad_meta, cantidad_actual, actividad, porcentaje_avance,
+                    duracion_horas, fecha_inicio, fecha_fin, estado, cap_id
+                ))
+                
+                flash('Capacitación actualizada exitosamente', 'success')
+                return redirect(url_for('capacitaciones'))
+                
+            except Exception as e:
+                flash(f'Error al actualizar capacitación: {str(e)}', 'error')
+                print(f"Error actualizando capacitación: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                return redirect(url_for('capacitaciones'))
+        
+        # Crear nueva capacitación
+        else:
+            try:
+                print("=== INICIANDO CREACIÓN DE CAPACITACIÓN ===")
+                titulo = request.form.get('titulo', '').strip()
+                descripcion = request.form.get('descripcion', '').strip()
+                tipo_capacitacion = request.form.get('tipo_capacitacion')
+                estado = request.form.get('estado', 'programada')
+                producto = request.form.get('producto', '').strip()
+                medicion = request.form.get('medicion', '').strip()
+                
+                # Convertir campos numéricos vacíos a 0
+                cantidad_meta = request.form.get('cantidad_meta', '0').strip()
+                cantidad_meta = int(cantidad_meta) if cantidad_meta else 0
+                
+                cantidad_actual = request.form.get('cantidad_actual', '0').strip()
+                cantidad_actual = int(cantidad_actual) if cantidad_actual else 0
+                
+                actividad = request.form.get('actividad', '').strip()
+                duracion_horas = request.form.get('duracion_horas')
+                fecha_inicio = request.form.get('fecha_inicio')
+                fecha_fin = request.form.get('fecha_fin')
+                
+                print(f"Título: {titulo}")
+                print(f"Tipo: {tipo_capacitacion}")
+                print(f"Estado: {estado}")
+                print(f"Duración: {duracion_horas}")
+                print(f"Fechas: {fecha_inicio} - {fecha_fin}")
+                
+                # Validaciones backend
+                if not titulo or len(titulo) < 5 or len(titulo) > 300:
+                    print("❌ Error: Título inválido")
+                    print(f"Error: Título inválido: {titulo}")
+                    flash('El título debe tener entre 5 y 300 caracteres', 'error')
+                    return redirect(url_for('capacitaciones'))
+                
+                if not tipo_capacitacion or tipo_capacitacion not in ['modulo_formativo', 'taller', 'material_didactico', 'gestion_cambio']:
+                    print(f"❌ Error: Tipo inválido: {tipo_capacitacion}")
+                    flash('Tipo de capacitación inválido', 'error')
+                    return redirect(url_for('capacitaciones'))
+                
+                if not duracion_horas or int(duracion_horas) < 1 or int(duracion_horas) > 500:
+                    print(f"❌ Error: Duración inválida: {duracion_horas}")
+                    flash('La duración debe estar entre 1 y 500 horas', 'error')
+                    return redirect(url_for('capacitaciones'))
+                
+                if not fecha_inicio or not fecha_fin:
+                    print(f"❌ Error: Fechas faltantes: {fecha_inicio} - {fecha_fin}")
+                    flash('Las fechas de inicio y fin son requeridas', 'error')
+                    return redirect(url_for('capacitaciones'))
+                
+                # Validar que fecha_fin sea posterior a fecha_inicio
+                from datetime import datetime
+                fecha_i = datetime.strptime(fecha_inicio, '%Y-%m-%d')
+                fecha_f = datetime.strptime(fecha_fin, '%Y-%m-%d')
+                if fecha_f < fecha_i:
+                    flash('La fecha de fin debe ser posterior a la fecha de inicio', 'error')
+                    return redirect(url_for('capacitaciones'))
+                
+                # Validar cantidad actual vs meta
+                if cantidad_meta and cantidad_actual:
+                    if int(cantidad_actual) > int(cantidad_meta):
+                        flash('La cantidad actual no puede ser mayor que la meta', 'error')
+                        return redirect(url_for('capacitaciones'))
+                
+                # Calcular porcentaje de avance
+                porcentaje_avance = 0
+                if cantidad_meta and int(cantidad_meta) > 0:
+                    porcentaje_avance = (int(cantidad_actual) / int(cantidad_meta)) * 100
+                
+                print("✅ Todas las validaciones pasaron")
+                print(f"Insertando capacitación: {titulo}")
+                
+                query_insert = """
+                    INSERT INTO capacitaciones (
+                        titulo, descripcion, tipo_capacitacion, producto, medicion,
+                        cantidad_meta, cantidad_actual, actividad, porcentaje_avance,
+                        duracion_horas, fecha_inicio, fecha_fin, estado
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                
+                db_manager.ejecutar_comando(query_insert, (
+                    titulo, descripcion, tipo_capacitacion, producto, medicion,
+                    cantidad_meta, cantidad_actual, actividad, porcentaje_avance,
+                    duracion_horas, fecha_inicio, fecha_fin, estado
+                ))
+                
+                print("✅ Capacitación insertada en BD")
+                flash('Capacitación creada exitosamente', 'success')
+                print("✅ Flash message agregado")
+                return redirect(url_for('capacitaciones'))
+                
+            except Exception as e:
+                flash(f'Error al crear capacitación: {str(e)}', 'error')
+                print(f"Error creando capacitación: {str(e)}")
+                import traceback
+                traceback.print_exc()
+    
+    # Cargar lista de capacitaciones
     capacitaciones_lista = []
     try:
         query = """
-            SELECT c.id, c.titulo, c.descripcion, c.duracion_horas, c.estado,
+            SELECT c.id, c.titulo, c.descripcion, c.tipo_capacitacion, 
+                   c.producto, c.medicion, c.cantidad_meta, c.cantidad_actual,
+                   c.actividad, c.porcentaje_avance, c.duracion_horas, c.estado,
                    DATE_FORMAT(c.fecha_inicio, '%d/%m/%Y') as fecha_inicio,
                    DATE_FORMAT(c.fecha_fin, '%d/%m/%Y') as fecha_fin,
                    CONCAT(u.nombres, ' ', u.apellidos) as instructor
             FROM capacitaciones c
             LEFT JOIN usuarios u ON c.id_instructor = u.id
-            ORDER BY c.fecha_inicio DESC
+            ORDER BY 
+                FIELD(c.tipo_capacitacion, 'modulo_formativo', 'taller', 'material_didactico', 'gestion_cambio'),
+                c.fecha_inicio ASC
         """
         capacitaciones_lista = db_manager.ejecutar_query(query) or []
     except Exception as e:
-        print(f"Nota: {str(e)}")
+        print(f"Error cargando capacitaciones: {str(e)}")
+        import traceback
+        traceback.print_exc()
     
     return render_template('capacitaciones.html', user=get_user_data(), capacitaciones=capacitaciones_lista, puede_editar=puede_editar('capacitaciones'))
 
@@ -933,7 +1492,7 @@ def usuarios():
 
 @app.route('/reportes')
 def reportes():
-    """Página de reportes"""
+    """Página de reportes y estadísticas"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
@@ -941,21 +1500,691 @@ def reportes():
         flash('No tiene permisos para acceder a reportes.', 'error')
         return redirect(url_for('dashboard'))
     
-    flash('Módulo de reportes en desarrollo', 'info')
-    return redirect(url_for('dashboard'))
+    from datetime import datetime, timedelta
+    
+    # Obtener filtros de fecha y tipo
+    fecha_inicio = request.args.get('fecha_inicio')
+    fecha_fin = request.args.get('fecha_fin')
+    tipo_reporte = request.args.get('tipo_reporte', 'general')
+    
+    # Si no hay fechas, usar último mes
+    if not fecha_inicio or not fecha_fin:
+        fecha_fin = datetime.now().strftime('%Y-%m-%d')
+        fecha_inicio = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    
+    try:
+        # ===== ESTADÍSTICAS GENERALES =====
+        stats = {}
+        
+        # Total de equipos
+        query_equipos = "SELECT COUNT(*) as total FROM equipos WHERE estado != 'dado_baja'"
+        result = db_manager.ejecutar_query(query_equipos)
+        stats['total_equipos'] = result[0]['total'] if result else 0
+        
+        # Equipos disponibles
+        query_disponibles = "SELECT COUNT(*) as total FROM equipos WHERE estado = 'disponible'"
+        result = db_manager.ejecutar_query(query_disponibles)
+        stats['equipos_disponibles'] = result[0]['total'] if result else 0
+        
+        # Préstamos activos
+        query_prestamos = "SELECT COUNT(*) as total FROM prestamos WHERE estado = 'activo'"
+        result = db_manager.ejecutar_query(query_prestamos)
+        stats['prestamos_activos'] = result[0]['total'] if result else 0
+        
+        # Préstamos vencidos
+        query_vencidos = """
+            SELECT COUNT(*) as total FROM prestamos 
+            WHERE estado = 'activo' AND fecha_devolucion_programada < NOW()
+        """
+        result = db_manager.ejecutar_query(query_vencidos)
+        stats['prestamos_vencidos'] = result[0]['total'] if result else 0
+        
+        # Mantenimientos del mes
+        query_mant = """
+            SELECT COUNT(*) as total FROM historial_mantenimiento 
+            WHERE MONTH(fecha_inicio) = MONTH(NOW()) AND YEAR(fecha_inicio) = YEAR(NOW())
+        """
+        result = db_manager.ejecutar_query(query_mant)
+        stats['mantenimientos_mes'] = result[0]['total'] if result else 0
+        
+        # Prácticas del mes
+        query_prac = """
+            SELECT COUNT(*) as total FROM practicas_laboratorio 
+            WHERE MONTH(fecha) = MONTH(NOW()) AND YEAR(fecha) = YEAR(NOW())
+        """
+        result = db_manager.ejecutar_query(query_prac)
+        stats['practicas_mes'] = result[0]['total'] if result else 0
+        
+        # ===== DATOS PARA TABLAS (según tipo_reporte) =====
+        equipos = []
+        prestamos = []
+        mantenimientos = []
+        practicas = []
+        
+        # Consultar solo los datos relevantes según el tipo de reporte
+        if tipo_reporte == 'general' or tipo_reporte == 'equipos':
+            # Equipos
+            query_equipos_list = """
+                SELECT e.codigo_interno, e.nombre, c.nombre as categoria, 
+                       l.nombre as laboratorio, e.estado, e.estado_fisico, e.valor_adquisicion
+                FROM equipos e
+                LEFT JOIN categorias_equipos c ON e.id_categoria = c.id
+                LEFT JOIN laboratorios l ON e.id_laboratorio = l.id
+                WHERE e.estado != 'dado_baja'
+                ORDER BY e.fecha_registro DESC
+                LIMIT 100
+            """
+            equipos = db_manager.ejecutar_query(query_equipos_list) or []
+        
+        if tipo_reporte == 'general' or tipo_reporte == 'prestamos':
+            # Préstamos
+            query_prestamos_list = """
+                SELECT p.codigo, e.nombre as equipo_nombre, 
+                       CONCAT(u.nombres, ' ', u.apellidos) as solicitante,
+                       DATE_FORMAT(p.fecha, '%d/%m/%Y') as fecha_prestamo,
+                       DATE_FORMAT(p.fecha_devolucion_programada, '%d/%m/%Y') as fecha_devolucion_programada,
+                       p.estado,
+                       DATEDIFF(COALESCE(p.fecha_devolucion_real, NOW()), p.fecha) as dias_prestamo
+                FROM prestamos p
+                JOIN equipos e ON p.id_equipo = e.id
+                JOIN usuarios u ON p.id_usuario_solicitante = u.id
+                WHERE p.fecha BETWEEN %s AND %s
+                ORDER BY p.fecha DESC
+                LIMIT 100
+            """
+            prestamos = db_manager.ejecutar_query(query_prestamos_list, (fecha_inicio, fecha_fin)) or []
+        
+        if tipo_reporte == 'general' or tipo_reporte == 'mantenimiento':
+            # Mantenimientos
+            query_mant_list = """
+                SELECT e.nombre as equipo_nombre, tm.nombre as tipo_mantenimiento,
+                       CONCAT(u.nombres, ' ', u.apellidos) as tecnico,
+                       DATE_FORMAT(hm.fecha_inicio, '%d/%m/%Y') as fecha_inicio,
+                       DATE_FORMAT(hm.fecha_fin, '%d/%m/%Y') as fecha_fin,
+                       hm.estado, hm.costo_mantenimiento
+                FROM historial_mantenimiento hm
+                JOIN equipos e ON hm.id_equipo = e.id
+                JOIN tipos_mantenimiento tm ON hm.id_tipo_mantenimiento = tm.id
+                LEFT JOIN usuarios u ON hm.tecnico_responsable_id = u.id
+                WHERE hm.fecha_inicio BETWEEN %s AND %s
+                ORDER BY hm.fecha_inicio DESC
+                LIMIT 100
+            """
+            mantenimientos = db_manager.ejecutar_query(query_mant_list, (fecha_inicio, fecha_fin)) or []
+        
+        if tipo_reporte == 'general' or tipo_reporte == 'practicas':
+            # Prácticas
+            query_prac_list = """
+                SELECT pl.codigo, pl.nombre, pf.nombre_programa as programa,
+                       CONCAT(u.nombres, ' ', u.apellidos) as instructor,
+                       l.nombre as laboratorio,
+                       DATE_FORMAT(pl.fecha, '%d/%m/%Y %H:%i') as fecha,
+                       pl.numero_estudiantes, pl.estado
+                FROM practicas_laboratorio pl
+                LEFT JOIN programas_formacion pf ON pl.id_programa = pf.id
+                LEFT JOIN instructores i ON pl.id_instructor = i.id
+                LEFT JOIN usuarios u ON i.id_usuario = u.id
+                LEFT JOIN laboratorios l ON pl.id_laboratorio = l.id
+                WHERE pl.fecha BETWEEN %s AND %s
+                ORDER BY pl.fecha DESC
+                LIMIT 100
+            """
+            practicas = db_manager.ejecutar_query(query_prac_list, (fecha_inicio, fecha_fin)) or []
+        
+        # ===== DATOS PARA GRÁFICOS =====
+        datos_graficos = {}
+        
+        # Gráfico: Equipos por Estado
+        query_eq_estado = """
+            SELECT estado, COUNT(*) as total 
+            FROM equipos 
+            WHERE estado != 'dado_baja'
+            GROUP BY estado
+        """
+        result = db_manager.ejecutar_query(query_eq_estado) or []
+        datos_graficos['equipos_estado'] = {
+            'labels': [r['estado'].capitalize() for r in result],
+            'data': [r['total'] for r in result]
+        }
+        
+        # Gráfico: Préstamos por Mes (últimos 6 meses)
+        query_prest_mes = """
+            SELECT DATE_FORMAT(fecha, '%Y-%m') as mes, COUNT(*) as total
+            FROM prestamos
+            WHERE fecha >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+            GROUP BY mes
+            ORDER BY mes
+        """
+        result = db_manager.ejecutar_query(query_prest_mes) or []
+        datos_graficos['prestamos_mes'] = {
+            'labels': [r['mes'] for r in result],
+            'data': [r['total'] for r in result]
+        }
+        
+        # Gráfico: Mantenimientos por Tipo
+        query_mant_tipo = """
+            SELECT tm.nombre, COUNT(*) as total
+            FROM historial_mantenimiento hm
+            JOIN tipos_mantenimiento tm ON hm.id_tipo_mantenimiento = tm.id
+            WHERE hm.fecha_inicio >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+            GROUP BY tm.nombre
+        """
+        result = db_manager.ejecutar_query(query_mant_tipo) or []
+        datos_graficos['mantenimientos'] = {
+            'labels': [r['nombre'] for r in result],
+            'data': [r['total'] for r in result]
+        }
+        
+        # Gráfico: Uso de Laboratorios (horas de prácticas)
+        query_lab_uso = """
+            SELECT l.nombre, COALESCE(SUM(pl.duracion_horas), 0) as horas_uso
+            FROM laboratorios l
+            LEFT JOIN practicas_laboratorio pl ON l.id = pl.id_laboratorio
+                AND pl.fecha >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+            GROUP BY l.id, l.nombre
+            ORDER BY horas_uso DESC
+            LIMIT 5
+        """
+        result = db_manager.ejecutar_query(query_lab_uso) or []
+        datos_graficos['laboratorios'] = {
+            'labels': [r['nombre'] for r in result],
+            'data': [float(r['horas_uso']) for r in result]
+        }
+        
+    except Exception as e:
+        print(f"Error cargando reportes: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        flash('Error cargando datos de reportes', 'error')
+        stats = {
+            'total_equipos': 0, 'equipos_disponibles': 0, 
+            'prestamos_activos': 0, 'prestamos_vencidos': 0,
+            'mantenimientos_mes': 0, 'practicas_mes': 0
+        }
+        equipos = []
+        prestamos = []
+        mantenimientos = []
+        practicas = []
+        datos_graficos = {
+            'equipos_estado': {'labels': [], 'data': []},
+            'prestamos_mes': {'labels': [], 'data': []},
+            'mantenimientos': {'labels': [], 'data': []},
+            'laboratorios': {'labels': [], 'data': []},
+            'practicas': {'labels': [], 'data': []}
+        }
+    
+    return render_template('reportes.html', 
+                          user=get_user_data(),
+                          stats=stats,
+                          equipos=equipos,
+                          prestamos=prestamos,
+                          mantenimientos=mantenimientos,
+                          practicas=practicas,
+                          datos_graficos=datos_graficos,
+                          fecha_inicio=fecha_inicio,
+                          fecha_fin=fecha_fin,
+                          tipo_reporte=tipo_reporte)
 
-@app.route('/backup')
+@app.route('/api/reportes/exportar/pdf')
+def exportar_reporte_pdf():
+    """Exportar reporte a PDF"""
+    if 'user_id' not in session:
+        return {'success': False, 'message': 'No autorizado'}, 401
+    
+    if not tiene_permiso('reportes'):
+        return {'success': False, 'message': 'Sin permisos'}, 403
+    
+    try:
+        from reportlab.lib.pagesizes import letter, A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from io import BytesIO
+        from datetime import datetime
+        
+        # Obtener parámetros
+        fecha_inicio = request.args.get('fecha_inicio', '')
+        fecha_fin = request.args.get('fecha_fin', '')
+        tipo_reporte = request.args.get('tipo_reporte', 'general')
+        
+        # Crear buffer para PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+        
+        # Contenedor de elementos
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Estilo personalizado para título
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        # Título
+        elements.append(Paragraph("Reporte de Gestión de Laboratorios", title_style))
+        elements.append(Paragraph(f"Centro Minero - SENA", styles['Normal']))
+        elements.append(Paragraph(f"Período: {fecha_inicio} a {fecha_fin}", styles['Normal']))
+        elements.append(Paragraph(f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+        elements.append(Spacer(1, 20))
+        
+        # Obtener datos (reutilizar lógica de reportes)
+        from datetime import timedelta
+        if not fecha_inicio or not fecha_fin:
+            fecha_fin_dt = datetime.now().strftime('%Y-%m-%d')
+            fecha_inicio_dt = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        else:
+            fecha_inicio_dt = fecha_inicio
+            fecha_fin_dt = fecha_fin
+        
+        # Estadísticas
+        stats = {}
+        query_equipos = "SELECT COUNT(*) as total FROM equipos WHERE estado != 'dado_baja'"
+        result = db_manager.ejecutar_query(query_equipos)
+        stats['total_equipos'] = result[0]['total'] if result else 0
+        
+        query_prestamos = "SELECT COUNT(*) as total FROM prestamos WHERE estado = 'activo'"
+        result = db_manager.ejecutar_query(query_prestamos)
+        stats['prestamos_activos'] = result[0]['total'] if result else 0
+        
+        # Tabla de estadísticas
+        elements.append(Paragraph("Resumen Ejecutivo", styles['Heading2']))
+        data_stats = [
+            ['Métrica', 'Valor'],
+            ['Total Equipos', str(stats['total_equipos'])],
+            ['Préstamos Activos', str(stats['prestamos_activos'])]
+        ]
+        
+        table_stats = Table(data_stats, colWidths=[3*inch, 2*inch])
+        table_stats.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(table_stats)
+        elements.append(Spacer(1, 20))
+        
+        # Agregar datos según el tipo de reporte
+        if tipo_reporte == 'general' or tipo_reporte == 'equipos':
+            # Equipos
+            elements.append(Paragraph("Equipos", styles['Heading2']))
+            query_equipos = """
+                SELECT e.codigo_interno, e.nombre, c.nombre as categoria, 
+                       l.nombre as laboratorio, e.estado
+                FROM equipos e
+                LEFT JOIN categorias_equipos c ON e.id_categoria = c.id
+                LEFT JOIN laboratorios l ON e.id_laboratorio = l.id
+                WHERE e.estado != 'dado_baja'
+                ORDER BY e.fecha_registro DESC
+                LIMIT 20
+            """
+            equipos = db_manager.ejecutar_query(query_equipos) or []
+            
+            if equipos:
+                data_equipos = [['Código', 'Nombre', 'Categoría', 'Laboratorio', 'Estado']]
+                for eq in equipos:
+                    data_equipos.append([
+                        eq['codigo_interno'] or 'N/A',
+                        eq['nombre'][:30] if eq['nombre'] else 'N/A',
+                        eq['categoria'][:20] if eq['categoria'] else 'N/A',
+                        eq['laboratorio'][:20] if eq['laboratorio'] else 'N/A',
+                        eq['estado']
+                    ])
+                
+                table_equipos = Table(data_equipos, colWidths=[1*inch, 2*inch, 1.5*inch, 1.5*inch, 1*inch])
+                table_equipos.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                elements.append(table_equipos)
+                elements.append(Spacer(1, 20))
+        
+        if tipo_reporte == 'general' or tipo_reporte == 'prestamos':
+            # Préstamos
+            elements.append(Paragraph("Préstamos Recientes", styles['Heading2']))
+            query_prestamos_list = """
+                SELECT p.codigo, e.nombre as equipo, 
+                       CONCAT(u.nombres, ' ', u.apellidos) as solicitante,
+                       DATE_FORMAT(p.fecha, '%d/%m/%Y') as fecha,
+                       p.estado
+                FROM prestamos p
+                JOIN equipos e ON p.id_equipo = e.id
+                JOIN usuarios u ON p.id_usuario_solicitante = u.id
+                WHERE p.fecha BETWEEN %s AND %s
+                ORDER BY p.fecha DESC
+                LIMIT 20
+            """
+            prestamos = db_manager.ejecutar_query(query_prestamos_list, (fecha_inicio_dt, fecha_fin_dt)) or []
+            
+            if prestamos:
+                data_prestamos = [['Código', 'Equipo', 'Solicitante', 'Fecha', 'Estado']]
+                for p in prestamos:
+                    data_prestamos.append([
+                        p['codigo'], 
+                        p['equipo'][:30], 
+                        p['solicitante'][:25],
+                        p['fecha'],
+                        p['estado']
+                    ])
+                
+                table_prestamos = Table(data_prestamos, colWidths=[1*inch, 2*inch, 1.5*inch, 1*inch, 1*inch])
+                table_prestamos.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                elements.append(table_prestamos)
+                elements.append(Spacer(1, 20))
+        
+        if tipo_reporte == 'general' or tipo_reporte == 'mantenimiento':
+            # Mantenimientos
+            elements.append(Paragraph("Mantenimientos", styles['Heading2']))
+            query_mant = """
+                SELECT e.nombre as equipo, tm.nombre as tipo,
+                       DATE_FORMAT(hm.fecha_inicio, '%d/%m/%Y') as fecha,
+                       hm.estado
+                FROM historial_mantenimiento hm
+                JOIN equipos e ON hm.id_equipo = e.id
+                JOIN tipos_mantenimiento tm ON hm.id_tipo_mantenimiento = tm.id
+                WHERE hm.fecha_inicio BETWEEN %s AND %s
+                ORDER BY hm.fecha_inicio DESC
+                LIMIT 20
+            """
+            mantenimientos = db_manager.ejecutar_query(query_mant, (fecha_inicio_dt, fecha_fin_dt)) or []
+            
+            if mantenimientos:
+                data_mant = [['Equipo', 'Tipo', 'Fecha', 'Estado']]
+                for m in mantenimientos:
+                    data_mant.append([
+                        m['equipo'][:30],
+                        m['tipo'][:20],
+                        m['fecha'],
+                        m['estado']
+                    ])
+                
+                table_mant = Table(data_mant, colWidths=[2.5*inch, 2*inch, 1.5*inch, 1*inch])
+                table_mant.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                elements.append(table_mant)
+        
+        # Generar PDF
+        doc.build(elements)
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'reporte_laboratorios_{fecha_inicio}_{fecha_fin}.pdf'
+        )
+        
+    except Exception as e:
+        print(f"Error generando PDF: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {'success': False, 'message': f'Error: {str(e)}'}, 500
+
+@app.route('/api/reportes/exportar/excel')
+def exportar_reporte_excel():
+    """Exportar reporte a Excel"""
+    if 'user_id' not in session:
+        return {'success': False, 'message': 'No autorizado'}, 401
+    
+    if not tiene_permiso('reportes'):
+        return {'success': False, 'message': 'Sin permisos'}, 403
+    
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from io import BytesIO
+        from datetime import datetime, timedelta
+        
+        # Obtener parámetros
+        fecha_inicio = request.args.get('fecha_inicio', '')
+        fecha_fin = request.args.get('fecha_fin', '')
+        
+        if not fecha_inicio or not fecha_fin:
+            fecha_fin = datetime.now().strftime('%Y-%m-%d')
+            fecha_inicio = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        
+        # Crear workbook
+        wb = Workbook()
+        
+        # Hoja 1: Resumen
+        ws1 = wb.active
+        ws1.title = "Resumen"
+        
+        # Título
+        ws1['A1'] = 'Reporte de Gestión de Laboratorios'
+        ws1['A1'].font = Font(size=16, bold=True, color='667eea')
+        ws1['A2'] = f'Período: {fecha_inicio} a {fecha_fin}'
+        ws1['A3'] = f'Generado: {datetime.now().strftime("%d/%m/%Y %H:%M")}'
+        
+        # Estadísticas
+        ws1['A5'] = 'Métrica'
+        ws1['B5'] = 'Valor'
+        ws1['A5'].font = Font(bold=True)
+        ws1['B5'].font = Font(bold=True)
+        ws1['A5'].fill = PatternFill(start_color='667eea', end_color='667eea', fill_type='solid')
+        ws1['B5'].fill = PatternFill(start_color='667eea', end_color='667eea', fill_type='solid')
+        
+        query_equipos = "SELECT COUNT(*) as total FROM equipos WHERE estado != 'dado_baja'"
+        result = db_manager.ejecutar_query(query_equipos)
+        total_equipos = result[0]['total'] if result else 0
+        
+        query_prestamos = "SELECT COUNT(*) as total FROM prestamos WHERE estado = 'activo'"
+        result = db_manager.ejecutar_query(query_prestamos)
+        prestamos_activos = result[0]['total'] if result else 0
+        
+        ws1['A6'] = 'Total Equipos'
+        ws1['B6'] = total_equipos
+        ws1['A7'] = 'Préstamos Activos'
+        ws1['B7'] = prestamos_activos
+        
+        # Hoja 2: Préstamos
+        ws2 = wb.create_sheet("Préstamos")
+        headers = ['Código', 'Equipo', 'Solicitante', 'Fecha', 'Estado']
+        ws2.append(headers)
+        
+        # Estilo de encabezados
+        for cell in ws2[1]:
+            cell.font = Font(bold=True, color='FFFFFF')
+            cell.fill = PatternFill(start_color='667eea', end_color='667eea', fill_type='solid')
+            cell.alignment = Alignment(horizontal='center')
+        
+        query_prestamos_list = """
+            SELECT p.codigo, e.nombre as equipo, 
+                   CONCAT(u.nombres, ' ', u.apellidos) as solicitante,
+                   DATE_FORMAT(p.fecha, '%d/%m/%Y') as fecha,
+                   p.estado
+            FROM prestamos p
+            JOIN equipos e ON p.id_equipo = e.id
+            JOIN usuarios u ON p.id_usuario_solicitante = u.id
+            WHERE p.fecha BETWEEN %s AND %s
+            ORDER BY p.fecha DESC
+            LIMIT 100
+        """
+        prestamos = db_manager.ejecutar_query(query_prestamos_list, (fecha_inicio, fecha_fin)) or []
+        
+        for p in prestamos:
+            ws2.append([p['codigo'], p['equipo'], p['solicitante'], p['fecha'], p['estado']])
+        
+        # Ajustar ancho de columnas
+        for ws in [ws1, ws2]:
+            for column in ws.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(cell.value)
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Guardar en buffer
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'reporte_laboratorios_{fecha_inicio}_{fecha_fin}.xlsx'
+        )
+        
+    except Exception as e:
+        print(f"Error generando Excel: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {'success': False, 'message': f'Error: {str(e)}'}, 500
+
+@app.route('/backup', methods=['GET', 'POST'])
 def backup():
-    """Página de backup del sistema"""
+    """Página de backup del sistema - SOLO ADMINISTRADORES"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
-    if not tiene_permiso('backups'):
-        flash('No tiene permisos para acceder a backups.', 'error')
+    # Verificar que sea administrador (id_rol = 1)
+    user_rol = session.get('user_rol')
+    if user_rol != 1:
+        flash('Acceso denegado. Solo administradores pueden gestionar backups.', 'error')
         return redirect(url_for('dashboard'))
     
-    flash('Módulo de backup en desarrollo', 'info')
-    return redirect(url_for('dashboard'))
+    # Procesar acciones POST
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'create':
+            # Crear backup usando la API
+            import requests
+            try:
+                response = requests.post(
+                    f"{request.url_root}api/backups/crear",
+                    cookies=request.cookies
+                )
+                data = response.json()
+                if data.get('success'):
+                    flash(f'Backup creado exitosamente: {data.get("filename")}', 'success')
+                else:
+                    flash(f'Error creando backup: {data.get("message")}', 'error')
+            except Exception as e:
+                flash(f'Error creando backup: {str(e)}', 'error')
+        
+        elif action == 'restore':
+            backup_file = request.form.get('backup_file')
+            import requests
+            try:
+                response = requests.post(
+                    f"{request.url_root}api/backups/restaurar",
+                    json={'filename': backup_file},
+                    cookies=request.cookies
+                )
+                data = response.json()
+                if data.get('success'):
+                    flash('Base de datos restaurada exitosamente', 'success')
+                else:
+                    flash(f'Error restaurando backup: {data.get("message")}', 'error')
+            except Exception as e:
+                flash(f'Error restaurando backup: {str(e)}', 'error')
+        
+        elif action == 'delete':
+            backup_file = request.form.get('backup_file')
+            import requests
+            try:
+                response = requests.post(
+                    f"{request.url_root}api/backups/eliminar",
+                    json={'filename': backup_file},
+                    cookies=request.cookies
+                )
+                data = response.json()
+                if data.get('success'):
+                    flash('Backup eliminado exitosamente', 'success')
+                else:
+                    flash(f'Error eliminando backup: {data.get("message")}', 'error')
+            except Exception as e:
+                flash(f'Error eliminando backup: {str(e)}', 'error')
+        
+        return redirect(url_for('backup'))
+    
+    # Obtener lista de backups
+    backups_list = []
+    try:
+        import requests
+        response = requests.get(
+            f"{request.url_root}api/backups/listar",
+            cookies=request.cookies
+        )
+        data = response.json()
+        if data.get('success'):
+            backups_list = data.get('backups', [])
+    except Exception as e:
+        print(f"Error obteniendo backups: {e}")
+    
+    return render_template('backup.html', user=get_user_data(), backups=backups_list)
+
+@app.route('/backup/download/<filename>')
+def download_backup(filename):
+    """Descargar un archivo de backup - SOLO ADMINISTRADORES"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    # Verificar que sea administrador (id_rol = 1)
+    user_rol = session.get('user_rol')
+    if user_rol != 1:
+        flash('Acceso denegado. Solo administradores pueden descargar backups.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    import os
+    from flask import send_file
+    
+    backup_dir = os.path.join(os.path.dirname(__file__), 'database', 'backups')
+    filepath = os.path.join(backup_dir, filename)
+    
+    if not os.path.exists(filepath):
+        flash('Archivo de backup no encontrado', 'error')
+        return redirect(url_for('backup'))
+    
+    try:
+        return send_file(filepath, as_attachment=True, download_name=filename)
+    except Exception as e:
+        flash(f'Error descargando backup: {str(e)}', 'error')
+        return redirect(url_for('backup'))
 
 @app.route('/configuracion')
 def configuracion():
@@ -970,10 +2199,17 @@ def configuracion():
     # Cargar configuraciones desde la BD
     configuraciones = []
     try:
-        query = "SELECT clave, valor, descripcion, tipo FROM configuracion_sistema ORDER BY clave"
+        query = """
+            SELECT clave_config as clave, valor_config as valor, 
+                   descripcion, tipo_dato as tipo 
+            FROM configuracion_sistema 
+            ORDER BY clave_config
+        """
         configuraciones = db_manager.ejecutar_query(query) or []
     except Exception as e:
         print(f"Error cargando configuraciones: {e}")
+        import traceback
+        traceback.print_exc()
     
     return render_template('configuracion.html', user=get_user_data(), configuraciones=configuraciones)
 

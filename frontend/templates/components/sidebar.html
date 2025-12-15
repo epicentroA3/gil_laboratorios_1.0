@@ -51,13 +51,6 @@
       </div>
     </li>
 
-    <!-- Buscador - Todos -->
-    <li class="nav-item">
-      <a class="nav-link text-white {{ 'active' if request.path=='/inventario' }}" href="{{ url_for('inventario') }}">
-        <i class="bi bi-search me-2"></i>Buscador
-      </a>
-    </li>
-
     <!-- Usuarios - Solo Admin -->
     {% if tiene_all or permisos.get('usuarios') %}
     <li class="nav-item">
