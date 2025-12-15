@@ -374,10 +374,10 @@ def equipos():
                    l.codigo_lab as laboratorio_codigo,
                    c.nombre as categoria_nombre,
                    c.codigo as categoria_codigo,
-                   (SELECT DATE_FORMAT(MAX(fecha_mantenimiento), '%d/%m/%Y') 
-                    FROM historial_mantenimiento WHERE id_equipo = e.id) as ultimo_mantenimiento,
+                   (SELECT DATE_FORMAT(MAX(fecha_inicio), '%d/%m/%Y') 
+                    FROM historial_mantenimiento WHERE id_equipo = e.id AND estado = 'completado') as ultimo_mantenimiento,
                    (SELECT DATE_FORMAT(MIN(proxima_fecha_mantenimiento), '%d/%m/%Y') 
-                    FROM historial_mantenimiento WHERE id_equipo = e.id AND proxima_fecha_mantenimiento >= CURDATE()) as proximo_mantenimiento
+                    FROM historial_mantenimiento WHERE id_equipo = e.id AND proxima_fecha_mantenimiento >= CURDATE() AND estado = 'completado') as proximo_mantenimiento
             FROM equipos e
             LEFT JOIN laboratorios l ON e.id_laboratorio = l.id
             LEFT JOIN categorias_equipos c ON e.id_categoria = c.id
@@ -719,8 +719,8 @@ def practicas():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
-    if not tiene_permiso('practicas'):
-        flash('No tiene permisos para gestionar prácticas.', 'error')
+    if not tiene_permiso('reservas'):
+        flash('No tiene permisos para gestionar reservas.', 'error')
         return redirect(url_for('dashboard'))
     
     practicas_lista = []
@@ -729,7 +729,35 @@ def practicas():
     instructores_lista = []
     
     try:
-        # Obtener prácticas con joins
+        db_manager.ejecutar_comando("""
+            UPDATE practicas_laboratorio
+            SET estado = 'completada'
+            WHERE estado IN ('programada', 'en_curso')
+            AND DATE_ADD(fecha, INTERVAL ROUND(COALESCE(duracion_horas, 1) * 60) MINUTE) <= NOW()
+        """)
+
+        db_manager.ejecutar_comando("""
+            UPDATE practicas_laboratorio
+            SET estado = 'en_curso'
+            WHERE estado = 'programada'
+            AND fecha <= NOW()
+            AND DATE_ADD(fecha, INTERVAL ROUND(COALESCE(duracion_horas, 1) * 60) MINUTE) > NOW()
+        """)
+
+        # Obtener ID del instructor si el usuario es instructor
+        user_rol = session.get('user_rol')
+        user_id = session.get('user_id')
+        instructor_id = None
+        es_instructor = False
+        
+        if user_rol == 2:  # Rol de Instructor
+            es_instructor = True
+            query_instructor = "SELECT id FROM instructores WHERE id_usuario = %s"
+            resultado = db_manager.ejecutar_query(query_instructor, (user_id,))
+            if resultado and len(resultado) > 0:
+                instructor_id = resultado[0]['id']
+        
+        # Obtener prácticas con joins (filtrar por instructor si aplica)
         query = """
             SELECT p.id, p.codigo, p.nombre, p.id_programa, p.id_laboratorio, 
                    p.id_instructor, p.fecha, p.duracion_horas, p.numero_estudiantes,
@@ -738,15 +766,27 @@ def practicas():
                    DATE_FORMAT(p.fecha, '%d/%m/%Y %H:%i') as fecha_formato,
                    pf.nombre_programa,
                    l.nombre as laboratorio_nombre,
-                   CONCAT(u.nombres, ' ', u.apellidos) as instructor_nombre
+                   CONCAT(u.nombres, ' ', u.apellidos) as instructor_nombre,
+                   (SELECT COUNT(*)
+                    FROM prestamos pr
+                    WHERE pr.codigo LIKE CONCAT('PRAC-', p.codigo, '-%')) as prestamos_total,
+                   (SELECT COUNT(*)
+                    FROM prestamos pr
+                    WHERE pr.codigo LIKE CONCAT('PRAC-', p.codigo, '-%')
+                    AND pr.estado = 'activo') as prestamos_activos
             FROM practicas_laboratorio p
             LEFT JOIN programas_formacion pf ON p.id_programa = pf.id
             LEFT JOIN laboratorios l ON p.id_laboratorio = l.id
             LEFT JOIN instructores i ON p.id_instructor = i.id
             LEFT JOIN usuarios u ON i.id_usuario = u.id
-            ORDER BY p.fecha DESC
         """
-        practicas_lista = db_manager.ejecutar_query(query) or []
+        
+        # Si es instructor, filtrar solo sus prácticas
+        if es_instructor and instructor_id:
+            query += " WHERE p.id_instructor = %s"
+            practicas_lista = db_manager.ejecutar_query(query + " ORDER BY p.fecha DESC", (instructor_id,)) or []
+        else:
+            practicas_lista = db_manager.ejecutar_query(query + " ORDER BY p.fecha DESC") or []
         
         # Obtener laboratorios para filtros y formulario
         query_labs = "SELECT id, nombre FROM laboratorios WHERE estado = 'disponible' ORDER BY nombre"
@@ -775,7 +815,21 @@ def practicas():
                            laboratorios=laboratorios_lista,
                            programas=programas_lista,
                            instructores=instructores_lista,
-                           puede_editar=puede_editar('practicas'))
+                           puede_editar=puede_editar('reservas'),
+                           es_instructor=es_instructor,
+                           instructor_id=instructor_id)
+
+@app.route('/estadisticas-practicas')
+def estadisticas_practicas():
+    """Página de estadísticas y monitoreo de prácticas"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    if not tiene_permiso('reservas'):
+        flash('No tiene permisos para ver estadísticas de reservas.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    return render_template('estadisticas_practicas.html', user=get_user_data())
 
 @app.route('/mantenimiento')
 def mantenimiento():
@@ -787,25 +841,7 @@ def mantenimiento():
         flash('No tiene permisos para acceder a mantenimiento.', 'error')
         return redirect(url_for('dashboard'))
     
-    mantenimientos_lista = []
-    try:
-        query = """
-            SELECT h.id, h.tipo_mantenimiento, h.descripcion, h.estado,
-                   DATE_FORMAT(h.fecha_mantenimiento, '%d/%m/%Y') as fecha,
-                   DATE_FORMAT(h.proxima_fecha_mantenimiento, '%d/%m/%Y') as proxima_fecha,
-                   e.nombre as equipo_nombre, e.codigo_interno,
-                   CONCAT(u.nombres, ' ', u.apellidos) as tecnico
-            FROM historial_mantenimiento h
-            LEFT JOIN equipos e ON h.id_equipo = e.id
-            LEFT JOIN usuarios u ON h.id_tecnico = u.id
-            ORDER BY h.fecha_mantenimiento DESC
-            LIMIT 100
-        """
-        mantenimientos_lista = db_manager.ejecutar_query(query) or []
-    except Exception as e:
-        print(f"Nota: {str(e)}")
-    
-    return render_template('mantenimiento.html', user=get_user_data(), mantenimientos=mantenimientos_lista, puede_editar=puede_editar('mantenimiento'))
+    return render_template('mantenimiento.html', user=get_user_data(), puede_editar=puede_editar('mantenimiento'))
 
 @app.route('/capacitaciones')
 def capacitaciones():

@@ -33,8 +33,15 @@ def require_auth_or_session(f):
 @equipos_bp.route('', methods=['GET'])
 @require_auth_or_session
 def listar_equipos():
-    """GET /api/equipos - Listar todos los equipos"""
+    """GET /api/equipos - Listar todos los equipos
+    
+    Query params:
+        - estado: Filtrar por estado (disponible, prestado, mantenimiento, reparacion, dado_baja)
+    """
     try:
+        # Filtro por estado
+        estado_filtro = request.args.get('estado')
+        
         query = """
             SELECT 
                 e.id,
@@ -56,9 +63,16 @@ def listar_equipos():
             FROM equipos e
             LEFT JOIN laboratorios l ON e.id_laboratorio = l.id
             LEFT JOIN categorias_equipos c ON e.id_categoria = c.id
-            ORDER BY e.nombre
         """
-        equipos = db.ejecutar_query(query)
+        
+        params = []
+        if estado_filtro:
+            query += " WHERE e.estado = %s"
+            params.append(estado_filtro)
+        
+        query += " ORDER BY e.nombre"
+        
+        equipos = db.ejecutar_query(query, tuple(params) if params else None)
         
         # Procesar especificaciones JSON
         for equipo in equipos:

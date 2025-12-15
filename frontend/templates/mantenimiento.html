@@ -3,75 +3,3028 @@
 {% block title %}Gestión de Mantenimiento - GIL{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-1"><i class="bi bi-tools me-2"></i>Gestión de Mantenimiento</h2>
-            <p class="text-muted mb-0">Historial y programación de mantenimientos de equipos</p>
-        </div>
+<!-- Header -->
+<div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h4 class="mb-1 text-white fw-bold"><i class="bi bi-tools me-2"></i>Gestión de Mantenimiento</h4>
+        <p class="mb-0 text-white opacity-90">Historial y programación de mantenimientos de equipos</p>
+      </div>
+      <div class="d-flex gap-2">
         {% if puede_editar %}
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevoMantenimiento">
-            <i class="bi bi-plus-circle me-2"></i>Nuevo Mantenimiento
+        <div class="dropdown">
+          <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="bi bi-robot me-1"></i>IA Predictiva
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="#" onclick="entrenarModeloIA()"><i class="bi bi-cpu me-2"></i>Entrenar Modelo</a></li>
+            <li><a class="dropdown-item" href="#" onclick="analizarEquiposIA()"><i class="bi bi-search me-2"></i>Analizar Equipos</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#" onclick="verEstadoModeloIA()"><i class="bi bi-info-circle me-2"></i>Estado del Modelo</a></li>
+          </ul>
+        </div>
+        <button class="btn btn-outline-light" onclick="generarAlertas()">
+          <i class="bi bi-bell me-1"></i>Generar Alertas
+        </button>
+        <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#modalTipos">
+          <i class="bi bi-gear me-1"></i>Tipos
+        </button>
+        <button class="btn btn-warning text-dark" data-bs-toggle="modal" data-bs-target="#modalIniciarMantenimiento">
+          <i class="bi bi-play-circle me-1"></i>Iniciar
         </button>
         {% endif %}
+      </div>
     </div>
+  </div>
+</div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
+<!-- Cards de estadísticas -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-1 opacity-75">Total Mantenimientos</h6>
+                        <h3 class="card-title mb-0" id="statTotal">0</h3>
+                    </div>
+                    <i class="bi bi-tools fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-1 opacity-75">Este Mes</h6>
+                        <h3 class="card-title mb-0" id="statMes">0</h3>
+                    </div>
+                    <i class="bi bi-calendar-check fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-1 opacity-75">Alertas Pendientes</h6>
+                        <h3 class="card-title mb-0" id="statAlertas">0</h3>
+                    </div>
+                    <i class="bi bi-exclamation-triangle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-1 opacity-75">Alertas Críticas</h6>
+                        <h3 class="card-title mb-0" id="statCriticas">0</h3>
+                    </div>
+                    <i class="bi bi-exclamation-octagon fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs de navegación -->
+<ul class="nav nav-tabs mb-3" id="mantenimientoTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="historial-tab" data-bs-toggle="tab" data-bs-target="#historial" type="button">
+            <i class="bi bi-clock-history me-1"></i>Historial
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="alertas-tab" data-bs-toggle="tab" data-bs-target="#alertas" type="button">
+            <i class="bi bi-bell me-1"></i>Alertas <span class="badge bg-danger" id="badgeAlertas">0</span>
+        </button>
+    </li>
+</ul>
+
+<!-- Contenido de tabs -->
+<div class="tab-content" id="mantenimientoTabsContent">
+    <!-- Tab Historial -->
+    <div class="tab-pane fade show active" id="historial" role="tabpanel">
+        <!-- Filtros estilo roles -->
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-body py-3">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label small text-muted mb-1"><i class="bi bi-search me-1"></i>Buscar</label>
+                <input type="text" class="form-control" id="buscarMantenimiento" placeholder="Nombre de equipo..." onkeyup="filtrarMantenimientos()">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small text-muted mb-1"><i class="bi bi-tag me-1"></i>Tipo</label>
+                <select class="form-select" id="filtroTipo" onchange="cargarMantenimientos()">
+                    <option value="">Todos</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small text-muted mb-1"><i class="bi bi-check-circle me-1"></i>Estado Post</label>
+                <select class="form-select" id="filtroEstado" onchange="cargarMantenimientos()">
+                    <option value="">Todos</option>
+                    <option value="excelente">Excelente</option>
+                    <option value="bueno">Bueno</option>
+                    <option value="regular">Regular</option>
+                    <option value="malo">Malo</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">&nbsp;</label>
+                <button class="btn btn-outline-secondary w-100" onclick="limpiarFiltrosMantenimiento()">
+                  <i class="bi bi-x-circle me-1"></i>Limpiar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de Mantenimientos -->
+        <div class="card border-0 shadow-sm">
+          <div class="card-header border-0" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+            <h6 class="mb-0 text-white fw-bold"><i class="bi bi-list-ul me-2"></i>Historial de Mantenimientos <span id="contadorMantenimientos" class="badge bg-light text-dark ms-2">0</span></h6>
+          </div>
+          <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle mb-0" id="tablaMantenimientos">
+                    <thead>
                         <tr>
-                            <th>Equipo</th>
-                            <th>Tipo</th>
-                            <th>Fecha</th>
-                            <th>Próximo</th>
-                            <th>Técnico</th>
-                            <th>Estado</th>
-                            {% if puede_editar %}<th class="text-center">Acciones</th>{% endif %}
+                            <th><i class="bi bi-pc-display me-1"></i>Equipo</th>
+                            <th><i class="bi bi-tag me-1"></i>Tipo</th>
+                            <th><i class="bi bi-shield-check me-1"></i>Clase</th>
+                            <th><i class="bi bi-hourglass-split me-1"></i>Estado</th>
+                            <th><i class="bi bi-calendar me-1"></i>Fecha Inicio</th>
+                            <th><i class="bi bi-calendar-plus me-1"></i>Próximo</th>
+                            <th><i class="bi bi-person me-1"></i>Técnico</th>
+                            <th><i class="bi bi-currency-dollar me-1"></i>Costo</th>
+                            <th>Estado Post</th>
+                            {% if puede_editar %}<th>Acciones</th>{% endif %}
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for mant in mantenimientos %}
-                        <tr>
-                            <td>
-                                <strong>{{ mant.equipo_nombre }}</strong>
-                                <br><small class="text-muted">{{ mant.codigo_interno }}</small>
-                            </td>
-                            <td>{{ mant.tipo_mantenimiento }}</td>
-                            <td>{{ mant.fecha }}</td>
-                            <td>{{ mant.proxima_fecha or 'N/A' }}</td>
-                            <td>{{ mant.tecnico or 'Sin asignar' }}</td>
-                            <td>
-                                {% if mant.estado == 'completado' %}
-                                <span class="badge bg-success">Completado</span>
-                                {% elif mant.estado == 'pendiente' %}
-                                <span class="badge bg-warning text-dark">Pendiente</span>
-                                {% elif mant.estado == 'en_proceso' %}
-                                <span class="badge bg-info">En Proceso</span>
-                                {% else %}
-                                <span class="badge bg-secondary">{{ mant.estado }}</span>
-                                {% endif %}
-                            </td>
-                            {% if puede_editar %}
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-outline-info" title="Ver"><i class="bi bi-eye"></i></button>
-                                <button class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></button>
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">
+                    <tbody id="tbodyMantenimientos">
+                        <tr id="filaVaciaMantenimientos">
+                            <td colspan="10" class="text-center py-4 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                No hay registros de mantenimiento
+                                No hay mantenimientos registrados
                             </td>
                         </tr>
-                        {% endfor %}
                     </tbody>
                 </table>
+            </div>
+            <!-- Paginación -->
+            <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center py-3">
+              <div class="d-flex align-items-center gap-2">
+                <label class="small text-muted mb-0">Mostrar:</label>
+                <select class="form-select form-select-sm" id="itemsPorPagina" style="width:auto" onchange="cargarMantenimientos()">
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                </select>
+                <span class="small text-muted">por página</span>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+
+    <!-- Tab Alertas -->
+    <div class="tab-pane fade" id="alertas" role="tabpanel">
+        <!-- Filtros de Alertas -->
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-body py-3">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label small text-muted mb-1"><i class="bi bi-toggle-on me-1"></i>Estado</label>
+                <select class="form-select" id="filtroAlertaEstado" onchange="cargarAlertas()">
+                    <option value="pendiente">Pendientes</option>
+                    <option value="en_proceso">En Proceso</option>
+                    <option value="">Todas</option>
+                    <option value="resuelta">Resueltas</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small text-muted mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Prioridad</label>
+                <select class="form-select" id="filtroAlertaPrioridad" onchange="cargarAlertas()">
+                    <option value="">Todas</option>
+                    <option value="critica">Crítica</option>
+                    <option value="alta">Alta</option>
+                    <option value="media">Media</option>
+                    <option value="baja">Baja</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">&nbsp;</label>
+                <button class="btn btn-outline-secondary w-100" onclick="limpiarFiltrosAlertas()">
+                  <i class="bi bi-x-circle me-1"></i>Limpiar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de Alertas -->
+        <div class="card border-0 shadow-sm">
+          <div class="card-header border-0" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+            <h6 class="mb-0 text-white fw-bold"><i class="bi bi-bell me-2"></i>Alertas de Mantenimiento <span id="contadorAlertas" class="badge bg-light text-dark ms-2">0</span></h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th><i class="bi bi-pc-display me-1"></i>Equipo</th>
+                            <th><i class="bi bi-tag me-1"></i>Tipo Alerta</th>
+                            <th><i class="bi bi-card-text me-1"></i>Descripción</th>
+                            <th><i class="bi bi-calendar-x me-1"></i>Fecha Límite</th>
+                            <th>Prioridad</th>
+                            <th>Estado</th>
+                            <th><i class="bi bi-person me-1"></i>Asignado</th>
+                                    {% if puede_editar %}<th class="text-center">Acciones</th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyAlertas">
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        Cargando alertas...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Paginación de Alertas -->
+                    <div class="card-footer bg-light border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">
+                                Mostrando <span id="alertasRangoInicio">0</span>-<span id="alertasRangoFin">0</span> de <span id="alertasTotal">0</span> alertas
+                            </div>
+                            <nav>
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item" id="alertasPrevBtn">
+                                        <a class="page-link" href="#" onclick="cambiarPaginaAlertas('prev'); return false;">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item active">
+                                        <span class="page-link" id="alertasPaginaActual">1</span>
+                                    </li>
+                                    <li class="page-item disabled">
+                                        <span class="page-link">de</span>
+                                    </li>
+                                    <li class="page-item active">
+                                        <span class="page-link" id="alertasTotalPaginas">1</span>
+                                    </li>
+                                    <li class="page-item" id="alertasNextBtn">
+                                        <a class="page-link" href="#" onclick="cambiarPaginaAlertas('next'); return false;">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Iniciar Mantenimiento (Paso 1) -->
+<div class="modal fade" id="modalIniciarMantenimiento" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header border-0 py-3" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <h5 class="modal-title text-white fw-bold">
+                    <i class="bi bi-play-circle me-2"></i>Iniciar Mantenimiento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info mb-3" style="border-radius: 10px;">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Paso 1:</strong> Inicie el mantenimiento para cambiar el estado del equipo. 
+                    Luego complete el trabajo y registre los resultados.
+                </div>
+                
+                <form id="formIniciarMantenimiento" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted mb-1">
+                            <i class="bi bi-pc-display me-1"></i>Equipo <span class="text-danger">*</span>
+                        </label>
+                        <div class="position-relative">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="buscarIniciarEquipo" 
+                                       placeholder="Buscar equipo..." 
+                                       onfocus="mostrarOpcionesIniciarEquipo()" oninput="filtrarIniciarEquipos()" autocomplete="off">
+                                <button class="btn btn-outline-secondary" type="button" onclick="limpiarIniciarEquipo()">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="toggleOpcionesIniciarEquipo()">
+                                    <i class="bi bi-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div id="opcionesIniciarEquipo" class="border rounded bg-white position-absolute w-100 d-none" 
+                                 style="max-height: 200px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                <div class="list-group list-group-flush" id="listaIniciarEquipos">
+                                </div>
+                            </div>
+                            <input type="hidden" id="iniciarEquipo" value="">
+                        </div>
+                        <div class="invalid-feedback d-block" id="errorIniciarEquipo"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted mb-1">
+                            <i class="bi bi-tag me-1"></i>Tipo de Mantenimiento <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="iniciarTipo" required>
+                            <option value="">Seleccione un tipo</option>
+                        </select>
+                        <div class="invalid-feedback" id="errorIniciarTipo"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted mb-1">
+                            <i class="bi bi-person-badge me-1"></i>Técnico Responsable <span class="text-danger">*</span>
+                        </label>
+                        <div class="position-relative">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="buscarIniciarTecnico" 
+                                       placeholder="Buscar técnico..." 
+                                       onfocus="mostrarOpcionesIniciarTecnico()" oninput="filtrarIniciarTecnicos()" autocomplete="off">
+                                <button class="btn btn-outline-secondary" type="button" onclick="limpiarIniciarTecnico()">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="toggleOpcionesIniciarTecnico()">
+                                    <i class="bi bi-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div id="opcionesIniciarTecnico" class="border rounded bg-white position-absolute w-100 d-none" 
+                                 style="max-height: 200px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                <div class="list-group list-group-flush" id="listaIniciarTecnicos">
+                                </div>
+                            </div>
+                            <input type="hidden" id="iniciarTecnico" value="">
+                        </div>
+                        <div class="invalid-feedback d-block" id="errorIniciarTecnico"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted mb-1">
+                            <i class="bi bi-card-text me-1"></i>Descripción inicial (opcional)
+                        </label>
+                        <textarea class="form-control" id="iniciarDescripcion" rows="2" 
+                                  placeholder="Describa brevemente el trabajo a realizar"></textarea>
+                    </div>
+                    
+                    <!-- Info del estado del equipo -->
+                    <div id="infoEstadoEquipoIniciar" class="alert d-none mb-3" style="border-radius: 10px;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-info-circle fs-5"></i>
+                            <div>
+                                <strong>Estado actual:</strong> <span id="estadoActualEquipoIniciar">-</span>
+                                <p class="mb-0 small" id="mensajeEstadoEquipoIniciar"></p>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 py-3" style="background: #f8fafc;">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn px-4" onclick="iniciarMantenimiento()" 
+                        style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                    <i class="bi bi-play-fill me-1"></i>Iniciar Mantenimiento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Completar Mantenimiento (Paso 2) -->
+<div class="modal fade" id="modalCompletarMantenimiento" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header border-0 py-3" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <h5 class="modal-title text-white fw-bold">
+                    <i class="bi bi-check-circle me-2"></i>Completar Mantenimiento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-success mb-3" style="border-radius: 10px;">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Paso 2:</strong> Registre los resultados del mantenimiento completado.
+                </div>
+                
+                <!-- Info del mantenimiento en proceso -->
+                <div id="infoMantenimientoEnProceso" class="card mb-3 border-0" style="background: #fef3c7; border-radius: 10px;">
+                    <div class="card-body py-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 45px; height: 45px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                                <i class="bi bi-tools text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold" id="completarEquipoNombre">Equipo</h6>
+                                <small class="text-muted">
+                                    <span id="completarTipoNombre">Tipo</span> • 
+                                    Iniciado: <span id="completarFechaInicio">-</span> • 
+                                    Tiempo: <span id="completarTiempoTranscurrido">-</span> hrs
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <form id="formCompletarMantenimiento" novalidate>
+                    <input type="hidden" id="completarId">
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-card-text me-1"></i>Descripción del Trabajo Realizado <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="completarDescripcion" rows="3" required
+                                      placeholder="Describa detalladamente el trabajo realizado (mínimo 10 caracteres)"></textarea>
+                            <div class="invalid-feedback" id="errorCompletarDescripcion"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-box-seam me-1"></i>Partes Reemplazadas
+                            </label>
+                            <input type="text" class="form-control" id="completarPartes" placeholder="Ej: Filtro, tornillos...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-currency-dollar me-1"></i>Costo ($)
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text" style="background: #f8fafc;">$</span>
+                                <input type="number" class="form-control" id="completarCosto" min="0" step="0.01" value="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-check-circle me-1"></i>Estado Post-Mantenimiento <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="completarEstadoPost" required disabled>
+                                <option value="excelente">🟢 Excelente</option>
+                                <option value="bueno" selected>🔵 Bueno</option>
+                                <option value="regular">🟡 Regular</option>
+                                <option value="malo">🔴 Malo</option>
+                            </select>
+                            <small class="text-muted">El estado se gestiona automáticamente según el mantenimiento</small>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-chat-left-text me-1"></i>Observaciones
+                            </label>
+                            <input type="text" class="form-control" id="completarObservaciones" placeholder="Observaciones adicionales">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 py-3" style="background: #f8fafc;">
+                <button type="button" class="btn btn-outline-danger px-3" onclick="cancelarMantenimientoEnProceso()">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar Mantenimiento
+                </button>
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                    <i class="bi bi-arrow-left me-1"></i>Cerrar
+                </button>
+                <button type="button" class="btn px-4" onclick="completarMantenimiento()" 
+                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                    <i class="bi bi-check-lg me-1"></i>Completar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal Gestión de Tipos -->
+<div class="modal fade" id="modalTipos" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header border-0 py-3" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+                <h5 class="modal-title text-white fw-bold"><i class="bi bi-tags me-2"></i>Tipos de Mantenimiento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Botón nuevo tipo -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-muted small"><i class="bi bi-info-circle me-1"></i>Gestione las categorías de mantenimiento</span>
+                    <button class="btn btn-sm px-3" onclick="mostrarFormTipo()" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); color: white;">
+                        <i class="bi bi-plus-circle me-1"></i>Nuevo Tipo
+                    </button>
+                </div>
+                
+                <!-- Formulario nuevo/editar tipo -->
+                <div id="formNuevoTipo" class="card border-0 mb-3 d-none" style="background: #f0fdf4; border-radius: 12px;">
+                    <div class="card-body p-3">
+                        <input type="hidden" id="tipoId">
+                        <h6 class="fw-bold mb-3" style="color: #2d6a4f;" id="formTipoTitulo">
+                            <i class="bi bi-plus-circle me-2"></i>Nuevo Tipo
+                        </h6>
+                        <!-- Alerta de error -->
+                        <div id="alertaErrorTipo" class="alert alert-danger d-none py-2 mb-3" style="border-radius: 8px; font-size: 0.875rem;">
+                            <i class="bi bi-exclamation-triangle me-1"></i><span id="mensajeErrorTipo"></span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-tag me-1"></i>Nombre <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="tipoNombre" placeholder="Ej: Mantenimiento Preventivo" maxlength="100">
+                            <div class="invalid-feedback" id="errorTipoNombre"></div>
+                            <div class="valid-feedback"><i class="bi bi-check-circle"></i> Correcto</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-card-text me-1"></i>Descripción
+                            </label>
+                            <textarea class="form-control" id="tipoDescripcion" rows="2" placeholder="Descripción del tipo de mantenimiento" style="resize: none;" maxlength="500"></textarea>
+                            <div class="d-flex justify-content-end mt-1">
+                                <small class="text-muted" id="contadorTipoDescripcion">0/500</small>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small text-muted mb-1">
+                                    <i class="bi bi-calendar-range me-1"></i>Frecuencia (días)
+                                </label>
+                                <input type="number" class="form-control" id="tipoFrecuencia" value="30" min="0" max="365">
+                                <div class="invalid-feedback" id="errorTipoFrecuencia"></div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small text-muted mb-1">
+                                    <i class="bi bi-shield-check me-1"></i>Tipo
+                                </label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="tipoPreventivo" checked style="width: 3em; height: 1.5em;">
+                                    <label class="form-check-label" for="tipoPreventivo" id="labelTipoPreventivo">Preventivo</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-secondary btn-sm px-3" onclick="ocultarFormTipo()">
+                                <i class="bi bi-x-lg me-1"></i>Cancelar
+                            </button>
+                            <button class="btn btn-sm px-3" onclick="guardarTipo()" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); color: white;">
+                                <i class="bi bi-check-lg me-1"></i><span id="btnGuardarTipoTexto">Guardar</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lista de tipos -->
+                <div class="list-group" id="listaTipos" style="max-height: 350px; overflow-y: auto;">
+                    <div class="text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm text-success me-2"></div>
+                        Cargando tipos...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Detalle -->
+<div class="modal fade" id="modalDetalle" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header border-0 py-3" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+                <h5 class="modal-title text-white fw-bold"><i class="bi bi-clipboard-data me-2"></i>Detalle de Mantenimiento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" id="detalleContenido">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Mantenimiento -->
+<div class="modal fade" id="modalEditarMantenimiento" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header border-0 py-3" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+                <h5 class="modal-title text-white fw-bold">
+                    <i class="bi bi-pencil me-2"></i>Editar Mantenimiento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formEditarMantenimiento" novalidate>
+                    <input type="hidden" id="editMantId">
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-pc-display me-1"></i>Equipo
+                            </label>
+                            <input type="text" class="form-control" id="editEquipoNombre" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-tag me-1"></i>Tipo de Mantenimiento
+                            </label>
+                            <input type="text" class="form-control" id="editTipoNombre" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-calendar me-1"></i>Fecha Inicio
+                            </label>
+                            <input type="datetime-local" class="form-control" id="editFechaInicio" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-calendar-check me-1"></i>Fecha Fin
+                            </label>
+                            <input type="datetime-local" class="form-control" id="editFechaFin" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-person-badge me-1"></i>Técnico Responsable
+                            </label>
+                            <input type="text" class="form-control" id="editTecnicoNombre" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-check-circle me-1"></i>Estado Post-Mantenimiento
+                            </label>
+                            <select class="form-select" id="editEstadoPost" disabled>
+                                <option value="excelente">🟢 Excelente</option>
+                                <option value="bueno">🔵 Bueno</option>
+                                <option value="regular">🟡 Regular</option>
+                                <option value="malo">🔴 Malo</option>
+                            </select>
+                            <small class="text-muted">El estado no se puede modificar</small>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-card-text me-1"></i>Descripción del Trabajo <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="editDescripcion" rows="3" required></textarea>
+                            <div class="invalid-feedback" id="errorEditDescripcion"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-box-seam me-1"></i>Partes Reemplazadas
+                            </label>
+                            <input type="text" class="form-control" id="editPartes">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-currency-dollar me-1"></i>Costo ($)
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="editCosto" min="0" step="0.01">
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small text-muted mb-1">
+                                <i class="bi bi-chat-left-text me-1"></i>Observaciones
+                            </label>
+                            <input type="text" class="form-control" id="editObservaciones">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 py-3" style="background: #f8fafc;">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn px-4" onclick="actualizarMantenimiento()" 
+                        style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); color: white;">
+                    <i class="bi bi-check-lg me-1"></i>Actualizar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Resolver Alerta -->
+<div class="modal fade" id="modalResolverAlerta" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-check-circle me-2"></i>Resolver Alerta</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="alertaIdResolver">
+                <div class="mb-3">
+                    <label class="form-label">Observaciones de resolución</label>
+                    <textarea class="form-control" id="alertaObservaciones" rows="3" placeholder="Describa cómo se resolvió la alerta"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="confirmarResolverAlerta()">
+                    <i class="bi bi-check-lg me-1"></i>Resolver
+                </button>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+// Constantes de validación
+const REGLAS_MANTENIMIENTO = {
+    descripcion: { min: 10, max: 1000 },
+    costo: { min: 0 },
+    tiempo: { min: 0 }
+};
+
+let debounceTimers = {};
+let equiposCache = [];
+let tiposCache = [];
+let tecnicosCache = [];
+
+// Inicialización
+document.addEventListener('DOMContentLoaded', function() {
+    cargarEstadisticas();
+    cargarMantenimientos();
+    cargarTipos();
+    cargarEquipos();
+    cargarTecnicos();
+    cargarAlertas();
+    
+    // Validación en tiempo real
+    document.getElementById('mantDescripcion').addEventListener('input', () => validarCampo('descripcion'));
+    document.getElementById('mantCosto').addEventListener('input', () => validarCampo('costo'));
+});
+
+// Cargar estadísticas
+async function cargarEstadisticas() {
+    try {
+        const res = await fetch('/api/mantenimiento/estadisticas');
+        const data = await res.json();
+        if (data.success) {
+            const stats = data.estadisticas;
+            document.getElementById('statTotal').textContent = stats.total_mantenimientos || 0;
+            document.getElementById('statMes').textContent = stats.mantenimientos_mes || 0;
+            document.getElementById('statAlertas').textContent = stats.alertas_pendientes || 0;
+            document.getElementById('statCriticas').textContent = stats.alertas_criticas || 0;
+            document.getElementById('badgeAlertas').textContent = stats.alertas_pendientes || 0;
+        }
+    } catch (e) {
+        console.error('Error cargando estadísticas:', e);
+    }
+}
+
+// Cargar mantenimientos
+async function cargarMantenimientos() {
+    const tbody = document.getElementById('tbodyMantenimientos');
+    tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>';
+    
+    try {
+        const tipo = document.getElementById('filtroTipo').value;
+        const estado = document.getElementById('filtroEstado').value;
+        const limit = document.getElementById('itemsPorPagina')?.value || 10;
+        let url = `/api/mantenimiento?limit=${limit}`;
+        if (tipo) url += `&tipo_id=${tipo}`;
+        if (estado) url += `&estado=${estado}`;
+        
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        // Actualizar contador
+        document.getElementById('contadorMantenimientos').textContent = data.mantenimientos?.length || 0;
+        
+        if (data.success && data.mantenimientos.length > 0) {
+            tbody.innerHTML = data.mantenimientos.map(m => `
+                <tr data-busqueda="${(m.equipo_nombre || '').toLowerCase()} ${(m.codigo_interno || '').toLowerCase()}">
+                    <td>
+                        <span class="fw-semibold" style="color: #2d6a4f;">${m.equipo_nombre || 'N/A'}</span>
+                        <br><small class="text-muted">${m.codigo_interno || ''}</small>
+                    </td>
+                    <td>
+                        <span class="badge rounded-pill px-3" style="background: ${m.es_preventivo ? 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'};">
+                            ${m.tipo_nombre || 'N/A'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge rounded-pill px-2" style="background: ${m.es_preventivo ? 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'};">
+                            <i class="bi bi-${m.es_preventivo ? 'shield-check' : 'wrench'} me-1"></i>${m.es_preventivo ? 'Preventivo' : 'Correctivo'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge rounded-pill px-2" style="background: ${getGradientEstadoMantenimiento(m.estado)};">
+                            <i class="bi bi-${getIconEstadoMantenimiento(m.estado)} me-1"></i>${getTextoEstadoMantenimiento(m.estado)}
+                        </span>
+                    </td>
+                    <td class="small">${m.fecha_inicio || 'N/A'}</td>
+                    <td class="small">${m.proxima_fecha_mantenimiento || '-'}</td>
+                    <td class="small text-muted">${m.tecnico_nombre || 'Sin asignar'}</td>
+                    <td class="small">$${parseFloat(m.costo_mantenimiento || 0).toLocaleString()}</td>
+                    <td>
+                        ${m.estado_post_mantenimiento ? `
+                            <span class="badge rounded-pill px-3" style="background: ${getGradientEstado(m.estado_post_mantenimiento)};">
+                                <i class="bi bi-${getIconEstado(m.estado_post_mantenimiento)} me-1"></i>${m.estado_post_mantenimiento}
+                            </span>
+                        ` : '<span class="text-muted small">-</span>'}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm border rounded" role="group">
+                            ${m.estado === 'en_proceso' ? `
+                                <button class="btn btn-outline-success border-0" onclick="abrirCompletarMantenimiento(${m.id})" title="Completar">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                            ` : `
+                                <button class="btn btn-outline-info border-0" onclick="verDetalle(${m.id})" title="Ver">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            `}
+                            {% if puede_editar %}
+                            ${m.estado === 'completado' ? `
+                                <button class="btn btn-outline-primary border-0 border-start" onclick="editarMantenimiento(${m.id})" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            ` : ''}
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = `
+                <tr id="filaVaciaMantenimientos">
+                    <td colspan="10" class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                        No hay registros de mantenimiento
+                    </td>
+                </tr>
+            `;
+        }
+    } catch (e) {
+        console.error('Error cargando mantenimientos:', e);
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle fs-1 d-block mb-2"></i>Error al cargar datos</td></tr>';
+    }
+}
+
+// Funciones auxiliares para estado de mantenimiento
+function getGradientEstadoMantenimiento(estado) {
+    const gradientes = {
+        'en_proceso': 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        'completado': 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+        'cancelado': 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
+    };
+    return gradientes[estado] || 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+}
+
+function getIconEstadoMantenimiento(estado) {
+    const iconos = {
+        'en_proceso': 'hourglass-split',
+        'completado': 'check-circle',
+        'cancelado': 'x-circle'
+    };
+    return iconos[estado] || 'circle';
+}
+
+function getTextoEstadoMantenimiento(estado) {
+    const textos = {
+        'en_proceso': 'En Proceso',
+        'completado': 'Completado',
+        'cancelado': 'Cancelado'
+    };
+    return textos[estado] || estado || 'N/A';
+}
+
+// Filtrar mantenimientos por búsqueda local
+function filtrarMantenimientos() {
+    const busqueda = document.getElementById('buscarMantenimiento').value.toLowerCase();
+    const filas = document.querySelectorAll('#tbodyMantenimientos tr[data-busqueda]');
+    let visibles = 0;
+    
+    filas.forEach(fila => {
+        const texto = fila.dataset.busqueda || '';
+        const mostrar = texto.includes(busqueda);
+        fila.style.display = mostrar ? '' : 'none';
+        if (mostrar) visibles++;
+    });
+    
+    document.getElementById('contadorMantenimientos').textContent = visibles;
+}
+
+// Limpiar filtros de mantenimiento
+function limpiarFiltrosMantenimiento() {
+    document.getElementById('buscarMantenimiento').value = '';
+    document.getElementById('filtroTipo').value = '';
+    document.getElementById('filtroEstado').value = '';
+    cargarMantenimientos();
+}
+
+// Limpiar filtros de alertas
+function limpiarFiltrosAlertas() {
+    document.getElementById('filtroAlertaEstado').value = 'pendiente';
+    document.getElementById('filtroAlertaPrioridad').value = '';
+    cargarAlertas();
+}
+
+// Obtener gradiente para estado
+function getGradientEstado(estado) {
+    const gradientes = {
+        'excelente': 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+        'bueno': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+        'regular': 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        'malo': 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+    };
+    return gradientes[estado] || 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+}
+
+// Obtener icono para estado
+function getIconEstado(estado) {
+    const iconos = {
+        'excelente': 'check-circle',
+        'bueno': 'hand-thumbs-up',
+        'regular': 'dash-circle',
+        'malo': 'x-circle'
+    };
+    return iconos[estado] || 'question-circle';
+}
+
+function getColorEstado(estado) {
+    const colores = {
+        'excelente': 'success',
+        'bueno': 'primary',
+        'regular': 'warning',
+        'malo': 'danger'
+    };
+    return colores[estado] || 'secondary';
+}
+
+// Cargar tipos de mantenimiento
+async function cargarTipos() {
+    try {
+        const res = await fetch('/api/mantenimiento/tipos');
+        const data = await res.json();
+        if (data.success) {
+            tiposCache = data.tipos;
+            
+            // Llenar select de filtro
+            const filtro = document.getElementById('filtroTipo');
+            filtro.innerHTML = '<option value="">Todos los tipos</option>' +
+                data.tipos.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+            
+            // Llenar selects de tipo en todos los formularios
+            const tipoOptionsHtml = '<option value="">Seleccione un tipo</option>' +
+                data.tipos.map(t => `<option value="${t.id}" data-es-preventivo="${t.es_preventivo}">${t.nombre} (${t.frecuencia_dias} días)</option>`).join('');
+            
+            ['mantTipo', 'iniciarTipo'].forEach(id => {
+                const select = document.getElementById(id);
+                if (select) select.innerHTML = tipoOptionsHtml;
+            });
+            
+            // Llenar lista en modal de tipos
+            actualizarListaTipos();
+        }
+    } catch (e) {
+        console.error('Error cargando tipos:', e);
+    }
+}
+
+function actualizarListaTipos() {
+    const lista = document.getElementById('listaTipos');
+    if (tiposCache.length === 0) {
+        lista.innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-tags fs-1 d-block mb-2" style="color: #d1d5db;"></i>
+                No hay tipos configurados
+            </div>
+        `;
+        return;
+    }
+    lista.innerHTML = tiposCache.map(t => `
+        <div class="list-group-item border-0 mb-2 p-3" style="background: #f8fafc; border-radius: 10px;">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="fw-semibold" style="color: #2d6a4f;">${t.nombre}</span>
+                        <span class="badge rounded-pill px-2" style="background: ${t.es_preventivo ? 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'}; font-size: 0.7rem;">
+                            ${t.es_preventivo ? 'Preventivo' : 'Correctivo'}
+                        </span>
+                    </div>
+                    <p class="text-muted small mb-1">${t.descripcion || 'Sin descripción'}</p>
+                    <span class="badge bg-light text-dark">
+                        <i class="bi bi-calendar-range me-1"></i>${t.frecuencia_dias} días
+                    </span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="editarTipo(${t.id})" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Cargar equipos
+async function cargarEquipos() {
+    try {
+        const res = await fetch('/api/equipos');
+        const data = await res.json();
+        if (data.success || data.equipos) {
+            equiposCache = data.equipos || data;
+            
+            // Solo equipos disponibles para nuevos mantenimientos
+            const equiposParaRegistrar = equiposCache.filter(e => 
+                e.estado === 'disponible'
+            );
+            
+            // Renderizar lista de equipos para el dropdown con búsqueda (modal Registrar)
+            renderizarListaMantEquipos(equiposParaRegistrar);
+            
+            // Renderizar lista de equipos para el dropdown con búsqueda (modal Iniciar)
+            renderizarListaIniciarEquipos(equiposParaRegistrar);
+        }
+    } catch (e) {
+        console.error('Error cargando equipos:', e);
+    }
+}
+
+// ========== Funciones para dropdown de equipo (Modal Registrar/Editar) ==========
+function renderizarListaMantEquipos(equipos) {
+    const lista = document.getElementById('listaMantEquipos');
+    if (!lista) return;
+    
+    if (!equipos || equipos.length === 0) {
+        lista.innerHTML = '<div class="list-group-item text-muted text-center py-3"><i class="bi bi-inbox me-2"></i>No hay equipos disponibles</div>';
+        return;
+    }
+    
+    lista.innerHTML = equipos.map(e => `
+        <a href="#" class="list-group-item list-group-item-action py-2 opcion-mant-equipo" 
+           data-id="${e.id}" data-estado="${e.estado}" data-estado-fisico="${e.estado_fisico || 'bueno'}"
+           onclick="seleccionarMantEquipo('${e.id}', '${getEstadoEquipoIcon(e.estado)} ${e.nombre} (${e.codigo_interno})', '${e.estado}', '${e.estado_fisico || 'bueno'}'); return false;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="me-1">${getEstadoEquipoIcon(e.estado)}</span>
+                    <span class="fw-semibold">${e.nombre}</span>
+                    <small class="text-muted ms-2">${e.codigo_interno}</small>
+                </div>
+                <small class="badge bg-${e.estado === 'disponible' ? 'success' : e.estado === 'mantenimiento' ? 'warning' : 'secondary'}">${e.estado}</small>
+            </div>
+        </a>
+    `).join('');
+}
+
+function mostrarOpcionesMantEquipo() {
+    document.getElementById('opcionesMantEquipo')?.classList.remove('d-none');
+}
+
+function ocultarOpcionesMantEquipo() {
+    setTimeout(() => {
+        document.getElementById('opcionesMantEquipo')?.classList.add('d-none');
+    }, 200);
+}
+
+function toggleOpcionesMantEquipo() {
+    document.getElementById('opcionesMantEquipo')?.classList.toggle('d-none');
+}
+
+function filtrarMantEquipos() {
+    const busqueda = document.getElementById('buscarMantEquipo').value.toLowerCase();
+    // Solo equipos disponibles (no en mantenimiento, reparacion, prestado, dado_baja)
+    const equiposParaRegistrar = equiposCache.filter(e => e.estado === 'disponible');
+    const equiposFiltrados = equiposParaRegistrar.filter(e => 
+        e.nombre.toLowerCase().includes(busqueda) || 
+        e.codigo_interno.toLowerCase().includes(busqueda)
+    );
+    renderizarListaMantEquipos(equiposFiltrados);
+    mostrarOpcionesMantEquipo();
+}
+
+function seleccionarMantEquipo(id, nombre, estado, estadoFisico) {
+    document.getElementById('buscarMantEquipo').value = nombre;
+    document.getElementById('mantEquipo').value = id;
+    document.getElementById('opcionesMantEquipo').classList.add('d-none');
+    // Limpiar error si existe
+    const errorEl = document.getElementById('errorMantEquipo');
+    if (errorEl) errorEl.textContent = '';
+    document.getElementById('buscarMantEquipo').classList.remove('is-invalid');
+    // Mostrar estado del equipo
+    mostrarEstadoEquipoSeleccionado(estado, estadoFisico);
+}
+
+function limpiarMantEquipo() {
+    document.getElementById('buscarMantEquipo').value = '';
+    document.getElementById('mantEquipo').value = '';
+    // Solo equipos disponibles
+    const equiposParaRegistrar = equiposCache.filter(e => e.estado === 'disponible');
+    renderizarListaMantEquipos(equiposParaRegistrar);
+    mostrarOpcionesMantEquipo();
+    // Ocultar info de estado
+    document.getElementById('infoEstadoEquipo')?.classList.add('d-none');
+}
+
+function mostrarEstadoEquipoSeleccionado(estado, estadoFisico) {
+    const infoDiv = document.getElementById('infoEstadoEquipo');
+    const estadoSpan = document.getElementById('estadoActualEquipo');
+    const mensajeP = document.getElementById('mensajeEstadoEquipo');
+    
+    if (!infoDiv) return;
+    
+    infoDiv.classList.remove('d-none', 'alert-info', 'alert-warning', 'alert-success', 'alert-danger');
+    
+    const estadoTexto = {
+        'disponible': 'Disponible',
+        'mantenimiento': 'En Mantenimiento',
+        'reparacion': 'En Reparación'
+    };
+    
+    estadoSpan.textContent = `${getEstadoEquipoIcon(estado)} ${estadoTexto[estado] || estado}`;
+    
+    if (estado === 'disponible') {
+        infoDiv.classList.add('alert-info');
+        mensajeP.textContent = 'Este formulario registra un mantenimiento completo en un solo paso. El estado final del equipo dependerá del "Estado Post-Mantenimiento" seleccionado.';
+    } else {
+        infoDiv.classList.add('alert-info');
+        mensajeP.textContent = '';
+    }
+}
+
+function getEstadoEquipoIcon(estado) {
+    const iconos = {
+        'disponible': '🟢',
+        'prestado': '🔵',
+        'mantenimiento': '🟡',
+        'reparacion': '🟠',
+        'dado_baja': '🔴'
+    };
+    return iconos[estado] || '⚪';
+}
+
+function mostrarEstadoEquipo() {
+    const equipoId = document.getElementById('mantEquipo').value;
+    const infoDiv = document.getElementById('infoEstadoEquipo');
+    const estadoSpan = document.getElementById('estadoActualEquipo');
+    const mensajeP = document.getElementById('mensajeEstadoEquipo');
+    
+    if (!equipoId) {
+        infoDiv?.classList.add('d-none');
+        return;
+    }
+    
+    // Obtener estado del equipo desde el cache
+    const equipo = equiposCache.find(e => e.id == equipoId);
+    const estado = equipo?.estado || 'disponible';
+    const estadoFisico = equipo?.estado_fisico || 'bueno';
+    
+    infoDiv.classList.remove('d-none', 'alert-info', 'alert-warning', 'alert-success', 'alert-danger');
+    
+    const estadoTexto = {
+        'disponible': 'Disponible',
+        'prestado': 'Prestado',
+        'mantenimiento': 'En Mantenimiento',
+        'reparacion': 'En Reparación',
+        'dado_baja': 'Dado de Baja'
+    };
+    
+    estadoSpan.textContent = `${getEstadoEquipoIcon(estado)} ${estadoTexto[estado] || estado}`;
+    
+    if (estado === 'disponible') {
+        infoDiv.classList.add('alert-info');
+        mensajeP.textContent = 'Este formulario registra un mantenimiento completo en un solo paso. El estado final del equipo dependerá del "Estado Post-Mantenimiento" seleccionado.';
+    } else if (estado === 'mantenimiento' || estado === 'reparacion') {
+        infoDiv.classList.add('alert-warning');
+        mensajeP.textContent = 'El equipo ya está en proceso de mantenimiento. Al registrar, se actualizará su estado según el resultado.';
+    } else if (estado === 'prestado') {
+        infoDiv.classList.add('alert-danger');
+        mensajeP.textContent = '⚠️ El equipo está prestado. Debe devolverse antes de iniciar mantenimiento.';
+    } else if (estado === 'dado_baja') {
+        infoDiv.classList.add('alert-danger');
+        mensajeP.textContent = '⚠️ El equipo está dado de baja. No se puede realizar mantenimiento.';
+    } else {
+        infoDiv.classList.add('alert-info');
+        mensajeP.textContent = '';
+    }
+}
+
+// Cargar técnicos responsables de mantenimiento (filtrados por permiso de rol)
+async function cargarTecnicos() {
+    try {
+        // Usar el nuevo endpoint que filtra por permiso de mantenimiento
+        const res = await fetch('/api/mantenimiento/tecnicos');
+        const data = await res.json();
+        if (data.success && data.tecnicos) {
+            tecnicosCache = data.tecnicos;
+            
+            // Renderizar lista de técnicos para el dropdown con búsqueda
+            renderizarListaMantTecnicos(tecnicosCache);
+            
+            // Renderizar lista de técnicos para el dropdown con búsqueda (modal Iniciar)
+            renderizarListaIniciarTecnicos(tecnicosCache);
+        }
+    } catch (e) {
+        console.error('Error cargando técnicos:', e);
+    }
+}
+
+// ========== Funciones para dropdown de técnico (Modal Registrar/Editar) ==========
+function renderizarListaMantTecnicos(tecnicos) {
+    const lista = document.getElementById('listaMantTecnicos');
+    if (!lista) return;
+    
+    if (!tecnicos || tecnicos.length === 0) {
+        lista.innerHTML = '<div class="list-group-item text-muted text-center py-3"><i class="bi bi-inbox me-2"></i>No hay técnicos disponibles</div>';
+        return;
+    }
+    
+    lista.innerHTML = tecnicos.map(t => `
+        <a href="#" class="list-group-item list-group-item-action py-2 opcion-mant-tecnico" 
+           data-id="${t.id}"
+           onclick="seleccionarMantTecnico('${t.id}', '${t.nombre} - ${t.rol_nombre}'); return false;">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">${t.nombre}</span>
+                <small class="badge bg-primary">${t.rol_nombre}</small>
+            </div>
+        </a>
+    `).join('');
+}
+
+function mostrarOpcionesMantTecnico() {
+    document.getElementById('opcionesMantTecnico')?.classList.remove('d-none');
+}
+
+function ocultarOpcionesMantTecnico() {
+    setTimeout(() => {
+        document.getElementById('opcionesMantTecnico')?.classList.add('d-none');
+    }, 200);
+}
+
+function toggleOpcionesMantTecnico() {
+    document.getElementById('opcionesMantTecnico')?.classList.toggle('d-none');
+}
+
+function filtrarMantTecnicos() {
+    const busqueda = document.getElementById('buscarMantTecnico').value.toLowerCase();
+    const tecnicosFiltrados = tecnicosCache.filter(t => 
+        t.nombre.toLowerCase().includes(busqueda) || 
+        t.rol_nombre.toLowerCase().includes(busqueda)
+    );
+    renderizarListaMantTecnicos(tecnicosFiltrados);
+    mostrarOpcionesMantTecnico();
+}
+
+function seleccionarMantTecnico(id, nombre) {
+    document.getElementById('buscarMantTecnico').value = nombre;
+    document.getElementById('mantTecnico').value = id;
+    document.getElementById('opcionesMantTecnico').classList.add('d-none');
+}
+
+function limpiarMantTecnico() {
+    document.getElementById('buscarMantTecnico').value = '';
+    document.getElementById('mantTecnico').value = '';
+    renderizarListaMantTecnicos(tecnicosCache);
+    mostrarOpcionesMantTecnico();
+}
+
+// ========== Funciones para dropdown de equipo (Modal Iniciar) ==========
+function renderizarListaIniciarEquipos(equipos) {
+    const lista = document.getElementById('listaIniciarEquipos');
+    if (!lista) return;
+    
+    if (!equipos || equipos.length === 0) {
+        lista.innerHTML = '<div class="list-group-item text-muted text-center py-3"><i class="bi bi-inbox me-2"></i>No hay equipos disponibles</div>';
+        return;
+    }
+    
+    lista.innerHTML = equipos.map(e => `
+        <a href="#" class="list-group-item list-group-item-action py-2 opcion-iniciar-equipo" 
+           data-id="${e.id}" data-estado="${e.estado}" data-estado-fisico="${e.estado_fisico || 'bueno'}"
+           onclick="seleccionarIniciarEquipo('${e.id}', '${getEstadoEquipoIcon(e.estado)} ${e.nombre} (${e.codigo_interno})', '${e.estado}'); return false;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="me-1">${getEstadoEquipoIcon(e.estado)}</span>
+                    <span class="fw-semibold">${e.nombre}</span>
+                    <small class="text-muted ms-2">${e.codigo_interno}</small>
+                </div>
+                <small class="badge bg-success">${e.estado}</small>
+            </div>
+        </a>
+    `).join('');
+}
+
+function mostrarOpcionesIniciarEquipo() {
+    document.getElementById('opcionesIniciarEquipo')?.classList.remove('d-none');
+}
+
+function toggleOpcionesIniciarEquipo() {
+    document.getElementById('opcionesIniciarEquipo')?.classList.toggle('d-none');
+}
+
+function filtrarIniciarEquipos() {
+    const busqueda = document.getElementById('buscarIniciarEquipo').value.toLowerCase();
+    const equiposParaIniciar = equiposCache.filter(e => e.estado === 'disponible');
+    const equiposFiltrados = equiposParaIniciar.filter(e => 
+        e.nombre.toLowerCase().includes(busqueda) || 
+        e.codigo_interno.toLowerCase().includes(busqueda)
+    );
+    renderizarListaIniciarEquipos(equiposFiltrados);
+    mostrarOpcionesIniciarEquipo();
+}
+
+function seleccionarIniciarEquipo(id, nombre, estado) {
+    document.getElementById('buscarIniciarEquipo').value = nombre;
+    document.getElementById('iniciarEquipo').value = id;
+    document.getElementById('opcionesIniciarEquipo').classList.add('d-none');
+    document.getElementById('errorIniciarEquipo').textContent = '';
+    // Mostrar info del equipo
+    mostrarEstadoEquipoIniciar();
+}
+
+function limpiarIniciarEquipo() {
+    document.getElementById('buscarIniciarEquipo').value = '';
+    document.getElementById('iniciarEquipo').value = '';
+    const equiposParaIniciar = equiposCache.filter(e => e.estado === 'disponible');
+    renderizarListaIniciarEquipos(equiposParaIniciar);
+    mostrarOpcionesIniciarEquipo();
+    document.getElementById('infoEstadoEquipoIniciar')?.classList.add('d-none');
+}
+
+// ========== Funciones para dropdown de técnico (Modal Iniciar) ==========
+function renderizarListaIniciarTecnicos(tecnicos) {
+    const lista = document.getElementById('listaIniciarTecnicos');
+    if (!lista) return;
+    
+    if (!tecnicos || tecnicos.length === 0) {
+        lista.innerHTML = '<div class="list-group-item text-muted text-center py-3"><i class="bi bi-inbox me-2"></i>No hay técnicos disponibles</div>';
+        return;
+    }
+    
+    lista.innerHTML = tecnicos.map(t => `
+        <a href="#" class="list-group-item list-group-item-action py-2 opcion-iniciar-tecnico" 
+           data-id="${t.id}"
+           onclick="seleccionarIniciarTecnico('${t.id}', '${t.nombre} - ${t.rol_nombre}'); return false;">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">${t.nombre}</span>
+                <small class="badge bg-primary">${t.rol_nombre}</small>
+            </div>
+        </a>
+    `).join('');
+}
+
+function mostrarOpcionesIniciarTecnico() {
+    document.getElementById('opcionesIniciarTecnico')?.classList.remove('d-none');
+}
+
+function toggleOpcionesIniciarTecnico() {
+    document.getElementById('opcionesIniciarTecnico')?.classList.toggle('d-none');
+}
+
+function filtrarIniciarTecnicos() {
+    const busqueda = document.getElementById('buscarIniciarTecnico').value.toLowerCase();
+    const tecnicosFiltrados = tecnicosCache.filter(t => 
+        t.nombre.toLowerCase().includes(busqueda) || 
+        t.rol_nombre.toLowerCase().includes(busqueda)
+    );
+    renderizarListaIniciarTecnicos(tecnicosFiltrados);
+    mostrarOpcionesIniciarTecnico();
+}
+
+function seleccionarIniciarTecnico(id, nombre) {
+    document.getElementById('buscarIniciarTecnico').value = nombre;
+    document.getElementById('iniciarTecnico').value = id;
+    document.getElementById('opcionesIniciarTecnico').classList.add('d-none');
+}
+
+function limpiarIniciarTecnico() {
+    document.getElementById('buscarIniciarTecnico').value = '';
+    document.getElementById('iniciarTecnico').value = '';
+    renderizarListaIniciarTecnicos(tecnicosCache);
+    mostrarOpcionesIniciarTecnico();
+}
+
+// Variables de paginación de alertas
+let alertasData = [];
+let alertasPaginaActual = 1;
+const alertasPorPagina = 10;
+
+// Cargar alertas
+async function cargarAlertas() {
+    const tbody = document.getElementById('tbodyAlertas');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><div class="spinner-border text-danger"></div></td></tr>';
+    
+    try {
+        const estado = document.getElementById('filtroAlertaEstado').value;
+        const prioridad = document.getElementById('filtroAlertaPrioridad').value;
+        let url = '/api/mantenimiento/alertas?';
+        if (estado) url += `estado=${estado}&`;
+        if (prioridad) url += `prioridad=${prioridad}`;
+        
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (data.success) {
+            alertasData = data.alertas || [];
+            alertasPaginaActual = 1;
+            renderizarAlertas();
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-muted">
+                        <i class="bi bi-bell-slash fs-1 d-block mb-2"></i>
+                        No hay alertas
+                    </td>
+                </tr>
+            `;
+            actualizarPaginacionAlertas();
+        }
+    } catch (e) {
+        console.error('Error cargando alertas:', e);
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle fs-1 d-block mb-2"></i>Error al cargar alertas</td></tr>';
+    }
+}
+
+function renderizarAlertas() {
+    const tbody = document.getElementById('tbodyAlertas');
+    const inicio = (alertasPaginaActual - 1) * alertasPorPagina;
+    const fin = inicio + alertasPorPagina;
+    const alertasPagina = alertasData.slice(inicio, fin);
+    
+    // Actualizar contador
+    document.getElementById('contadorAlertas').textContent = alertasData.length;
+    
+    if (alertasPagina.length > 0) {
+        tbody.innerHTML = alertasPagina.map(a => `
+            <tr>
+                <td>
+                    <span class="fw-semibold" style="color: #2d6a4f;">${a.equipo_nombre || 'N/A'}</span>
+                    <br><small class="text-muted">${a.codigo_interno || ''}</small>
+                </td>
+                <td>${formatTipoAlerta(a.tipo_alerta)}</td>
+                <td class="small text-muted">${a.descripcion_alerta || '-'}</td>
+                <td class="small">${a.fecha_limite || 'N/A'}</td>
+                <td>
+                    <span class="badge rounded-pill px-3" style="background: ${getGradientPrioridad(a.prioridad)};">
+                        <i class="bi bi-${getIconPrioridad(a.prioridad)} me-1"></i>${a.prioridad}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge rounded-pill px-3" style="background: ${getGradientEstadoAlerta(a.estado_alerta)};">
+                        ${a.estado_alerta}
+                    </span>
+                </td>
+                <td class="small text-muted">${a.asignado_nombre || 'Sin asignar'}</td>
+                <td>
+                    {% if puede_editar %}
+                    ${a.estado_alerta === 'pendiente' || a.estado_alerta === 'en_proceso' ? `
+                        <div class="btn-group btn-group-sm border rounded" role="group">
+                            <button class="btn btn-outline-success border-0" onclick="resolverAlerta(${a.id})" title="Resolver">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary border-0 border-start" onclick="cancelarAlerta(${a.id})" title="Cancelar">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    ` : '<span class="text-muted small">-</span>'}
+                    {% endif %}
+                </td>
+            </tr>
+        `).join('');
+    } else {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-4 text-muted">
+                    <i class="bi bi-bell-slash fs-1 d-block mb-2"></i>
+                    No hay alertas
+                </td>
+            </tr>
+        `;
+    }
+    
+    actualizarPaginacionAlertas();
+}
+
+function actualizarPaginacionAlertas() {
+    const totalPaginas = Math.ceil(alertasData.length / alertasPorPagina);
+    const inicio = (alertasPaginaActual - 1) * alertasPorPagina + 1;
+    const fin = Math.min(alertasPaginaActual * alertasPorPagina, alertasData.length);
+    
+    document.getElementById('alertasRangoInicio').textContent = alertasData.length > 0 ? inicio : 0;
+    document.getElementById('alertasRangoFin').textContent = fin;
+    document.getElementById('alertasTotal').textContent = alertasData.length;
+    document.getElementById('alertasPaginaActual').textContent = alertasPaginaActual;
+    document.getElementById('alertasTotalPaginas').textContent = totalPaginas || 1;
+    
+    // Habilitar/deshabilitar botones
+    const prevBtn = document.getElementById('alertasPrevBtn');
+    const nextBtn = document.getElementById('alertasNextBtn');
+    
+    if (alertasPaginaActual <= 1) {
+        prevBtn.classList.add('disabled');
+    } else {
+        prevBtn.classList.remove('disabled');
+    }
+    
+    if (alertasPaginaActual >= totalPaginas) {
+        nextBtn.classList.add('disabled');
+    } else {
+        nextBtn.classList.remove('disabled');
+    }
+}
+
+function cambiarPaginaAlertas(direccion) {
+    const totalPaginas = Math.ceil(alertasData.length / alertasPorPagina);
+    
+    if (direccion === 'prev' && alertasPaginaActual > 1) {
+        alertasPaginaActual--;
+        renderizarAlertas();
+    } else if (direccion === 'next' && alertasPaginaActual < totalPaginas) {
+        alertasPaginaActual++;
+        renderizarAlertas();
+    }
+}
+
+function formatTipoAlerta(tipo) {
+    const tipos = {
+        'mantenimiento_programado': '<span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);">Programado</span>',
+        'mantenimiento_vencido': '<span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">Vencido</span>',
+        'falla_predicha': '<span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">Falla Predicha</span>',
+        'revision_urgente': '<span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">Urgente</span>'
+    };
+    return tipos[tipo] || `<span class="badge bg-secondary">${tipo}</span>`;
+}
+
+function getGradientPrioridad(prioridad) {
+    const gradientes = {
+        'critica': 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+        'alta': 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        'media': 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+        'baja': 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
+    };
+    return gradientes[prioridad] || 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+}
+
+function getIconPrioridad(prioridad) {
+    const iconos = { 'critica': 'exclamation-octagon', 'alta': 'exclamation-triangle', 'media': 'info-circle', 'baja': 'dash-circle' };
+    return iconos[prioridad] || 'circle';
+}
+
+function getGradientEstadoAlerta(estado) {
+    const gradientes = {
+        'pendiente': 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        'en_proceso': 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+        'resuelta': 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+        'cancelada': 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
+    };
+    return gradientes[estado] || 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+}
+
+function getColorPrioridad(prioridad) {
+    const colores = { 'critica': 'danger', 'alta': 'warning', 'media': 'info', 'baja': 'secondary' };
+    return colores[prioridad] || 'secondary';
+}
+
+function getColorEstadoAlerta(estado) {
+    const colores = { 'pendiente': 'warning', 'en_proceso': 'info', 'resuelta': 'success', 'cancelada': 'secondary' };
+    return colores[estado] || 'secondary';
+}
+
+// Validación híbrida mejorada
+function validarCampo(campo) {
+    clearTimeout(debounceTimers[campo]);
+    debounceTimers[campo] = setTimeout(async () => {
+        const resultado = await validarCampoLocal(campo);
+        if (resultado.valido && campo === 'descripcion') {
+            // Validación backend para descripción
+            validarEnBackend(campo, resultado.valor);
+        }
+    }, 300);
+}
+
+function validarCampoLocal(campo) {
+    let valido = true;
+    let valor = '';
+    
+    if (campo === 'descripcion') {
+        valor = document.getElementById('mantDescripcion').value.trim();
+        const input = document.getElementById('mantDescripcion');
+        const error = document.getElementById('errorMantDescripcion');
+        
+        // Actualizar contador
+        document.getElementById('contadorDescripcion').textContent = `${valor.length}/1000 caracteres`;
+        
+        if (!valor) {
+            mostrarError(input, error, 'La descripción es requerida');
+            valido = false;
+        } else if (valor.length < REGLAS_MANTENIMIENTO.descripcion.min) {
+            mostrarError(input, error, `Mínimo ${REGLAS_MANTENIMIENTO.descripcion.min} caracteres (actual: ${valor.length})`);
+            valido = false;
+        } else if (valor.length > REGLAS_MANTENIMIENTO.descripcion.max) {
+            mostrarError(input, error, `Máximo ${REGLAS_MANTENIMIENTO.descripcion.max} caracteres`);
+            valido = false;
+        } else {
+            mostrarValido(input, error);
+        }
+    } else if (campo === 'costo') {
+        valor = parseFloat(document.getElementById('mantCosto').value) || 0;
+        const input = document.getElementById('mantCosto');
+        const error = document.getElementById('errorMantCosto');
+        if (valor < 0) {
+            mostrarError(input, error, 'El costo no puede ser negativo');
+            valido = false;
+        } else {
+            mostrarValido(input, error);
+        }
+    } else if (campo === 'equipo') {
+        valor = document.getElementById('mantEquipo').value;
+        const input = document.getElementById('buscarMantEquipo');
+        const error = document.getElementById('errorMantEquipo');
+        if (!valor) {
+            mostrarError(input, error, 'Seleccione un equipo');
+            valido = false;
+        } else {
+            mostrarValido(input, error);
+        }
+    } else if (campo === 'tipo') {
+        valor = document.getElementById('mantTipo').value;
+        const input = document.getElementById('mantTipo');
+        const error = document.getElementById('errorMantTipo');
+        if (!valor) {
+            mostrarError(input, error, 'Seleccione un tipo de mantenimiento');
+            valido = false;
+        } else {
+            mostrarValido(input, error);
+        }
+    } else if (campo === 'fechaInicio') {
+        valor = document.getElementById('mantFechaInicio').value;
+        const input = document.getElementById('mantFechaInicio');
+        const error = document.getElementById('errorMantFechaInicio');
+        if (!valor) {
+            mostrarError(input, error, 'La fecha de inicio es requerida');
+            valido = false;
+        } else {
+            mostrarValido(input, error);
+        }
+    } else if (campo === 'fechaFin') {
+        valor = document.getElementById('mantFechaFin').value;
+        const input = document.getElementById('mantFechaFin');
+        const error = document.getElementById('errorMantFechaFin');
+        const fechaInicio = document.getElementById('mantFechaInicio').value;
+        if (!valor) {
+            mostrarError(input, error, 'La fecha de fin es requerida');
+            valido = false;
+        } else if (fechaInicio && new Date(valor) < new Date(fechaInicio)) {
+            mostrarError(input, error, 'La fecha fin debe ser posterior a la fecha inicio');
+            valido = false;
+        } else {
+            mostrarValido(input, error);
+        }
+    }
+    
+    return { valido, valor };
+}
+
+async function validarEnBackend(campo, valor) {
+    try {
+        const res = await fetch('/api/mantenimiento/validar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ campo, valor })
+        });
+        const data = await res.json();
+        
+        const input = document.getElementById('mantDescripcion');
+        const error = document.getElementById('errorMantDescripcion');
+        
+        if (!data.valido) {
+            mostrarError(input, error, data.mensaje || 'Error de validación');
+        }
+    } catch (e) {
+        console.log('Validación backend no disponible');
+    }
+}
+
+function mostrarError(input, errorEl, mensaje) {
+    input.classList.remove('is-valid');
+    input.classList.add('is-invalid');
+    if (errorEl) {
+        errorEl.textContent = mensaje;
+        errorEl.style.display = 'block';
+    }
+}
+
+function mostrarValido(input, errorEl) {
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.style.display = 'none';
+    }
+}
+
+function limpiarValidaciones() {
+    document.querySelectorAll('#formMantenimiento .is-invalid, #formMantenimiento .is-valid').forEach(el => {
+        el.classList.remove('is-invalid', 'is-valid');
+    });
+    document.querySelectorAll('#formMantenimiento .invalid-feedback').forEach(el => {
+        el.textContent = '';
+        el.style.display = 'none';
+    });
+    // Limpiar también los campos de búsqueda
+    const buscarEquipo = document.getElementById('buscarMantEquipo');
+    const buscarTecnico = document.getElementById('buscarMantTecnico');
+    if (buscarEquipo) buscarEquipo.classList.remove('is-invalid', 'is-valid');
+    if (buscarTecnico) buscarTecnico.classList.remove('is-invalid', 'is-valid');
+    
+    document.getElementById('alertaErrorGeneral')?.classList.add('d-none');
+    const contador = document.getElementById('contadorDescripcion');
+    if (contador) contador.textContent = '0/1000 caracteres';
+}
+
+function mostrarErrorGeneral(mensaje) {
+    const alerta = document.getElementById('alertaErrorGeneral');
+    document.getElementById('mensajeErrorGeneral').textContent = mensaje;
+    alerta.classList.remove('d-none');
+}
+
+// Configurar modal para nuevo mantenimiento
+function configurarModalNuevo() {
+    document.getElementById('modalMantenimientoTitulo').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Registrar Mantenimiento';
+    document.getElementById('btnGuardarTexto').textContent = 'Guardar';
+    limpiarFormulario();
+}
+
+// Configurar modal para editar mantenimiento
+function configurarModalEditar() {
+    document.getElementById('modalMantenimientoTitulo').innerHTML = '<i class="bi bi-pencil me-2"></i>Editar Mantenimiento';
+    document.getElementById('btnGuardarTexto').textContent = 'Actualizar';
+}
+
+// Guardar mantenimiento
+async function guardarMantenimiento() {
+    const id = document.getElementById('mantId').value;
+    const equipoSelect = document.getElementById('mantEquipo');
+    const tipoSelect = document.getElementById('mantTipo');
+    
+    const fechaInicio = document.getElementById('mantFechaInicio').value;
+    const fechaFin = document.getElementById('mantFechaFin').value;
+    
+    const data = {
+        id_equipo: equipoSelect.value,
+        id_tipo_mantenimiento: tipoSelect.value,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        tecnico_responsable_id: document.getElementById('mantTecnico').value || null,
+        descripcion_trabajo: document.getElementById('mantDescripcion').value.trim(),
+        partes_reemplazadas: document.getElementById('mantPartes').value.trim(),
+        costo_mantenimiento: parseFloat(document.getElementById('mantCosto').value) || 0,
+        tiempo_inactividad_horas: parseFloat(document.getElementById('mantTiempo').value) || 0,
+        estado_post_mantenimiento: document.getElementById('mantEstadoPost').value,
+        observaciones: document.getElementById('mantObservaciones').value.trim()
+    };
+    
+    // Validación final
+    let hayErrores = false;
+    if (!data.id_equipo) {
+        mostrarError(document.getElementById('buscarMantEquipo'), document.getElementById('errorMantEquipo'), 'Seleccione un equipo');
+        hayErrores = true;
+    }
+    if (!data.id_tipo_mantenimiento) {
+        mostrarError(document.getElementById('mantTipo'), document.getElementById('errorMantTipo'), 'Seleccione un tipo');
+        hayErrores = true;
+    }
+    if (!data.fecha_inicio) {
+        mostrarError(document.getElementById('mantFechaInicio'), document.getElementById('errorMantFechaInicio'), 'Ingrese la fecha de inicio');
+        hayErrores = true;
+    }
+    if (!data.fecha_fin) {
+        mostrarError(document.getElementById('mantFechaFin'), document.getElementById('errorMantFechaFin'), 'Ingrese la fecha de fin');
+        hayErrores = true;
+    }
+    if (data.fecha_inicio && data.fecha_fin && new Date(data.fecha_fin) < new Date(data.fecha_inicio)) {
+        mostrarError(document.getElementById('mantFechaFin'), document.getElementById('errorMantFechaFin'), 'La fecha fin debe ser posterior');
+        hayErrores = true;
+    }
+    if (!data.tecnico_responsable_id) {
+        mostrarError(document.getElementById('buscarMantTecnico'), document.getElementById('errorMantTecnico'), 'Seleccione un técnico responsable');
+        hayErrores = true;
+    }
+    if (!data.descripcion_trabajo || data.descripcion_trabajo.length < 10) {
+        mostrarError(document.getElementById('mantDescripcion'), document.getElementById('errorMantDescripcion'), 'Mínimo 10 caracteres');
+        hayErrores = true;
+    }
+    
+    if (hayErrores) return;
+    
+    // Obtener estado del equipo desde el cache
+    const equipoSeleccionado = equiposCache.find(e => e.id == data.id_equipo);
+    const estadoEquipo = equipoSeleccionado?.estado;
+    
+    // Bloquear si el equipo está prestado o dado de baja
+    if (estadoEquipo === 'prestado') {
+        alert('⚠️ No se puede registrar mantenimiento. El equipo está prestado.\n\nDebe devolverse primero.');
+        return;
+    }
+    if (estadoEquipo === 'dado_baja') {
+        alert('⚠️ No se puede registrar mantenimiento. El equipo está dado de baja.');
+        return;
+    }
+    
+    try {
+        // Si es nuevo mantenimiento y el equipo está disponible, primero iniciar el mantenimiento
+        if (!id && estadoEquipo === 'disponible') {
+            const iniciarRes = await fetch(`/api/mantenimiento/iniciar/${data.id_equipo}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_tipo_mantenimiento: data.id_tipo_mantenimiento })
+            });
+            const iniciarResult = await iniciarRes.json();
+            if (!iniciarResult.success) {
+                alert('Error al iniciar mantenimiento: ' + (iniciarResult.error || 'Error desconocido'));
+                return;
+            }
+            console.log('✅ Equipo puesto en mantenimiento:', iniciarResult.estado_nuevo);
+        }
+        
+        // Registrar el mantenimiento completado
+        const url = id ? `/api/mantenimiento/${id}` : '/api/mantenimiento';
+        const method = id ? 'PUT' : 'POST';
+        
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await res.json();
+        
+        if (result.success) {
+            // Mostrar mensaje con info del equipo
+            let mensaje = result.message || 'Mantenimiento guardado correctamente';
+            if (result.equipo) {
+                mensaje += `\n\n📊 Estado del equipo:\n`;
+                mensaje += `• Anterior: ${result.equipo.estado_anterior}\n`;
+                mensaje += `• Nuevo: ${result.equipo.estado_nuevo}\n`;
+                mensaje += `• Estado físico: ${result.equipo.estado_fisico}`;
+            }
+            alert(mensaje);
+            bootstrap.Modal.getInstance(document.getElementById('modalNuevoMantenimiento')).hide();
+            cargarMantenimientos();
+            cargarEstadisticas();
+            cargarEquipos(); // Recargar equipos para actualizar estados
+            limpiarFormulario();
+        } else {
+            if (result.errores) {
+                Object.entries(result.errores).forEach(([campo, msg]) => {
+                    const input = document.getElementById(`mant${campo.charAt(0).toUpperCase() + campo.slice(1)}`);
+                    const error = document.getElementById(`errorMant${campo.charAt(0).toUpperCase() + campo.slice(1)}`);
+                    if (input && error) mostrarError(input, error, msg);
+                });
+            } else {
+                alert('Error: ' + (result.error || 'Error desconocido'));
+            }
+        }
+    } catch (e) {
+        console.error('Error guardando:', e);
+        alert('Error de conexión');
+    }
+}
+
+function limpiarFormulario() {
+    document.getElementById('formMantenimiento').reset();
+    document.getElementById('mantId').value = '';
+    // Limpiar campos de búsqueda
+    document.getElementById('buscarMantEquipo').value = '';
+    document.getElementById('mantEquipo').value = '';
+    document.getElementById('buscarMantTecnico').value = '';
+    document.getElementById('mantTecnico').value = '';
+    // Ocultar dropdowns
+    document.getElementById('opcionesMantEquipo')?.classList.add('d-none');
+    document.getElementById('opcionesMantTecnico')?.classList.add('d-none');
+    document.getElementById('infoEstadoEquipo')?.classList.add('d-none');
+    limpiarValidaciones();
+}
+
+// Ver detalle
+async function verDetalle(id) {
+    try {
+        const res = await fetch(`/api/mantenimiento/${id}`);
+        const data = await res.json();
+        if (data.success) {
+            const m = data.mantenimiento;
+            document.getElementById('detalleContenido').innerHTML = `
+                <!-- Header con info del equipo y estado -->
+                <div class="p-4" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+                            <i class="bi bi-pc-display text-white fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1 fw-bold" style="color: #2d6a4f;">${m.equipo_nombre || 'N/A'}</h5>
+                            <span class="badge rounded-pill px-3" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                                <i class="bi bi-upc me-1"></i>${m.codigo_interno || 'Sin código'}
+                            </span>
+                        </div>
+                        <div class="ms-auto text-end d-flex flex-column gap-1">
+                            <span class="badge rounded-pill px-3 py-2" style="background: ${getGradientEstadoMantenimiento(m.estado)};">
+                                <i class="bi bi-${getIconEstadoMantenimiento(m.estado)} me-1"></i>${getTextoEstadoMantenimiento(m.estado)}
+                            </span>
+                            <span class="badge rounded-pill px-3 py-2" style="background: ${m.es_preventivo ? 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'};">
+                                <i class="bi bi-${m.es_preventivo ? 'shield-check' : 'wrench'} me-1"></i>${m.tipo_nombre || 'N/A'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Cards de información -->
+                <div class="p-4">
+                    <!-- Estado del mantenimiento destacado -->
+                    ${m.estado === 'en_proceso' ? `
+                    <div class="alert mb-4" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: none; border-radius: 12px;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                                <i class="bi bi-hourglass-split text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold" style="color: #92400e;">⏳ Mantenimiento en Proceso</h6>
+                                <small class="text-muted">Iniciado: ${m.fecha_inicio || 'N/A'}</small>
+                            </div>
+                            <button class="btn btn-success ms-auto" onclick="abrirCompletarMantenimiento(${m.id}); bootstrap.Modal.getInstance(document.getElementById('modalDetalle')).hide();">
+                                <i class="bi bi-check-circle me-1"></i>Completar
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3 col-6">
+                            <div class="card border-0 h-100" style="background: #f8fafc; border-radius: 12px;">
+                                <div class="card-body text-center py-3">
+                                    <i class="bi bi-calendar-event fs-4" style="color: #2d6a4f;"></i>
+                                    <p class="small text-muted mb-1 mt-2">Fecha Inicio</p>
+                                    <p class="fw-semibold mb-0" style="color: #2d6a4f;">${m.fecha_inicio || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="card border-0 h-100" style="background: #f8fafc; border-radius: 12px;">
+                                <div class="card-body text-center py-3">
+                                    <i class="bi bi-calendar-check fs-4" style="color: #2d6a4f;"></i>
+                                    <p class="small text-muted mb-1 mt-2">Fecha Fin</p>
+                                    <p class="fw-semibold mb-0" style="color: #2d6a4f;">${m.fecha_fin || (m.estado === 'en_proceso' ? 'En proceso...' : 'N/A')}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="card border-0 h-100" style="background: #f8fafc; border-radius: 12px;">
+                                <div class="card-body text-center py-3">
+                                    <i class="bi bi-person-badge fs-4" style="color: #2d6a4f;"></i>
+                                    <p class="small text-muted mb-1 mt-2">Técnico</p>
+                                    <p class="fw-semibold mb-0" style="color: #2d6a4f;">${m.tecnico_nombre || 'Sin asignar'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="card border-0 h-100" style="background: #f8fafc; border-radius: 12px;">
+                                <div class="card-body text-center py-3">
+                                    <i class="bi bi-currency-dollar fs-4" style="color: #2d6a4f;"></i>
+                                    <p class="small text-muted mb-1 mt-2">Costo</p>
+                                    <p class="fw-semibold mb-0" style="color: #2d6a4f;">$${parseFloat(m.costo_mantenimiento || 0).toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="card border-0 h-100" style="background: #f8fafc; border-radius: 12px;">
+                                <div class="card-body text-center py-3">
+                                    <i class="bi bi-hourglass-split fs-4" style="color: #2d6a4f;"></i>
+                                    <p class="small text-muted mb-1 mt-2">Inactividad</p>
+                                    <p class="fw-semibold mb-0" style="color: #2d6a4f;">${m.tiempo_inactividad_horas || 0} hrs</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Estado y próximo mantenimiento -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background: #f8fafc;">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; background: ${getGradientEstado(m.estado_post_mantenimiento)};">
+                                    <i class="bi bi-${getIconEstado(m.estado_post_mantenimiento)} text-white"></i>
+                                </div>
+                                <div>
+                                    <p class="small text-muted mb-0">Estado Post-Mantenimiento</p>
+                                    <p class="fw-bold mb-0 text-capitalize" style="color: #2d6a4f;">${m.estado_post_mantenimiento || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background: #f8fafc;">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);">
+                                    <i class="bi bi-calendar-plus text-white"></i>
+                                </div>
+                                <div>
+                                    <p class="small text-muted mb-0">Próximo Mantenimiento</p>
+                                    <p class="fw-bold mb-0" style="color: #2d6a4f;">${m.proxima_fecha_mantenimiento || 'No programado'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Información del Tipo de Mantenimiento -->
+                    <div class="mb-4 p-3 rounded-3" style="background: ${m.es_preventivo ? 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' : 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)'}; border-left: 4px solid ${m.es_preventivo ? '#0ea5e9' : '#f59e0b'};">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 45px; height: 45px; background: ${m.es_preventivo ? 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'};">
+                                <i class="bi bi-${m.es_preventivo ? 'shield-check' : 'wrench'} text-white"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <h6 class="fw-bold mb-0" style="color: ${m.es_preventivo ? '#0369a1' : '#b45309'};">${m.tipo_nombre || 'Tipo no especificado'}</h6>
+                                    <span class="badge rounded-pill" style="background: ${m.es_preventivo ? '#0ea5e9' : '#f59e0b'}; font-size: 0.7rem;">
+                                        ${m.es_preventivo ? 'Preventivo' : 'Correctivo'}
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-2">${m.tipo_descripcion || 'Sin descripción del tipo'}</p>
+                                <div class="d-flex gap-3">
+                                    <span class="badge bg-light text-dark">
+                                        <i class="bi bi-calendar-range me-1"></i>Frecuencia: ${m.tipo_frecuencia_dias || 0} días
+                                    </span>
+                                    ${m.es_preventivo ? 
+                                        '<span class="badge bg-light text-dark"><i class="bi bi-clock-history me-1"></i>Programado</span>' : 
+                                        '<span class="badge bg-light text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Por falla</span>'
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Descripción y detalles -->
+                    <div class="mb-3">
+                        <h6 class="fw-bold mb-2" style="color: #2d6a4f;"><i class="bi bi-card-text me-2"></i>Descripción del Trabajo</h6>
+                        <div class="p-3 rounded-3" style="background: #f8fafc;">
+                            <p class="mb-0 text-muted">${m.descripcion_trabajo || 'Sin descripción registrada'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-2" style="color: #2d6a4f;"><i class="bi bi-box-seam me-2"></i>Partes Reemplazadas</h6>
+                            <div class="p-3 rounded-3" style="background: #f8fafc;">
+                                <p class="mb-0 text-muted">${m.partes_reemplazadas || 'Ninguna'}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-2" style="color: #2d6a4f;"><i class="bi bi-chat-left-text me-2"></i>Observaciones</h6>
+                            <div class="p-3 rounded-3" style="background: #f8fafc;">
+                                <p class="mb-0 text-muted">${m.observaciones || 'Sin observaciones'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Footer con botón cerrar -->
+                <div class="px-4 py-3 border-top d-flex justify-content-end" style="background: #f8fafc;">
+                    <button type="button" class="btn px-4" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); color: white;" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>Cerrar
+                    </button>
+                </div>
+            `;
+            new bootstrap.Modal(document.getElementById('modalDetalle')).show();
+        }
+    } catch (e) {
+        console.error('Error:', e);
+    }
+}
+
+// Editar mantenimiento (solo para mantenimientos completados)
+async function editarMantenimiento(id) {
+    try {
+        const res = await fetch(`/api/mantenimiento/${id}`);
+        const data = await res.json();
+        if (data.success) {
+            const m = data.mantenimiento;
+            
+            // Solo permitir editar mantenimientos completados
+            if (m.estado === 'en_proceso') {
+                alert('No se puede editar un mantenimiento en proceso. Use el botón "Completar" para finalizarlo.');
+                return;
+            }
+            
+            // Llenar datos en el modal de edición
+            document.getElementById('editMantId').value = m.id;
+            document.getElementById('editEquipoNombre').value = `${m.equipo_nombre || ''} (${m.codigo_interno || ''})`;
+            document.getElementById('editTipoNombre').value = m.tipo_nombre || '';
+            document.getElementById('editFechaInicio').value = m.fecha_inicio ? m.fecha_inicio.replace(' ', 'T') : '';
+            document.getElementById('editFechaFin').value = m.fecha_fin ? m.fecha_fin.replace(' ', 'T') : '';
+            document.getElementById('editTecnicoNombre').value = m.tecnico_nombre || '';
+            document.getElementById('editEstadoPost').value = m.estado_post_mantenimiento || 'bueno';
+            document.getElementById('editDescripcion').value = m.descripcion_trabajo || '';
+            document.getElementById('editPartes').value = m.partes_reemplazadas || '';
+            document.getElementById('editCosto').value = m.costo_mantenimiento || 0;
+            document.getElementById('editObservaciones').value = m.observaciones || '';
+            
+            // Abrir modal
+            new bootstrap.Modal(document.getElementById('modalEditarMantenimiento')).show();
+        }
+    } catch (e) {
+        console.error('Error:', e);
+        alert('Error al cargar los datos del mantenimiento');
+    }
+}
+
+// Actualizar mantenimiento
+async function actualizarMantenimiento() {
+    const id = document.getElementById('editMantId').value;
+    const descripcion = document.getElementById('editDescripcion').value.trim();
+    const partes = document.getElementById('editPartes').value.trim();
+    const costo = parseFloat(document.getElementById('editCosto').value) || 0;
+    const observaciones = document.getElementById('editObservaciones').value.trim();
+    
+    // Validar descripción
+    if (descripcion.length < 10) {
+        document.getElementById('errorEditDescripcion').textContent = 'La descripción debe tener al menos 10 caracteres';
+        document.getElementById('editDescripcion').classList.add('is-invalid');
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/mantenimiento/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                descripcion_trabajo: descripcion,
+                partes_reemplazadas: partes,
+                costo_mantenimiento: costo,
+                observaciones: observaciones
+            })
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            alert('Mantenimiento actualizado exitosamente');
+            bootstrap.Modal.getInstance(document.getElementById('modalEditarMantenimiento')).hide();
+            cargarMantenimientos();
+        } else {
+            alert('Error: ' + (data.message || 'No se pudo actualizar'));
+        }
+    } catch (e) {
+        console.error('Error:', e);
+        alert('Error al actualizar el mantenimiento');
+    }
+}
+
+// Gestión de tipos
+function mostrarFormTipo() {
+    document.getElementById('formNuevoTipo').classList.remove('d-none');
+}
+
+function ocultarFormTipo() {
+    document.getElementById('formNuevoTipo').classList.add('d-none');
+    document.getElementById('tipoId').value = '';
+    document.getElementById('tipoNombre').value = '';
+    document.getElementById('tipoDescripcion').value = '';
+    document.getElementById('tipoFrecuencia').value = 30;
+    document.getElementById('tipoPreventivo').checked = true;
+    // Resetear título y botón
+    document.getElementById('formTipoTitulo').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nuevo Tipo';
+    document.getElementById('btnGuardarTipoTexto').textContent = 'Guardar';
+    // Limpiar validaciones
+    limpiarValidacionesTipo();
+}
+
+// Limpiar validaciones del formulario de tipos
+function limpiarValidacionesTipo() {
+    const campos = ['tipoNombre', 'tipoFrecuencia'];
+    campos.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('is-valid', 'is-invalid');
+        }
+    });
+    document.getElementById('alertaErrorTipo')?.classList.add('d-none');
+    document.getElementById('contadorTipoDescripcion').textContent = '0/500';
+}
+
+// Validar campo de tipo en tiempo real
+function validarCampoTipo(campo) {
+    let valido = true;
+    
+    if (campo === 'nombre') {
+        const valor = document.getElementById('tipoNombre').value.trim();
+        const input = document.getElementById('tipoNombre');
+        const error = document.getElementById('errorTipoNombre');
+        
+        if (!valor) {
+            mostrarErrorTipo(input, error, 'El nombre es requerido');
+            valido = false;
+        } else if (valor.length < 3) {
+            mostrarErrorTipo(input, error, 'Mínimo 3 caracteres');
+            valido = false;
+        } else if (valor.length > 100) {
+            mostrarErrorTipo(input, error, 'Máximo 100 caracteres');
+            valido = false;
+        } else {
+            // Validar duplicados en cache (validación local)
+            const tipoId = document.getElementById('tipoId').value;
+            const duplicado = tiposCache.find(t => 
+                t.nombre.toLowerCase() === valor.toLowerCase() && 
+                t.id !== parseInt(tipoId)
+            );
+            if (duplicado) {
+                mostrarErrorTipo(input, error, 'Ya existe un tipo con este nombre');
+                valido = false;
+            } else {
+                mostrarValidoTipo(input, error);
+            }
+        }
+    } else if (campo === 'descripcion') {
+        const valor = document.getElementById('tipoDescripcion').value;
+        document.getElementById('contadorTipoDescripcion').textContent = `${valor.length}/500`;
+    } else if (campo === 'frecuencia') {
+        const valor = parseInt(document.getElementById('tipoFrecuencia').value) || 0;
+        const input = document.getElementById('tipoFrecuencia');
+        const error = document.getElementById('errorTipoFrecuencia');
+        
+        if (valor < 0) {
+            mostrarErrorTipo(input, error, 'No puede ser negativo');
+            valido = false;
+        } else if (valor > 365) {
+            mostrarErrorTipo(input, error, 'Máximo 365 días');
+            valido = false;
+        } else {
+            mostrarValidoTipo(input, error);
+        }
+    }
+    
+    return valido;
+}
+
+function mostrarErrorTipo(input, errorEl, mensaje) {
+    input.classList.remove('is-valid');
+    input.classList.add('is-invalid');
+    if (errorEl) {
+        errorEl.textContent = mensaje;
+    }
+}
+
+function mostrarValidoTipo(input, errorEl) {
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    if (errorEl) {
+        errorEl.textContent = '';
+    }
+}
+
+function mostrarAlertaErrorTipo(mensaje) {
+    const alerta = document.getElementById('alertaErrorTipo');
+    document.getElementById('mensajeErrorTipo').textContent = mensaje;
+    alerta.classList.remove('d-none');
+}
+
+// Editar tipo de mantenimiento
+function editarTipo(id) {
+    const tipo = tiposCache.find(t => t.id === id);
+    if (!tipo) return;
+    
+    // Limpiar validaciones previas
+    limpiarValidacionesTipo();
+    
+    // Configurar formulario para edición
+    document.getElementById('formTipoTitulo').innerHTML = '<i class="bi bi-pencil me-2"></i>Editar Tipo';
+    document.getElementById('btnGuardarTipoTexto').textContent = 'Actualizar';
+    
+    // Llenar datos
+    document.getElementById('tipoId').value = tipo.id;
+    document.getElementById('tipoNombre').value = tipo.nombre;
+    document.getElementById('tipoDescripcion').value = tipo.descripcion || '';
+    document.getElementById('tipoFrecuencia').value = tipo.frecuencia_dias || 30;
+    document.getElementById('tipoPreventivo').checked = tipo.es_preventivo;
+    
+    // Actualizar contador
+    const desc = tipo.descripcion || '';
+    document.getElementById('contadorTipoDescripcion').textContent = `${desc.length}/500`;
+    
+    // Mostrar formulario
+    document.getElementById('formNuevoTipo').classList.remove('d-none');
+}
+
+async function guardarTipo() {
+    // Validar todos los campos antes de enviar
+    const nombreValido = validarCampoTipo('nombre');
+    const frecuenciaValida = validarCampoTipo('frecuencia');
+    
+    if (!nombreValido || !frecuenciaValida) {
+        mostrarAlertaErrorTipo('Por favor corrija los errores en el formulario');
+        return;
+    }
+    
+    const id = document.getElementById('tipoId').value;
+    const data = {
+        nombre: document.getElementById('tipoNombre').value.trim(),
+        descripcion: document.getElementById('tipoDescripcion').value.trim(),
+        frecuencia_dias: parseInt(document.getElementById('tipoFrecuencia').value) || 30,
+        es_preventivo: document.getElementById('tipoPreventivo').checked
+    };
+    
+    try {
+        let url = '/api/mantenimiento/tipos';
+        let method = 'POST';
+        
+        // Si hay ID, es actualización
+        if (id) {
+            url = `/api/mantenimiento/tipos/${id}`;
+            method = 'PUT';
+        }
+        
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+            ocultarFormTipo();
+            cargarTipos();
+        } else {
+            // Mostrar errores del backend
+            if (result.errores) {
+                if (result.errores.nombre) {
+                    mostrarErrorTipo(
+                        document.getElementById('tipoNombre'),
+                        document.getElementById('errorTipoNombre'),
+                        result.errores.nombre
+                    );
+                }
+                mostrarAlertaErrorTipo('Error de validación en el servidor');
+            } else {
+                mostrarAlertaErrorTipo(result.error || result.message || 'Error al guardar');
+            }
+        }
+    } catch (e) {
+        console.error('Error:', e);
+        mostrarAlertaErrorTipo('Error de conexión al guardar');
+    }
+}
+
+// =========================================================
+// FLUJO DE 2 PASOS - Iniciar y Completar Mantenimiento
+// =========================================================
+
+// Mostrar estado del equipo en modal Iniciar
+function mostrarEstadoEquipoIniciar() {
+    const equipoId = document.getElementById('iniciarEquipo').value;
+    const infoDiv = document.getElementById('infoEstadoEquipoIniciar');
+    const estadoSpan = document.getElementById('estadoActualEquipoIniciar');
+    const mensajeP = document.getElementById('mensajeEstadoEquipoIniciar');
+    
+    if (!equipoId) {
+        infoDiv.classList.add('d-none');
+        return;
+    }
+    
+    // Obtener estado del equipo desde el cache
+    const equipo = equiposCache.find(e => e.id == equipoId);
+    const estado = equipo?.estado || 'disponible';
+    
+    infoDiv.classList.remove('d-none', 'alert-info', 'alert-warning', 'alert-success', 'alert-danger');
+    
+    const estadoTexto = {
+        'disponible': 'Disponible',
+        'prestado': 'Prestado',
+        'mantenimiento': 'En Mantenimiento',
+        'reparacion': 'En Reparación',
+        'dado_baja': 'Dado de Baja'
+    };
+    
+    estadoSpan.textContent = `${getEstadoEquipoIcon(estado)} ${estadoTexto[estado] || estado}`;
+    
+    if (estado === 'disponible') {
+        infoDiv.classList.add('alert-info');
+        mensajeP.textContent = 'Al iniciar, el equipo pasará a estado "mantenimiento". Luego use "Completar" para registrar los resultados.';
+    } else {
+        infoDiv.classList.add('alert-info');
+        mensajeP.textContent = '';
+    }
+}
+
+// PASO 1: Iniciar mantenimiento
+async function iniciarMantenimiento() {
+    const idEquipo = document.getElementById('iniciarEquipo').value;
+    const idTipo = document.getElementById('iniciarTipo').value;
+    const idTecnico = document.getElementById('iniciarTecnico').value;
+    const descripcion = document.getElementById('iniciarDescripcion').value.trim();
+    
+    // Validaciones
+    let hayErrores = false;
+    if (!idEquipo) {
+        document.getElementById('buscarIniciarEquipo').classList.add('is-invalid');
+        document.getElementById('errorIniciarEquipo').textContent = 'Seleccione un equipo';
+        hayErrores = true;
+    } else {
+        document.getElementById('buscarIniciarEquipo').classList.remove('is-invalid');
+    }
+    
+    if (!idTipo) {
+        document.getElementById('iniciarTipo').classList.add('is-invalid');
+        document.getElementById('errorIniciarTipo').textContent = 'Seleccione un tipo';
+        hayErrores = true;
+    } else {
+        document.getElementById('iniciarTipo').classList.remove('is-invalid');
+    }
+    
+    if (!idTecnico) {
+        document.getElementById('buscarIniciarTecnico').classList.add('is-invalid');
+        document.getElementById('errorIniciarTecnico').textContent = 'Seleccione un técnico responsable';
+        hayErrores = true;
+    } else {
+        document.getElementById('buscarIniciarTecnico').classList.remove('is-invalid');
+    }
+    
+    if (hayErrores) return;
+    
+    // Verificar estado del equipo desde el cache
+    const equipoSeleccionado = equiposCache.find(e => e.id == idEquipo);
+    const estadoEquipo = equipoSeleccionado?.estado;
+    
+    if (estadoEquipo === 'prestado') {
+        alert('⚠️ No se puede iniciar mantenimiento. El equipo está prestado.');
+        return;
+    }
+    if (estadoEquipo === 'dado_baja') {
+        alert('⚠️ No se puede iniciar mantenimiento. El equipo está dado de baja.');
+        return;
+    }
+    if (estadoEquipo === 'mantenimiento' || estadoEquipo === 'reparacion') {
+        alert('⚠️ El equipo ya está en mantenimiento. Use la opción "Completar" para finalizar.');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/mantenimiento/iniciar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id_equipo: idEquipo,
+                id_tipo_mantenimiento: idTipo,
+                tecnico_responsable_id: idTecnico || null,
+                descripcion_trabajo: descripcion
+            })
+        });
+        
+        const result = await res.json();
+        
+        if (result.success) {
+            alert(`✅ ${result.message}\n\nID del mantenimiento: ${result.id}\n\nCuando termine el trabajo, use "Completar" para registrar los resultados.`);
+            bootstrap.Modal.getInstance(document.getElementById('modalIniciarMantenimiento')).hide();
+            document.getElementById('formIniciarMantenimiento').reset();
+            // Limpiar campos de búsqueda
+            document.getElementById('buscarIniciarEquipo').value = '';
+            document.getElementById('iniciarEquipo').value = '';
+            document.getElementById('buscarIniciarTecnico').value = '';
+            document.getElementById('iniciarTecnico').value = '';
+            document.getElementById('infoEstadoEquipoIniciar').classList.add('d-none');
+            cargarMantenimientos();
+            cargarEquipos();
+            cargarEstadisticas();
+            cargarMantenimientosEnProceso();
+        } else {
+            alert('❌ Error: ' + (result.error || 'Error desconocido'));
+        }
+    } catch (e) {
+        console.error('Error:', e);
+        alert('Error de conexión');
+    }
+}
+
+// Cargar mantenimientos en proceso
+async function cargarMantenimientosEnProceso() {
+    try {
+        const res = await fetch('/api/mantenimiento/en-proceso');
+        const data = await res.json();
+        
+        if (data.success) {
+            mantenimientosEnProcesoCache = data.mantenimientos || [];
+            // Actualizar contador en estadísticas si existe
+            const statEnProceso = document.getElementById('statEnProceso');
+            if (statEnProceso) {
+                statEnProceso.textContent = mantenimientosEnProcesoCache.length;
+            }
+        }
+    } catch (e) {
+        console.error('Error cargando mantenimientos en proceso:', e);
+    }
+}
+
+// Abrir modal para completar un mantenimiento en proceso
+async function abrirCompletarMantenimiento(id) {
+    try {
+        const res = await fetch(`/api/mantenimiento/${id}`);
+        const data = await res.json();
+        
+        if (data.success) {
+            const m = data.mantenimiento;
+            
+            // Verificar que está en proceso
+            if (m.estado !== 'en_proceso') {
+                alert('Este mantenimiento no está en proceso.');
+                return;
+            }
+            
+            // Llenar datos del modal
+            document.getElementById('completarId').value = m.id;
+            document.getElementById('completarEquipoNombre').textContent = m.equipo_nombre || 'Equipo';
+            document.getElementById('completarTipoNombre').textContent = m.tipo_nombre || 'Tipo';
+            document.getElementById('completarFechaInicio').textContent = m.fecha_inicio || '-';
+            
+            // Calcular tiempo transcurrido
+            if (m.fecha_inicio) {
+                const inicio = new Date(m.fecha_inicio.replace(' ', 'T'));
+                const ahora = new Date();
+                const horas = ((ahora - inicio) / (1000 * 60 * 60)).toFixed(2);
+                document.getElementById('completarTiempoTranscurrido').textContent = horas;
+            }
+            
+            // Pre-llenar todos los campos si existen (mantenimiento reactivado)
+            document.getElementById('completarDescripcion').value = m.descripcion_trabajo || '';
+            document.getElementById('completarPartes').value = m.partes_reemplazadas || '';
+            document.getElementById('completarCosto').value = m.costo_mantenimiento || 0;
+            document.getElementById('completarObservaciones').value = m.observaciones || '';
+            
+            // Pre-seleccionar estado post si existe
+            if (m.estado_post_mantenimiento) {
+                document.getElementById('completarEstadoPost').value = m.estado_post_mantenimiento;
+            } else {
+                document.getElementById('completarEstadoPost').value = 'bueno'; // Default
+            }
+            
+            console.log('📋 Mantenimiento cargado para completar:', {
+                id: m.id,
+                estado: m.estado,
+                estado_post_actual: m.estado_post_mantenimiento,
+                descripcion: m.descripcion_trabajo
+            });
+            
+            // Abrir modal
+            new bootstrap.Modal(document.getElementById('modalCompletarMantenimiento')).show();
+        }
+    } catch (e) {
+        console.error('Error:', e);
+        alert('Error al cargar el mantenimiento');
+    }
+}
+
+// PASO 2: Completar mantenimiento
+async function completarMantenimiento() {
+    const id = document.getElementById('completarId').value;
+    const descripcion = document.getElementById('completarDescripcion').value.trim();
+    const partes = document.getElementById('completarPartes').value.trim();
+    const costo = parseFloat(document.getElementById('completarCosto').value) || 0;
+    const estadoPost = document.getElementById('completarEstadoPost').value;
+    const observaciones = document.getElementById('completarObservaciones').value.trim();
+    
+    console.log('📋 Completar Mantenimiento - Datos:', {
+        id,
+        descripcion,
+        estadoPost,
+        costo
+    });
+    
+    // Validación
+    if (!descripcion || descripcion.length < 10) {
+        document.getElementById('completarDescripcion').classList.add('is-invalid');
+        document.getElementById('errorCompletarDescripcion').textContent = 'Mínimo 10 caracteres';
+        return;
+    } else {
+        document.getElementById('completarDescripcion').classList.remove('is-invalid');
+    }
+    
+    const payload = {
+        descripcion_trabajo: descripcion,
+        partes_reemplazadas: partes,
+        costo_mantenimiento: costo,
+        estado_post_mantenimiento: estadoPost,
+        observaciones: observaciones
+    };
+    
+    console.log('📤 Enviando al backend:', payload);
+    
+    try {
+        const res = await fetch(`/api/mantenimiento/completar/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const result = await res.json();
+        
+        if (result.success) {
+            let mensaje = `✅ ${result.message}`;
+            if (result.proxima_fecha) {
+                mensaje += `\n\n📅 Próximo mantenimiento: ${result.proxima_fecha}`;
+            }
+            if (result.equipo) {
+                mensaje += `\n\n📊 Estado del equipo:\n`;
+                mensaje += `• Anterior: ${result.equipo.estado_anterior}\n`;
+                mensaje += `• Nuevo: ${result.equipo.estado_nuevo}\n`;
+                mensaje += `• Estado físico: ${result.equipo.estado_fisico}`;
+            }
+            alert(mensaje);
+            bootstrap.Modal.getInstance(document.getElementById('modalCompletarMantenimiento')).hide();
+            document.getElementById('formCompletarMantenimiento').reset();
+            cargarMantenimientos();
+            cargarEquipos();
+            cargarEstadisticas();
+            cargarMantenimientosEnProceso();
+            cargarAlertas();
+        } else {
+            alert('❌ Error: ' + (result.error || 'Error desconocido'));
+        }
+    } catch (e) {
+        console.error('Error:', e);
+        alert('Error de conexión');
+    }
+}
+
+// Cancelar mantenimiento en proceso
+async function cancelarMantenimientoEnProceso() {
+    const id = document.getElementById('completarId').value;
+    
+    if (!confirm('¿Está seguro de cancelar este mantenimiento?\n\nEl equipo volverá a estar disponible.')) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/mantenimiento/cancelar/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ observaciones: 'Cancelado por usuario' })
+        });
+        
+        const result = await res.json();
+        
+        if (result.success) {
+            alert(`✅ ${result.message}`);
+            bootstrap.Modal.getInstance(document.getElementById('modalCompletarMantenimiento')).hide();
+            cargarMantenimientos();
+            cargarEquipos();
+            cargarEstadisticas();
+            cargarMantenimientosEnProceso();
+        } else {
+            alert('❌ Error: ' + (result.error || 'Error desconocido'));
+        }
+    } catch (e) {
+        console.error('Error:', e);
+        alert('Error de conexión');
+    }
+}
+
+// Variable para cache de mantenimientos en proceso
+let mantenimientosEnProcesoCache = [];
+
+// =========================================================
+// IA PREDICTIVA - Funciones
+// =========================================================
+
+async function entrenarModeloIA() {
+    if (!confirm('¿Entrenar el modelo de IA con los datos históricos?\n\nEsto puede tomar unos segundos.')) return;
+    
+    try {
+        // Mostrar loading
+        const btn = event.target.closest('a');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Entrenando...';
+        btn.classList.add('disabled');
+        
+        const res = await fetch('/api/predictivo/entrenar', { method: 'POST' });
+        const data = await res.json();
+        
+        btn.innerHTML = originalText;
+        btn.classList.remove('disabled');
+        
+        if (data.success) {
+            let mensaje = `✅ Modelo entrenado exitosamente!\n\n`;
+            mensaje += `📊 Precisión: ${data.precision_cv}%\n`;
+            mensaje += `🎯 Objetivo: ${data.objetivo}\n`;
+            mensaje += `📁 Registros usados: ${data.registros_usados}\n\n`;
+            
+            if (data.cumple_objetivo) {
+                mensaje += `✨ ¡El modelo cumple con el objetivo de precisión!`;
+            } else {
+                mensaje += `⚠️ El modelo necesita más datos para mejorar la precisión.`;
+            }
+            
+            if (data.features_importantes) {
+                mensaje += `\n\n📈 Factores más importantes:\n`;
+                data.features_importantes.slice(0, 3).forEach(f => {
+                    mensaje += `• ${f.nombre}: ${f.importancia}%\n`;
+                });
+            }
+            
+            alert(mensaje);
+        } else {
+            alert(`❌ Error: ${data.error}\n\n${data.sugerencia || ''}`);
+        }
+    } catch (e) {
+        console.error('Error:', e);
+        alert('Error de conexión al entrenar el modelo');
+    }
+}
+
+async function analizarEquiposIA() {
+    if (!confirm('¿Analizar todos los equipos con IA?\n\nSe generarán alertas predictivas para equipos con alto riesgo de falla.')) return;
+    
+    try {
+        const res = await fetch('/api/predictivo/analizar', { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.success) {
+            let mensaje = `🤖 Análisis completado!\n\n`;
+            mensaje += `📊 Equipos analizados: ${data.equipos_analizados}\n`;
+            mensaje += `⚠️ Equipos en riesgo: ${data.equipos_riesgo}\n`;
+            mensaje += `🔔 Alertas generadas: ${data.alertas_generadas}\n`;
+            
+            if (data.detalle && data.detalle.length > 0) {
+                mensaje += `\n📋 Top equipos en riesgo:\n`;
+                data.detalle.slice(0, 5).forEach(eq => {
+                    mensaje += `• ${eq.nombre} (${eq.codigo}): ${eq.probabilidad_falla}% - ${eq.riesgo}\n`;
+                });
+            }
+            
+            alert(mensaje);
+            cargarAlertas();
+            cargarEstadisticas();
+        } else {
+            alert(`❌ Error: ${data.error}`);
+        }
+    } catch (e) {
+        console.error('Error:', e);
+        alert('Error de conexión al analizar equipos');
+    }
+}
+
+async function verEstadoModeloIA() {
+    try {
+        const res = await fetch('/api/predictivo/estado');
+        const data = await res.json();
+        
+        if (data.success) {
+            let mensaje = `🤖 Estado del Modelo de IA\n\n`;
+            mensaje += `📦 Modelo entrenado: ${data.modelo_entrenado ? 'Sí ✅' : 'No ❌'}\n`;
+            mensaje += `🎯 Precisión objetivo: ${data.precision_objetivo}\n`;
+            
+            if (data.modelo_entrenado) {
+                mensaje += `\n📊 Configuración:\n`;
+                mensaje += `• Estimadores: ${data.n_estimators || 100}\n`;
+                mensaje += `• Profundidad máx: ${data.max_depth || 10}\n`;
+                mensaje += `\n${data.mensaje}`;
+            } else {
+                mensaje += `\n⚠️ ${data.mensaje}`;
+            }
+            
+            alert(mensaje);
+        } else {
+            alert(`❌ Error: ${data.error}`);
+        }
+    } catch (e) {
+        console.error('Error:', e);
+        alert('Error de conexión al obtener estado del modelo');
+    }
+}
+
+// Alertas
+async function generarAlertas() {
+    try {
+        const res = await fetch('/api/mantenimiento/alertas/generar', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message);
+            cargarAlertas();
+            cargarEstadisticas();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (e) {
+        console.error('Error:', e);
+    }
+}
+
+function resolverAlerta(id) {
+    document.getElementById('alertaIdResolver').value = id;
+    document.getElementById('alertaObservaciones').value = '';
+    new bootstrap.Modal(document.getElementById('modalResolverAlerta')).show();
+}
+
+async function confirmarResolverAlerta() {
+    const id = document.getElementById('alertaIdResolver').value;
+    const observaciones = document.getElementById('alertaObservaciones').value;
+    
+    try {
+        const res = await fetch(`/api/mantenimiento/alertas/${id}/resolver`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ observaciones })
+        });
+        const data = await res.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modalResolverAlerta')).hide();
+            cargarAlertas();
+            cargarEstadisticas();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (e) {
+        console.error('Error:', e);
+    }
+}
+
+async function cancelarAlerta(id) {
+    if (!confirm('¿Cancelar esta alerta?')) return;
+    
+    try {
+        const res = await fetch(`/api/mantenimiento/alertas/${id}/cancelar`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ observaciones: 'Cancelada por usuario' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            cargarAlertas();
+            cargarEstadisticas();
+        }
+    } catch (e) {
+        console.error('Error:', e);
+    }
+}
+
+// Inicializar eventos después de que el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar modal al abrir
+    const modalMant = document.getElementById('modalNuevoMantenimiento');
+    if (modalMant) {
+        modalMant.addEventListener('show.bs.modal', function(e) {
+            // Si no hay ID, es nuevo mantenimiento
+            if (!document.getElementById('mantId').value) {
+                configurarModalNuevo();
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                document.getElementById('mantFechaInicio').value = now.toISOString().slice(0, 16);
+                document.getElementById('mantFechaFin').value = now.toISOString().slice(0, 16);
+            }
+        });
+        
+        // Limpiar al cerrar modal
+        modalMant.addEventListener('hidden.bs.modal', function(e) {
+            limpiarFormulario();
+            limpiarValidaciones();
+        });
+    }
+    
+    // Validación en tiempo real para todos los campos
+    const mantDescripcion = document.getElementById('mantDescripcion');
+    const mantCosto = document.getElementById('mantCosto');
+    const mantTipo = document.getElementById('mantTipo');
+    const mantFechaInicio = document.getElementById('mantFechaInicio');
+    const mantFechaFin = document.getElementById('mantFechaFin');
+    const buscarMantEquipo = document.getElementById('buscarMantEquipo');
+    
+    if (mantDescripcion) {
+        mantDescripcion.addEventListener('input', () => validarCampo('descripcion'));
+    }
+    if (mantCosto) {
+        mantCosto.addEventListener('input', () => validarCampo('costo'));
+    }
+    // Validación para el campo de búsqueda de equipo (ya no es select)
+    if (buscarMantEquipo) {
+        buscarMantEquipo.addEventListener('blur', () => {
+            const equipoId = document.getElementById('mantEquipo').value;
+            if (!equipoId) {
+                mostrarError(buscarMantEquipo, document.getElementById('errorMantEquipo'), 'Seleccione un equipo');
+            } else {
+                mostrarValido(buscarMantEquipo, document.getElementById('errorMantEquipo'));
+            }
+        });
+    }
+    if (mantTipo) {
+        mantTipo.addEventListener('change', () => validarCampo('tipo'));
+    }
+    if (mantFechaInicio) {
+        mantFechaInicio.addEventListener('change', () => validarCampo('fechaInicio'));
+    }
+    if (mantFechaFin) {
+        mantFechaFin.addEventListener('change', () => validarCampo('fechaFin'));
+    }
+    
+    // Validación en tiempo real para modal Completar Mantenimiento
+    const completarDescripcion = document.getElementById('completarDescripcion');
+    const completarCosto = document.getElementById('completarCosto');
+    
+    if (completarDescripcion) {
+        completarDescripcion.addEventListener('input', function() {
+            const valor = this.value.trim();
+            const error = document.getElementById('errorCompletarDescripcion');
+            if (!valor || valor.length < 10) {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+                error.textContent = valor.length === 0 ? 'La descripción es requerida' : `Mínimo 10 caracteres (actual: ${valor.length})`;
+            } else {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+                error.textContent = '';
+            }
+        });
+    }
+    
+    if (completarCosto) {
+        completarCosto.addEventListener('input', function() {
+            const valor = parseFloat(this.value) || 0;
+            if (valor < 0) {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            } else {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            }
+        });
+    }
+    
+    // Validación en tiempo real para modal Iniciar Mantenimiento
+    const buscarIniciarEquipo = document.getElementById('buscarIniciarEquipo');
+    const buscarIniciarTecnico = document.getElementById('buscarIniciarTecnico');
+    const iniciarTipo = document.getElementById('iniciarTipo');
+    const iniciarDescripcion = document.getElementById('iniciarDescripcion');
+    
+    if (buscarIniciarEquipo) {
+        buscarIniciarEquipo.addEventListener('blur', function() {
+            const equipoId = document.getElementById('iniciarEquipo').value;
+            const error = document.getElementById('errorIniciarEquipo');
+            if (!equipoId) {
+                this.classList.add('is-invalid');
+                error.textContent = 'Seleccione un equipo';
+            } else {
+                this.classList.remove('is-invalid');
+                error.textContent = '';
+            }
+        });
+    }
+    
+    if (iniciarTipo) {
+        iniciarTipo.addEventListener('change', function() {
+            const error = document.getElementById('errorIniciarTipo');
+            if (!this.value) {
+                this.classList.add('is-invalid');
+                error.textContent = 'Seleccione un tipo de mantenimiento';
+            } else {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+                error.textContent = '';
+            }
+        });
+    }
+    
+    if (buscarIniciarTecnico) {
+        buscarIniciarTecnico.addEventListener('blur', function() {
+            const tecnicoId = document.getElementById('iniciarTecnico').value;
+            const error = document.getElementById('errorIniciarTecnico');
+            if (!tecnicoId) {
+                this.classList.add('is-invalid');
+                error.textContent = 'Seleccione un técnico responsable';
+            } else {
+                this.classList.remove('is-invalid');
+                error.textContent = '';
+            }
+        });
+    }
+    
+    // Cargar mantenimientos en proceso al inicio
+    cargarMantenimientosEnProceso();
+    
+    // Filtros de alertas
+    const filtroEstado = document.getElementById('filtroAlertaEstado');
+    const filtroPrioridad = document.getElementById('filtroAlertaPrioridad');
+    if (filtroEstado) filtroEstado.addEventListener('change', cargarAlertas);
+    if (filtroPrioridad) filtroPrioridad.addEventListener('change', cargarAlertas);
+    
+    // Validación en tiempo real para tipos de mantenimiento
+    const tipoNombre = document.getElementById('tipoNombre');
+    const tipoDescripcion = document.getElementById('tipoDescripcion');
+    const tipoFrecuencia = document.getElementById('tipoFrecuencia');
+    const tipoPreventivo = document.getElementById('tipoPreventivo');
+    
+    if (tipoNombre) {
+        tipoNombre.addEventListener('input', () => validarCampoTipo('nombre'));
+    }
+    if (tipoDescripcion) {
+        tipoDescripcion.addEventListener('input', () => validarCampoTipo('descripcion'));
+    }
+    if (tipoFrecuencia) {
+        tipoFrecuencia.addEventListener('input', () => validarCampoTipo('frecuencia'));
+    }
+    if (tipoPreventivo) {
+        tipoPreventivo.addEventListener('change', function() {
+            document.getElementById('labelTipoPreventivo').textContent = this.checked ? 'Preventivo' : 'Correctivo';
+        });
+    }
+});
+</script>
+{% endblock extra_js %}

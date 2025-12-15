@@ -256,5 +256,19 @@ INSERT IGNORE INTO logs_sistema (modulo, nivel_log, mensaje, id_usuario, ip_addr
 ('sistema', 'INFO', 'Backup automático completado exitosamente', NULL, NULL);
 
 -- =========================================================
+-- TIPOS DE MANTENIMIENTO
+-- =========================================================
+
+INSERT IGNORE INTO tipos_mantenimiento (nombre, descripcion, frecuencia_dias, es_preventivo) VALUES
+('Preventivo General', 'Mantenimiento preventivo rutinario para asegurar el buen funcionamiento del equipo', 30, true),
+('Correctivo', 'Mantenimiento correctivo para reparar fallas o averías', 0, false),
+('Calibración', 'Calibración y ajuste de equipos de medición', 90, true),
+('Limpieza Profunda', 'Limpieza exhaustiva de componentes internos y externos', 15, true),
+('Revisión Técnica', 'Inspección técnica completa del equipo', 60, true),
+('Reparación Mayor', 'Reparación de componentes críticos o reemplazo de piezas importantes', 0, false),
+('Actualización de Software', 'Actualización de firmware o software del equipo', 180, true),
+('Verificación de Seguridad', 'Verificación de sistemas de seguridad y protección', 45, true);
+
+-- =========================================================
 -- FIN DE DATOS DE PRUEBA
 -- =========================================================

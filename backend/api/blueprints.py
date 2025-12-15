@@ -623,3 +623,23 @@ def registrar_blueprints(app):
         print(f"⚠️  Error registrando prestamos_bp: {e}")
         import traceback
         traceback.print_exc()
+    
+    # Registrar blueprint de mantenimiento
+    try:
+        from backend.api.mantenimiento import mantenimiento_bp
+        app.register_blueprint(mantenimiento_bp, url_prefix='/api/mantenimiento')
+        print("✅ API Mantenimiento registrada en /api/mantenimiento")
+    except Exception as e:
+        print(f"⚠️  Error registrando mantenimiento_bp: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    # Registrar blueprint de mantenimiento predictivo (IA)
+    try:
+        from backend.api.mantenimiento_predictivo import predictivo_bp
+        app.register_blueprint(predictivo_bp, url_prefix='/api/predictivo')
+        print("✅ API Predictivo (IA) registrada en /api/predictivo")
+    except Exception as e:
+        print(f"⚠️  Error registrando predictivo_bp: {e}")
+        import traceback
+        traceback.print_exc()

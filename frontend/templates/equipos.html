@@ -106,8 +106,12 @@
           </span>
         </td>
         <td>
-          {% set estado_colors = {'disponible': 'success', 'prestado': 'info', 'mantenimiento': 'warning', 'reparacion': 'orange', 'dado_baja': 'danger'} %}
-          <span class="badge bg-{{ estado_colors.get(e.estado, 'secondary') }}">{{ e.estado|replace('_', ' ')|title }}</span>
+          {% if e.estado == 'reparacion' %}
+            <span class="badge text-white" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);">{{ e.estado|replace('_', ' ')|title }}</span>
+          {% else %}
+            {% set estado_colors = {'disponible': 'success', 'prestado': 'info', 'mantenimiento': 'warning', 'dado_baja': 'danger'} %}
+            <span class="badge bg-{{ estado_colors.get(e.estado, 'secondary') }}">{{ e.estado|replace('_', ' ')|title }}</span>
+          {% endif %}
         </td>
         <td>
           {% set fisico_colors = {'excelente': 'success', 'bueno': 'primary', 'regular': 'warning', 'malo': 'danger'} %}
@@ -133,6 +137,11 @@
             {% if e.estado == 'disponible' %}
             <button class="btn btn-sena border-0 border-start" title="Solicitar Préstamo" data-bs-toggle="modal" data-bs-target="#modalSolicitarPrestamo" data-equipo='{{ e|tojson }}'>
               <i class="bi bi-box-arrow-right"></i>
+            </button>
+            {% endif %}
+            {% if user and user.get('permisos', {}).get('mantenimiento') and e.estado in ['disponible'] %}
+            <button class="btn btn-outline-warning border-0 border-start" title="Iniciar Mantenimiento" onclick="iniciarMantenimientoEquipo({{ e.id }}, '{{ e.nombre }}')">
+              <i class="bi bi-tools"></i>
             </button>
             {% endif %}
           </div>
@@ -407,6 +416,9 @@
       </div>
       <div class="modal-footer py-2">
         <button class="btn btn-outline-primary btn-sm" onclick="generarQR(window.equipoDetalleId)"><i class="bi bi-qr-code me-1"></i>Generar QR</button>
+        {% if user and user.get('permisos', {}).get('mantenimiento') %}
+        <button class="btn btn-outline-warning btn-sm" id="btnIniciarMantDetalle" onclick="iniciarMantenimientoDesdeDetalle()"><i class="bi bi-tools me-1"></i>Iniciar Mantenimiento</button>
+        {% endif %}
         <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
       </div>
     </div>
@@ -1237,6 +1249,8 @@
   function llenarModalDetalle(e) {
     if (!e) return;
     window.equipoDetalleId = e.id;
+    window.equipoDetalleNombre = e.nombre;
+    window.equipoDetalleEstado = e.estado;
     
     // Llenar datos
     document.getElementById('detalleNombre').textContent = e.nombre || '-';
@@ -1257,8 +1271,14 @@
     
     // Estado
     const estadoEl = document.getElementById('detalleEstado');
-    const estadoColors = {disponible:'success', prestado:'info', mantenimiento:'warning', reparacion:'warning', dado_baja:'danger'};
-    estadoEl.className = 'badge bg-' + (estadoColors[e.estado] || 'secondary');
+    if (e.estado === 'reparacion') {
+        estadoEl.className = 'badge text-white';
+        estadoEl.style.background = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
+    } else {
+        const estadoColors = {disponible:'success', prestado:'info', mantenimiento:'warning', dado_baja:'danger'};
+        estadoEl.className = 'badge bg-' + (estadoColors[e.estado] || 'secondary');
+        estadoEl.style.background = '';
+    }
     estadoEl.textContent = (e.estado || 'disponible').replace('_', ' ');
     
     // Condición física
@@ -1276,6 +1296,16 @@
       imgContainer.innerHTML = `<img src="${e.imagen_url}" class="img-fluid rounded" style="max-height:150px">`;
     } else {
       imgContainer.innerHTML = '<i class="bi bi-cpu display-1 text-muted"></i>';
+    }
+    
+    // Mostrar/ocultar botón de Iniciar Mantenimiento según estado
+    const btnIniciarMant = document.getElementById('btnIniciarMantDetalle');
+    if (btnIniciarMant) {
+      if (e.estado === 'disponible') {
+        btnIniciarMant.style.display = 'inline-block';
+      } else {
+        btnIniciarMant.style.display = 'none';
+      }
     }
   }
 
@@ -1562,6 +1592,98 @@
     }catch(e){ setVisionMsg('err','Error guardando: '+e.message); }
   });
 
+  // Función para iniciar mantenimiento desde la vista de equipos
+  window.iniciarMantenimientoEquipo = async function(equipoId, equipoNombre) {
+    // Obtener tipos de mantenimiento
+    try {
+      const resTipos = await fetch('/api/mantenimiento/tipos');
+      const dataTipos = await resTipos.json();
+      
+      if (!dataTipos.success || !dataTipos.tipos || dataTipos.tipos.length === 0) {
+        alert('No hay tipos de mantenimiento configurados. Configure primero los tipos en el módulo de Mantenimiento.');
+        return;
+      }
+      
+      // Crear opciones para el select
+      const tiposOptions = dataTipos.tipos.map(t => 
+        `<option value="${t.id}" data-preventivo="${t.es_preventivo}">${t.nombre} (${t.frecuencia_dias} días)</option>`
+      ).join('');
+      
+      // Mostrar modal de confirmación con select de tipo
+      const modalHtml = `
+        <div class="modal fade" id="modalIniciarMantEquipo" tabindex="-1">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-tools me-2"></i>Iniciar Mantenimiento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <p>¿Iniciar mantenimiento para el equipo <strong>${equipoNombre}</strong>?</p>
+                <div class="mb-3">
+                  <label class="form-label">Tipo de Mantenimiento</label>
+                  <select class="form-select" id="tipoMantEquipo">
+                    ${tiposOptions}
+                  </select>
+                </div>
+                <div class="alert alert-info small">
+                  <i class="bi bi-info-circle me-1"></i>
+                  El equipo pasará a estado "mantenimiento" o "reparación" según el tipo seleccionado.
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" id="btnConfirmarMant">
+                  <i class="bi bi-play-fill me-1"></i>Iniciar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Remover modal anterior si existe
+      document.getElementById('modalIniciarMantEquipo')?.remove();
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      
+      const modal = new bootstrap.Modal(document.getElementById('modalIniciarMantEquipo'));
+      modal.show();
+      
+      // Manejar confirmación
+      document.getElementById('btnConfirmarMant').onclick = async () => {
+        const tipoId = document.getElementById('tipoMantEquipo').value;
+        
+        try {
+          const res = await fetch('/api/mantenimiento/iniciar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id_equipo: equipoId,
+              id_tipo_mantenimiento: tipoId
+            })
+          });
+          
+          const result = await res.json();
+          
+          if (result.success) {
+            modal.hide();
+            alert(`✅ ${result.message}\n\nID del mantenimiento: ${result.id}\n\nVaya al módulo de Mantenimiento para completar el trabajo.`);
+            location.reload(); // Recargar para ver el cambio de estado
+          } else {
+            alert('❌ Error: ' + (result.error || 'Error desconocido'));
+          }
+        } catch (e) {
+          console.error('Error:', e);
+          alert('Error de conexión');
+        }
+      };
+      
+    } catch (e) {
+      console.error('Error:', e);
+      alert('Error al cargar tipos de mantenimiento');
+    }
+  };
+
   btnCapturar?.addEventListener('click', async ()=>{
     if(!video.videoWidth){ return; }
     canvas.width = video.videoWidth; canvas.height = video.videoHeight;
@@ -1620,5 +1742,17 @@
       visionMsg.className='alert alert-danger small'; visionMsg.textContent='Error consultando visión: '+e.message;
     }
   });
+
+  // Funciones para iniciar mantenimiento desde equipos
+  function iniciarMantenimientoEquipo(equipoId, equipoNombre) {
+    // Redirigir a la página de mantenimiento con parámetros
+    window.location.href = `/mantenimiento?iniciar_equipo=${equipoId}&nombre=${encodeURIComponent(equipoNombre)}`;
+  }
+
+  function iniciarMantenimientoDesdeDetalle() {
+    if (window.equipoDetalleId && window.equipoDetalleNombre) {
+      iniciarMantenimientoEquipo(window.equipoDetalleId, window.equipoDetalleNombre);
+    }
+  }
 </script>
 {% endblock %}

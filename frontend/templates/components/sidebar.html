@@ -1,6 +1,6 @@
 <!-- Sidebar Component -->
 <!-- Permisos disponibles: usuarios, roles, programas, equipos, equipos_ver, laboratorios, laboratorios_ver,
-     practicas, reservas, reservas_propias, prestamos, prestamos_propios, reportes, mantenimiento, mantenimiento_ver, 
+     reservas, reservas_propias, prestamos, prestamos_propios, reportes, mantenimiento, mantenimiento_ver, 
      capacitaciones, capacitaciones_ver, reconocimiento, ia_visual, backups, configuracion, ayuda -->
 {% set permisos = user.get('permisos', {}) if user else {} %}
 {% set tiene_all = permisos.get('all', false) %}
@@ -103,20 +103,11 @@
     </li>
     {% endif %}
 
-    <!-- Prácticas de Laboratorio - Admin, Instructor -->
-    {% if tiene_all or permisos.get('practicas') %}
+    <!-- Reservas de Laboratorio - Admin, Instructor -->
+    {% if tiene_all or permisos.get('reservas') %}
     <li class="nav-item">
       <a class="nav-link text-white {{ 'active' if request.path=='/practicas' }}" href="{{ url_for('practicas') if 'practicas' in url_for.__globals__['current_app'].view_functions else '#' }}">
-        <i class="bi bi-journal-text me-2"></i>Prácticas
-      </a>
-    </li>
-    {% endif %}
-    
-    <!-- Reservas - Todos con diferentes niveles -->
-    {% if tiene_all or permisos.get('reservas') or permisos.get('reservas_ver') or permisos.get('reservas_propias') %}
-    <li class="nav-item">
-      <a class="nav-link text-white {{ 'active' if request.path=='/reservas' }}" href="{{ url_for('reservas') }}">
-        <i class="bi bi-calendar-event me-2"></i>Reservas
+        <i class="bi bi-journal-text me-2"></i>Reservas laboratorio
       </a>
     </li>
     {% endif %}

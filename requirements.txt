@@ -27,7 +27,6 @@ joblib==1.5.2
 tensorflow==2.20.0
 
 # Reconocimiento de voz
-vosk==0.3.45
 pydub==0.25.1
 
 # Código QR

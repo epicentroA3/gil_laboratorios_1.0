@@ -232,10 +232,28 @@
               <label class="form-label fw-semibold" style="color: #2d6a4f;">
                 <i class="bi bi-laptop me-1"></i>Equipo *
               </label>
-              <select id="equipoId" class="form-select" required>
-                <option value="">-- Seleccione un equipo --</option>
-              </select>
-              <div class="invalid-feedback" id="errorEquipo"></div>
+              <div class="position-relative">
+                <div class="input-group">
+                  <input type="text" class="form-control" id="buscarEquipo" 
+                         placeholder="Buscar equipo por nombre o código..." 
+                         onfocus="mostrarOpcionesEquipo()" oninput="filtrarEquipos()" autocomplete="off">
+                  <button class="btn btn-outline-secondary" type="button" onclick="limpiarEquipo()">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                  <button class="btn btn-outline-secondary" type="button" onclick="toggleOpcionesEquipo()">
+                    <i class="bi bi-chevron-down"></i>
+                  </button>
+                </div>
+                <div id="opcionesEquipo" class="border rounded bg-white position-absolute w-100 d-none" 
+                     style="max-height: 200px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                  <div class="list-group list-group-flush" id="listaEquipos">
+                    <!-- Se llena dinámicamente -->
+                  </div>
+                </div>
+                <input type="hidden" id="equipoId" value="">
+              </div>
+              <div class="invalid-feedback d-block" id="errorEquipo"></div>
+              <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Solo se muestran equipos disponibles</small>
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold" style="color: #2d6a4f;">
@@ -539,25 +557,87 @@ async function cargarEquiposParaFiltro() {
     }
 }
 
+// Cache de equipos disponibles
+let equiposDisponiblesCache = [];
+
 async function cargarEquiposDisponibles() {
     try {
         const res = await fetch('/api/equipos?estado=disponible');
         const data = await res.json();
         
-        const select = document.getElementById('equipoId');
-        select.innerHTML = '<option value="">-- Seleccione un equipo --</option>';
-        
         if (data.success && data.equipos) {
-            data.equipos.forEach(equipo => {
-                const option = document.createElement('option');
-                option.value = equipo.id;
-                option.textContent = `${equipo.nombre} (${equipo.codigo_interno}) - ${equipo.laboratorio_nombre || 'Sin laboratorio'}`;
-                select.appendChild(option);
-            });
+            equiposDisponiblesCache = data.equipos;
+            renderizarListaEquipos(equiposDisponiblesCache);
         }
     } catch (e) {
         console.error('Error cargando equipos:', e);
     }
+}
+
+function renderizarListaEquipos(equipos) {
+    const lista = document.getElementById('listaEquipos');
+    if (!lista) return;
+    
+    if (equipos.length === 0) {
+        lista.innerHTML = '<div class="list-group-item text-muted text-center py-3"><i class="bi bi-inbox me-2"></i>No hay equipos disponibles</div>';
+        return;
+    }
+    
+    lista.innerHTML = equipos.map(e => `
+        <a href="#" class="list-group-item list-group-item-action py-2 opcion-equipo" 
+           data-id="${e.id}" 
+           data-nombre="${e.nombre} (${e.codigo_interno})"
+           onclick="seleccionarEquipo('${e.id}', '${e.nombre} (${e.codigo_interno}) - ${e.laboratorio_nombre || 'Sin laboratorio'}'); return false;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="fw-semibold">${e.nombre}</span>
+                    <small class="text-muted ms-2">${e.codigo_interno}</small>
+                </div>
+                <small class="badge bg-secondary">${e.laboratorio_nombre || 'Sin lab'}</small>
+            </div>
+        </a>
+    `).join('');
+}
+
+function mostrarOpcionesEquipo() {
+    document.getElementById('opcionesEquipo').classList.remove('d-none');
+}
+
+function ocultarOpcionesEquipo() {
+    setTimeout(() => {
+        document.getElementById('opcionesEquipo').classList.add('d-none');
+    }, 200);
+}
+
+function toggleOpcionesEquipo() {
+    document.getElementById('opcionesEquipo').classList.toggle('d-none');
+}
+
+function filtrarEquipos() {
+    const busqueda = document.getElementById('buscarEquipo').value.toLowerCase();
+    const equiposFiltrados = equiposDisponiblesCache.filter(e => 
+        e.nombre.toLowerCase().includes(busqueda) || 
+        e.codigo_interno.toLowerCase().includes(busqueda) ||
+        (e.laboratorio_nombre || '').toLowerCase().includes(busqueda)
+    );
+    renderizarListaEquipos(equiposFiltrados);
+    mostrarOpcionesEquipo();
+}
+
+function seleccionarEquipo(id, nombre) {
+    document.getElementById('buscarEquipo').value = nombre;
+    document.getElementById('equipoId').value = id;
+    document.getElementById('opcionesEquipo').classList.add('d-none');
+    // Limpiar error si existe
+    document.getElementById('errorEquipo').textContent = '';
+    document.getElementById('buscarEquipo').classList.remove('is-invalid');
+}
+
+function limpiarEquipo() {
+    document.getElementById('buscarEquipo').value = '';
+    document.getElementById('equipoId').value = '';
+    renderizarListaEquipos(equiposDisponiblesCache);
+    mostrarOpcionesEquipo();
 }
 
 async function cargarPrestamos() {

@@ -155,21 +155,24 @@ CREATE TABLE IF NOT EXISTS historial_mantenimiento (
     id INT PRIMARY KEY AUTO_INCREMENT,
     id_equipo INT NOT NULL,
     id_tipo_mantenimiento INT NOT NULL,
-    fecha_mantenimiento DATETIME NOT NULL,
+    estado ENUM('en_proceso', 'completado', 'cancelado') DEFAULT 'en_proceso',
+    fecha_inicio DATETIME NOT NULL,
+    fecha_fin DATETIME NULL,
     tecnico_responsable_id INT,
     descripcion_trabajo TEXT,
     partes_reemplazadas TEXT,
-    costo_mantenimiento DECIMAL(10,2),
-    tiempo_inactividad_horas DECIMAL(5,2),
+    costo_mantenimiento DECIMAL(10,2) DEFAULT 0,
+    tiempo_inactividad_horas DECIMAL(5,2) DEFAULT 0,
     observaciones TEXT,
-    estado_post_mantenimiento ENUM('excelente', 'bueno', 'regular', 'malo'),
-    proxima_fecha_mantenimiento DATE,
+    estado_post_mantenimiento ENUM('excelente', 'bueno', 'regular', 'malo') NULL,
+    proxima_fecha_mantenimiento DATE NULL,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_equipo) REFERENCES equipos(id),
     FOREIGN KEY (id_tipo_mantenimiento) REFERENCES tipos_mantenimiento(id),
     FOREIGN KEY (tecnico_responsable_id) REFERENCES usuarios(id),
     INDEX idx_equipo_mantenimiento (id_equipo),
-    INDEX idx_fecha_mantenimiento (fecha_mantenimiento)
+    INDEX idx_estado (estado),
+    INDEX idx_fecha_inicio (fecha_inicio)
 );
 
 -- Tabla de Alertas de Mantenimiento
@@ -207,7 +210,7 @@ CREATE TABLE IF NOT EXISTS programas_formacion (
     estado ENUM('activo', 'inactivo') DEFAULT 'activo'
 );
 
--- Tabla de Instructores
+-- Tabla de Instructores cambiar nomber datos de intructores
 CREATE TABLE IF NOT EXISTS instructores (
     id INT PRIMARY KEY AUTO_INCREMENT,
     id_usuario INT NOT NULL UNIQUE,
