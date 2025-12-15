@@ -55,8 +55,20 @@ source venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
+### 4. Configurar variables de entorno (opcional)
 
-### 4. Configurar base de datos MySQL
+Crear archivo `.env` en la raíz del proyecto:
+
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=tu_password
+DB_NAME=gil_laboratorios
+SECRET_KEY=tu_clave_secreta
+```
+
+
+### 5. Configurar base de datos MySQL
 
 Crear la base de datos y cargar el esquema:
 
@@ -69,25 +81,11 @@ O desde MySQL Workbench, ejecutar los scripts en orden:
 1. `database/schema.sql`
 2. `database/data.sql`
 
-### 5. Configurar variables de entorno (opcional)
 
-Crear archivo `.env` en la raíz del proyecto:
 
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=tu_password
-DB_NAME=gil_laboratorios
-SECRET_KEY=tu_clave_secreta
-```
 
-### 6. Descargar modelo Vosk (para reconocimiento de voz)
 
-Descargar el modelo español desde: https://alphacephei.com/vosk/models
-
-Extraer en: `models/vosk-model-small-es-0.42/`
-
-### 7. Ejecutar la aplicación
+### 6. Ejecutar la aplicación
 
 ```bash
 python app.py
@@ -95,20 +93,6 @@ python app.py
 
 Acceder a: http://localhost:5000
 
----
-
-## 👥 Usuarios de prueba
-
-| Tipo | ID | Nombre |
-|------|-----|--------|
-| Admin | ADMIN001 | Roberto Díaz Silva |
-| Admin | TEC_LAB_001 | Téc. Gloria Martínez |
-| Instructor | INST001 | Carlos Rodríguez Pérez |
-| Instructor | INST002 | María Elena González |
-| Aprendiz | APRE001 | Laura Patricia Ruiz |
-| Aprendiz | APRE002 | David Alejandro Castro |
-
-> 💡 Solo ingrese el ID (sin contraseña)
 
 ---
 
