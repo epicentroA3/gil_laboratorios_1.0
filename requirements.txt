@@ -1,55 +1,50 @@
-# GIL Laboratorios - Dependencias
-# Sistema de Gestión Integral de Laboratorios SENA
 
-# Framework Web
-Flask==3.1.2
-flask-cors==6.0.2
-Werkzeug==3.1.4
 
-# Base de datos
-mysql-connector-python==9.5.0
+# ============================================
+# SISTEMA GIL - VERSIÓN MÍNIMA
+# Solo lo esencial para funcionar
+# ============================================
 
-# Autenticación
+# CORE FLASK (Solo lo necesario)
+Flask==2.3.3
+Flask-CORS==4.0.0
+Flask-Mail==1.0.0
+
+# BASE DE DATOS
+mysql-connector-python==8.2.0
+
+# AUTENTICACIÓN (Tus especificaciones)
 PyJWT==2.10.1
-bcrypt==5.0.0
+bcrypt==5.0.0  # Mantengo tu versión
 
-# Variables de entorno
+# VARIABLES ENTORNO
 python-dotenv==1.2.1
 
-# Procesamiento de imágenes
+# PROCESAMIENTO IMÁGENES (Tus especificaciones)
 Pillow==12.0.0
 opencv-python==4.12.0.88
 numpy==2.2.6
 
-# Machine Learning / IA
+# MACHINE LEARNING (Tus especificaciones)
 scikit-learn==1.8.0
 joblib==1.5.2
 tensorflow==2.20.0
 
-# Reconocimiento de voz
+# VOZ (Tus especificaciones)
 pydub==0.25.1
 
-# Código QR
+# QR (Tus especificaciones)
 qrcode==8.2
 
-# Utilidades
+# UTILIDADES (Tus especificaciones)
 requests==2.32.5
 
+# ============================================
+# AGREGADOS MÍNIMOS NECESARIOS
+# ============================================
 
-Flask-RESTful==0.3.10 - Usado en API REST
-Flask-JWT-Extended==4.7.1 - Autenticación JWT
-keras==3.12.0 - Usado con TensorFlow
-Todas las dependencias de TensorFlow (tensorboard, grpcio, etc.)
-pandas==2.3.3 - Procesamiento de datos
-scipy==1.16.3 - Análisis científico
-SpeechRecognition==3.14.4 - Reconocimiento de voz
-PyAudio==0.2.14 - Audio
-pyttsx3==2.99 - Text-to-speech
-vosk==0.3.45 - Reconocimiento de voz offline
-websockets==15.0.1 - Comunicación en tiempo real
-srt==3.5.3 - Subtítulos
-openpyxl==3.1.5 - Excel
-reportlab==4.4.6 - PDFs
-matplotlib==3.10.8 - Gráficos
-rich==14.2.0 - Terminal mejorada
-pywin32==311 - Utilidades Windows
+# Para reportes PDF (necesario para /api/reportes/exportar/pdf)
+reportlab==4.1.0
+
+# Para reportes Excel (necesario para /api/reportes/exportar/excel)
+openpyxl==3.1.2
