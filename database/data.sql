@@ -132,15 +132,49 @@ INSERT IGNORE INTO prestamos (codigo, id_equipo, id_usuario_solicitante, id_usua
 -- =========================================================
 -- HISTORIAL DE MANTENIMIENTO
 -- =========================================================
+        
+INSERT INTO historial_mantenimiento (
+    id_equipo,
+    id_tipo_mantenimiento,
+    fecha_inicio,
+    fecha_fin,
+    tecnico_responsable_id,
+    descripcion_trabajo,
+    partes_reemplazadas,
+    costo_mantenimiento,
+    tiempo_inactividad_horas,
+    observaciones,
+    estado_post_mantenimiento,
+    proxima_fecha_mantenimiento
+) VALUES
+(1, 1, '2024-11-01 09:00:00', NULL, 6,
+ 'Limpieza de lentes, verificación de iluminación y ajuste de platina',
+ NULL, 150000.00, 2.0, NULL, 'excelente', '2024-12-01'),
 
-INSERT IGNORE INTO historial_mantenimiento (id_equipo, id_tipo_mantenimiento, fecha_mantenimiento, tecnico_responsable_id, descripcion_trabajo, costo_mantenimiento, tiempo_inactividad_horas, estado_post_mantenimiento, proxima_fecha_mantenimiento) VALUES
-(1, 1, '2024-11-01 09:00:00', 6, 'Limpieza de lentes, verificación de iluminación y ajuste de platina', 150000.00, 2.0, 'excelente', '2024-12-01'),
-(2, 1, '2024-11-01 11:00:00', 6, 'Limpieza de lentes, verificación de iluminación y ajuste de platina', 150000.00, 2.0, 'excelente', '2024-12-01'),
-(5, 3, '2024-10-15 08:00:00', 7, 'Calibración con pesas patrón certificadas, ajuste de sensibilidad', 350000.00, 4.0, 'excelente', '2025-04-15'),
-(6, 3, '2024-10-15 14:00:00', 7, 'Calibración con pesas patrón certificadas, ajuste de sensibilidad', 350000.00, 4.0, 'excelente', '2025-04-15'),
-(11, 3, '2024-09-20 09:00:00', 7, 'Calibración de longitud de onda, verificación de absorbancia', 500000.00, 6.0, 'excelente', '2025-03-20'),
-(12, 1, '2024-11-15 08:00:00', 6, 'Limpieza de quemador, verificación de gases, ajuste de nebulizador', 800000.00, 8.0, 'bueno', '2024-12-15'),
-(19, 4, '2024-11-20 09:00:00', 6, 'Limpieza profunda de cámara, verificación de sellos y calibración de temperatura', 400000.00, 4.0, 'excelente', '2024-12-05');
+(2, 1, '2024-11-01 11:00:00', NULL, 6,
+ 'Limpieza de lentes, verificación de iluminación y ajuste de platina',
+ NULL, 150000.00, 2.0, NULL, 'excelente', '2024-12-01'),
+
+(5, 3, '2024-10-15 08:00:00', NULL, 7,
+ 'Calibración con pesas patrón certificadas, ajuste de sensibilidad',
+ NULL, 350000.00, 4.0, NULL, 'excelente', '2025-04-15'),
+
+(6, 3, '2024-10-15 14:00:00', NULL, 7,
+ 'Calibración con pesas patrón certificadas, ajuste de sensibilidad',
+ NULL, 350000.00, 4.0, NULL, 'excelente', '2025-04-15'),
+
+(11, 3, '2024-09-20 09:00:00', NULL, 7,
+ 'Calibración de longitud de onda, verificación de absorbancia',
+ NULL, 500000.00, 6.0, NULL, 'excelente', '2025-03-20'),
+
+(12, 1, '2024-11-15 08:00:00', NULL, 6,
+ 'Limpieza de quemador, verificación de gases, ajuste de nebulizador',
+ NULL, 800000.00, 8.0, NULL, 'bueno', '2024-12-15'),
+
+(19, 4, '2024-11-20 09:00:00', NULL, 6,
+ 'Limpieza profunda de cámara, verificación de sellos y calibración de temperatura',
+ NULL, 400000.00, 4.0, NULL, 'excelente', '2024-12-05');
+
 
 -- =========================================================
 -- ALERTAS DE MANTENIMIENTO

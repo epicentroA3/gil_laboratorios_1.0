@@ -56,20 +56,9 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Configurar base de datos MySQL
+opcional pip install Flask Flask-CORS Flask-Mail mysql-connector-python PyJWT bcrypt python-dotenv Pillow opencv-python numpy scikit-learn joblib tensorflow pydub qrcode requests reportlab openpyxl
 
-Crear la base de datos y cargar el esquema:
-
-```bash
-mysql -u root -p < database/schema.sql
-mysql -u root -p gil_laboratorios < database/data.sql
-```
-
-O desde MySQL Workbench, ejecutar los scripts en orden:
-1. `database/schema.sql`
-2. `database/data.sql`
-
-### 5. Configurar variables de entorno (opcional)
+### 4. Configurar variables de entorno (opcional)
 
 Crear archivo `.env` en la raíz del proyecto:
 
@@ -81,13 +70,27 @@ DB_NAME=gil_laboratorios
 SECRET_KEY=tu_clave_secreta
 ```
 
-### 6. Descargar modelo Vosk (para reconocimiento de voz)
 
-Descargar el modelo español desde: https://alphacephei.com/vosk/models
+### 5. Configurar base de datos MySQL
 
-Extraer en: `models/vosk-model-small-es-0.42/`
+Crear la base de datos y cargar el esquema:
 
-### 7. Ejecutar la aplicación
+```powershell
+Get-Content database/schema.sql | mysql -u root -p
+
+# Para data.sql
+Get-Content database/data.sql | mysql -u root -p -D gil_laboratorios
+```
+
+O desde MySQL Workbench, ejecutar los scripts en orden:
+1. `database/schema.sql`
+2. `database/data.sql`
+
+
+
+
+
+### 6. Ejecutar la aplicación
 
 ```bash
 python app.py
@@ -95,20 +98,6 @@ python app.py
 
 Acceder a: http://localhost:5000
 
----
-
-## 👥 Usuarios de prueba
-
-| Tipo | ID | Nombre |
-|------|-----|--------|
-| Admin | ADMIN001 | Roberto Díaz Silva |
-| Admin | TEC_LAB_001 | Téc. Gloria Martínez |
-| Instructor | INST001 | Carlos Rodríguez Pérez |
-| Instructor | INST002 | María Elena González |
-| Aprendiz | APRE001 | Laura Patricia Ruiz |
-| Aprendiz | APRE002 | David Alejandro Castro |
-
-> 💡 Solo ingrese el ID (sin contraseña)
 
 ---
 

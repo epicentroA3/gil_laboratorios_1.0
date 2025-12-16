@@ -18,6 +18,8 @@ from flask_cors import CORS
 from flask_mail import Mail, Message
 from dotenv import load_dotenv
 
+
+
 # Cargar variables de entorno
 load_dotenv()
 
@@ -31,6 +33,8 @@ from config.api_config import APIConfig
 # Importar módulos del backend
 from backend.utils.database import DatabaseManager
 from backend.utils.auth import AuthManager
+
+
 
 # Obtener configuración según entorno
 config = get_config()
@@ -67,6 +71,26 @@ mail = Mail(app)
 
 # Inicializar base de datos con Config
 db_manager = DatabaseManager()
+
+# Inicializar el notificador notifaciionesfrom backend.utils.email_notifier_fixed import EmailNotifierFixed email_notifier = EmailNotifierFixed(mail, db_manager)
+
+# En app.py, después de configurar mail
+from backend.utils.email_notifier import EmailNotifier
+
+# Inicializar notificador
+email_notifier = EmailNotifier(mail, db_manager)
+
+def notificar(tipo, *args, **kwargs):
+    """Función simple para notificar"""
+    if tipo == 'prestamo_aprobado':
+        return email_notifier.notify_prestamo_aprobado(*args, **kwargs)
+    elif tipo == 'prestamo_solicitado':
+        return email_notifier.notify_prestamo_solicitado(*args, **kwargs)
+    elif tipo == 'devolucion_registrada':
+        return email_notifier.notify_devolucion_registrada(*args, **kwargs)
+    elif tipo == 'prestamo_rechazado':
+        return email_notifier.notify_prestamo_rechazado(*args, **kwargs)
+    return False
 
 # Intentar registrar blueprints de la API
 try:
@@ -2418,6 +2442,167 @@ def api_estadisticas():
     }
     
     return jsonify({'estadisticas': stats_api, 'success': True})
+
+
+# ========================================
+# API ENDPOINTS PRUEBA 
+# ========================================
+@app.route('/test-notificaciones-fixed', methods=['GET'])
+def test_notificaciones_fixed():
+    """Endpoint para probar el EmailNotifierFixed"""
+    
+    test_email = "farenheit87654321@gmail.com"
+    
+    tests = [
+        {
+            'name': 'Email simple',
+            'func': lambda: email_notifier.send_simple_email(
+                test_email,
+                '✅ Test EmailNotifierFixed',
+                '<h2>¡Funciona el Fixed!</h2><p>Este email prueba el EmailNotifierFixed.</p>'
+            )
+        },
+        {
+            'name': 'Préstamo aprobado (simulado)',
+            'func': lambda: email_notifier.notify_prestamo_aprobado(999)
+        },
+        {
+            'name': 'Préstamo solicitado (simulado)',
+            'func': lambda: email_notifier.notify_prestamo_solicitado(999)
+        }
+    ]
+    
+    resultados = []
+    for test in tests:
+        try:
+            print(f"\n🧪 Probando: {test['name']}")
+            success = test['func']()
+            resultados.append({
+                'test': test['name'],
+                'success': success,
+                'message': '✅ Enviado' if success else '❌ Falló'
+            })
+            print(f"   Resultado: {'✅ Éxito' if success else '❌ Fallo'}")
+        except Exception as e:
+            print(f"   ❌ Error: {e}")
+            resultados.append({
+                'test': test['name'],
+                'success': False,
+                'message': f'❌ Error: {str(e)}'
+            })
+    
+    return jsonify({
+        'success': True,
+        'message': 'Pruebas completadas - Revisa tu email',
+        'resultados': resultados,
+        'email_destino': test_email
+    })
+
+@app.route('/test-notificaciones-reales', methods=['GET'])
+def test_notificaciones_reales():
+    """Prueba notificaciones con datos reales de la BD"""
+    
+    try:
+        results = []
+        
+        # 1. Buscar un préstamo real para prueba
+        query_prestamo = """
+            SELECT p.id, p.codigo, e.nombre as equipo,
+                   CONCAT(u.nombres, ' ', u.apellidos) as usuario,
+                   u.email
+            FROM prestamos p
+            JOIN equipos e ON p.id_equipo = e.id
+            JOIN usuarios u ON p.id_usuario_solicitante = u.id
+            WHERE u.email IS NOT NULL AND u.email != ''
+            LIMIT 1
+        """
+        
+        prestamo = db_manager.obtener_uno(query_prestamo)
+        
+        if prestamo:
+            # Prueba notificación de préstamo aprobado
+            success = email_notifier.notify_prestamo_aprobado(prestamo['id'])
+            results.append({
+                'test': f'Préstamo aprobado (ID: {prestamo["id"]})',
+                'success': success,
+                'destino': prestamo['email'],
+                'equipo': prestamo['equipo']
+            })
+        
+        # 2. Buscar un mantenimiento real
+        query_mantenimiento = """
+            SELECT hm.id, e.nombre as equipo,
+                   CONCAT(u.nombres, ' ', u.apellidos) as tecnico,
+                   u.email
+            FROM historial_mantenimiento hm
+            JOIN equipos e ON hm.id_equipo = e.id
+            JOIN usuarios u ON hm.tecnico_responsable_id = u.id
+            WHERE u.email IS NOT NULL AND u.email != ''
+            LIMIT 1
+        """
+        
+        mantenimiento = db_manager.obtener_uno(query_mantenimiento)
+        
+        if mantenimiento:
+            # Prueba notificación de mantenimiento
+            success = email_notifier.notify_mantenimiento_completado(
+                mantenimiento['id'], 
+                mantenimiento['email']
+            )
+            results.append({
+                'test': f'Mantenimiento completado (ID: {mantenimiento["id"]})',
+                'success': success,
+                'destino': mantenimiento['email'],
+                'equipo': mantenimiento['equipo']
+            })
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'message': 'Pruebas con datos reales completadas'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
+
+
+@app.route('/email-status', methods=['GET'])
+def email_status():
+    """Estado del sistema de notificaciones"""
+    
+    status = {
+        'email_notifier': {
+            'type': type(email_notifier).__name__,
+            'has_mail': hasattr(email_notifier, 'mail'),
+            'base_url': email_notifier.base_url if hasattr(email_notifier, 'base_url') else 'N/A'
+        },
+        'config': {
+            'mail_server': app.config.get('MAIL_SERVER'),
+            'mail_username': app.config.get('MAIL_USERNAME'),
+            'sistema_url': os.getenv('SISTEMA_URL', 'No configurado')
+        },
+        'methods_available': [
+            'send_simple_email',
+            'notify_prestamo_aprobado', 
+            'notify_prestamo_solicitado',
+            'notify_mantenimiento_completado',
+            'notify_devolucion_registrada'
+        ]
+    }
+    
+    return jsonify({
+        'success': True,
+        'status': status,
+        'message': '✅ Sistema de notificaciones operativo'
+    })
+
+
+
+print(f"✅ Notificador inicializado: {type(email_notifier).__name__}")
 
 # ========================================
 # MANEJO DE ERRORES
