@@ -132,8 +132,7 @@ INSERT IGNORE INTO prestamos (codigo, id_equipo, id_usuario_solicitante, id_usua
 -- =========================================================
 -- HISTORIAL DE MANTENIMIENTO
 -- =========================================================
-
-
+        
 INSERT INTO historial_mantenimiento (
     id_equipo,
     id_tipo_mantenimiento,
@@ -175,7 +174,8 @@ INSERT INTO historial_mantenimiento (
 (19, 4, '2024-11-20 09:00:00', NULL, 6,
  'Limpieza profunda de cámara, verificación de sellos y calibración de temperatura',
  NULL, 400000.00, 4.0, NULL, 'excelente', '2024-12-05');
- 
+
+
 -- =========================================================
 -- ALERTAS DE MANTENIMIENTO
 -- =========================================================

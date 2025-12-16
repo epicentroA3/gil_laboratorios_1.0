@@ -24,6 +24,8 @@ db = DatabaseManager()
 # DECORADORES
 # =========================================================
 
+
+
 def require_auth_session(f):
     """Decorador para requerir autenticación por sesión"""
     @wraps(f)
@@ -49,6 +51,8 @@ def require_permission(permiso):
             return f(*args, **kwargs)
         return decorated
     return decorator
+
+
 
 # =========================================================
 # ENDPOINTS DE PRÉSTAMOS
@@ -296,7 +300,7 @@ def validar_prestamo():
 @prestamos_bp.route('', methods=['POST'])
 @require_auth_session
 def crear_prestamo():
-    """POST /api/prestamos - Crear nuevo préstamo (solicitud)"""
+    """POST /api/prestamos - Crear nuevo préstamo (solicitud) CON NOTIFICACIONES"""
     try:
         data = request.get_json()
         
@@ -376,24 +380,67 @@ def crear_prestamo():
         result = db.obtener_uno("SELECT LAST_INSERT_ID() as id")
         nuevo_id = result['id'] if result else None
         
+        # =============================================
+        # SECCIÓN DE NOTIFICACIONES - FORMA CORRECTA
+        # =============================================
+        
+        notificado = False
+        
+        try:
+            # OPCIÓN A: Usar current_app si está configurado en app.py
+            from flask import current_app
+            
+            if hasattr(current_app, 'email_notifier'):
+                # Usar el notificador de la app principal
+                notificador = current_app.email_notifier
+                notificado = notificador.notify_prestamo_solicitado(nuevo_id)
+                print(f"📧 Notificación enviada para préstamo {nuevo_id}: {notificado}")
+            else:
+                # OPCIÓN B: Crear notificador local si no está en current_app
+                from backend.utils.email_notifier_fixed import EmailNotifierFixed
+                from flask_mail import Mail
+                
+                # Crear notificador temporal
+                mail_instance = Mail(current_app) if current_app else None
+                if mail_instance:
+                    notificador_local = EmailNotifierFixed(mail_instance, db)
+                    notificado = notificador_local.notify_prestamo_solicitado(nuevo_id)
+                    print(f"📧 Notificación local enviada: {notificado}")
+                else:
+                    print("⚠️ No se pudo crear notificador local")
+                    
+        except Exception as e:
+            print(f"⚠️ Error en notificación: {e}")
+            notificado = False
+            # NO fallar la operación principal por error en notificación
+        
+        # =============================================
+        # FIN SECCIÓN NOTIFICACIONES
+        # =============================================
+        
         return jsonify({
             'success': True,
-            'message': 'Solicitud de préstamo creada exitosamente',
+            'message': 'Solicitud de préstamo creada exitosamente' + 
+                      (' y notificada a los administradores.' if notificado else '.'),
             'prestamo_id': nuevo_id,
-            'codigo': codigo
+            'codigo': codigo,
+            'notificado': notificado
         }), 201
         
     except Exception as e:
+        print(f"❌ Error creando préstamo: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': f'Error creando préstamo: {str(e)}'}), 500
 
 
 @prestamos_bp.route('/<int:prestamo_id>/aprobar', methods=['POST'])
 @require_permission('prestamos')
 def aprobar_prestamo(prestamo_id):
-    """POST /api/prestamos/{id}/aprobar - Aprobar préstamo"""
+    """POST /api/prestamos/{id}/aprobar - Aprobar préstamo CON NOTIFICACIÓN"""
     try:
         prestamo = db.obtener_uno(
-            "SELECT estado, id_equipo FROM prestamos WHERE id = %s", 
+            "SELECT estado, id_equipo, id_usuario_solicitante FROM prestamos WHERE id = %s", 
             (prestamo_id,)
         )
         
@@ -417,104 +464,65 @@ def aprobar_prestamo(prestamo_id):
         # Cambiar estado del equipo a 'prestado'
         db.actualizar('equipos', {'estado': 'prestado'}, 'id = %s', (prestamo['id_equipo'],))
         
+        # =============================================
+        # SECCIÓN DE NOTIFICACIONES - MISMA FORMA
+        # =============================================
+        
+        notificado = False
+        
+        try:
+            # OPCIÓN A: Usar current_app si está configurado en app.py
+            from flask import current_app
+            
+            if hasattr(current_app, 'email_notifier'):
+                # Usar el notificador de la app principal
+                notificador = current_app.email_notifier
+                notificado = notificador.notify_prestamo_aprobado(prestamo_id)
+                print(f"📧 Notificación de aprobación enviada para préstamo {prestamo_id}: {notificado}")
+            else:
+                # OPCIÓN B: Crear notificador local si no está en current_app
+                from backend.utils.email_notifier_fixed import EmailNotifierFixed
+                from flask_mail import Mail
+                
+                # Crear notificador temporal
+                mail_instance = Mail(current_app) if current_app else None
+                if mail_instance:
+                    notificador_local = EmailNotifierFixed(mail_instance, db)
+                    notificado = notificador_local.notify_prestamo_aprobado(prestamo_id)
+                    print(f"📧 Notificación local de aprobación enviada: {notificado}")
+                else:
+                    print("⚠️ No se pudo crear notificador local para aprobación")
+                    
+        except Exception as e:
+            print(f"⚠️ Error en notificación de aprobación: {e}")
+            notificado = False
+            # NO fallar la operación principal por error en notificación
+        
+        # =============================================
+        # FIN SECCIÓN NOTIFICACIONES
+        # =============================================
+        
         return jsonify({
             'success': True,
-            'message': 'Préstamo aprobado. Equipo marcado como prestado.'
+            'message': 'Préstamo aprobado. Equipo marcado como prestado.' + 
+                      (' El usuario ha sido notificado por email.' if notificado else ''),
+            'notificado': notificado
         }), 200
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error aprobando préstamo: {str(e)}'}), 500
 
 
-@prestamos_bp.route('/<int:prestamo_id>/rechazar', methods=['POST'])
-@require_permission('prestamos')
-def rechazar_prestamo(prestamo_id):
-    """POST /api/prestamos/{id}/rechazar - Rechazar préstamo"""
-    try:
-        data = request.get_json() or {}
-        motivo = data.get('motivo', '').strip()
-        
-        if not motivo:
-            return jsonify({'success': False, 'message': 'El motivo del rechazo es requerido'}), 400
-        
-        prestamo = db.obtener_uno(
-            "SELECT estado FROM prestamos WHERE id = %s", 
-            (prestamo_id,)
-        )
-        
-        if not prestamo:
-            return jsonify({'success': False, 'message': 'Préstamo no encontrado'}), 404
-        
-        if prestamo['estado'] != 'solicitado':
-            return jsonify({
-                'success': False, 
-                'message': f'Solo se pueden rechazar préstamos en estado "solicitado". Estado actual: {prestamo["estado"]}'
-            }), 400
-        
-        user_id = session.get('user_id')
-        
-        # Actualizar préstamo a rechazado
-        db.actualizar('prestamos', {
-            'estado': 'rechazado',
-            'id_usuario_autorizador': user_id,
-            'observaciones': motivo
-        }, 'id = %s', (prestamo_id,))
-        
-        return jsonify({
-            'success': True,
-            'message': 'Préstamo rechazado'
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Error rechazando préstamo: {str(e)}'}), 500
-
-
-@prestamos_bp.route('/<int:prestamo_id>/activar', methods=['POST'])
-@require_permission('prestamos')
-def activar_prestamo(prestamo_id):
-    """POST /api/prestamos/{id}/activar - Activar préstamo (entregar equipo)"""
-    try:
-        prestamo = db.obtener_uno(
-            "SELECT estado, id_equipo FROM prestamos WHERE id = %s", 
-            (prestamo_id,)
-        )
-        
-        if not prestamo:
-            return jsonify({'success': False, 'message': 'Préstamo no encontrado'}), 404
-        
-        if prestamo['estado'] != 'aprobado':
-            return jsonify({
-                'success': False, 
-                'message': f'Solo se pueden activar préstamos aprobados. Estado actual: {prestamo["estado"]}'
-            }), 400
-        
-        # Actualizar préstamo a activo
-        db.actualizar('prestamos', {
-            'estado': 'activo',
-            'fecha': datetime.now()
-        }, 'id = %s', (prestamo_id,))
-        
-        # Cambiar estado del equipo a 'prestado'
-        db.actualizar('equipos', {'estado': 'prestado'}, 'id = %s', (prestamo['id_equipo'],))
-        
-        return jsonify({
-            'success': True,
-            'message': 'Préstamo activado. Equipo entregado.'
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Error activando préstamo: {str(e)}'}), 500
-
-
+ 
 @prestamos_bp.route('/<int:prestamo_id>/devolver', methods=['POST'])
 @require_auth_session
 def devolver_prestamo(prestamo_id):
-    """POST /api/prestamos/{id}/devolver - Registrar devolución de equipo"""
+    """POST /api/prestamos/{id}/devolver - Registrar devolución CON NOTIFICACIÓN"""
     try:
         data = request.get_json() or {}
         
         prestamo = db.obtener_uno(
-            "SELECT estado, id_equipo FROM prestamos WHERE id = %s", 
+            "SELECT estado, id_equipo, id_usuario_solicitante FROM prestamos WHERE id = %s", 
             (prestamo_id,)
         )
         
@@ -544,13 +552,230 @@ def devolver_prestamo(prestamo_id):
         # Cambiar estado del equipo a 'disponible'
         db.actualizar('equipos', {'estado': 'disponible'}, 'id = %s', (prestamo['id_equipo'],))
         
+        # =============================================
+        # SECCIÓN DE NOTIFICACIONES - MISMA FORMA
+        # =============================================
+        
+        notificado = False
+        
+        try:
+            # Obtener email del usuario
+            query = """
+                SELECT u.email 
+                FROM prestamos p
+                JOIN usuarios u ON p.id_usuario_solicitante = u.id
+                WHERE p.id = %s AND u.email IS NOT NULL AND u.email != ''
+            """
+            usuario = db.obtener_uno(query, (prestamo_id,))
+            
+            if usuario and usuario['email']:
+                # OPCIÓN A: Usar current_app si está configurado en app.py
+                from flask import current_app
+                
+                if hasattr(current_app, 'email_notifier'):
+                    # Usar el notificador de la app principal
+                    notificador = current_app.email_notifier
+                    notificado = notificador.notify_devolucion_registrada(prestamo_id, usuario['email'])
+                    print(f"📧 Notificación de devolución enviada para préstamo {prestamo_id}: {notificado}")
+                else:
+                    # OPCIÓN B: Crear notificador local si no está en current_app
+                    from backend.utils.email_notifier_fixed import EmailNotifierFixed
+                    from flask_mail import Mail
+                    
+                    # Crear notificador temporal
+                    mail_instance = Mail(current_app) if current_app else None
+                    if mail_instance:
+                        notificador_local = EmailNotifierFixed(mail_instance, db)
+                        notificado = notificador_local.notify_devolucion_registrada(prestamo_id, usuario['email'])
+                        print(f"📧 Notificación local de devolución enviada: {notificado}")
+                    else:
+                        print("⚠️ No se pudo crear notificador local para devolución")
+                        
+        except Exception as e:
+            print(f"⚠️ Error en notificación de devolución: {e}")
+            notificado = False
+            # NO fallar la operación principal por error en notificación
+        
+        # =============================================
+        # FIN SECCIÓN NOTIFICACIONES
+        # =============================================
+        
         return jsonify({
             'success': True,
-            'message': 'Devolución registrada exitosamente. Equipo disponible.'
+            'message': 'Devolución registrada exitosamente. Equipo disponible.' + 
+                      (' El usuario ha sido notificado por email.' if notificado else ''),
+            'notificado': notificado
         }), 200
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error registrando devolución: {str(e)}'}), 500
+
+
+
+
+
+@prestamos_bp.route('/<int:prestamo_id>/activar', methods=['POST'])
+@require_permission('prestamos')
+def activar_prestamo(prestamo_id):
+    """POST /api/prestamos/{id}/activar - Activar préstamo (entregar equipo) CON NOTIFICACIÓN"""
+    try:
+        prestamo = db.obtener_uno(
+            "SELECT estado, id_equipo, id_usuario_solicitante FROM prestamos WHERE id = %s", 
+            (prestamo_id,)
+        )
+        
+        if not prestamo:
+            return jsonify({'success': False, 'message': 'Préstamo no encontrado'}), 404
+        
+        if prestamo['estado'] != 'aprobado':
+            return jsonify({
+                'success': False, 
+                'message': f'Solo se pueden activar préstamos aprobados. Estado actual: {prestamo["estado"]}'
+            }), 400
+        
+        # Actualizar préstamo a activo
+        db.actualizar('prestamos', {
+            'estado': 'activo',
+            'fecha': datetime.now()
+        }, 'id = %s', (prestamo_id,))
+        
+        # Cambiar estado del equipo a 'prestado'
+        db.actualizar('equipos', {'estado': 'prestado'}, 'id = %s', (prestamo['id_equipo'],))
+        
+        # =============================================
+        # SECCIÓN DE NOTIFICACIONES - MISMA FORMA
+        # =============================================
+        
+        notificado = False
+        
+        try:
+            # OPCIÓN A: Usar current_app si está configurado en app.py
+            from flask import current_app
+            
+            if hasattr(current_app, 'email_notifier'):
+                # Usar el notificador de la app principal
+                notificador = current_app.email_notifier
+                notificado = notificador.notify_prestamo_activado(prestamo_id)
+                print(f"📧 Notificación de activación enviada para préstamo {prestamo_id}: {notificado}")
+            else:
+                # OPCIÓN B: Crear notificador local si no está en current_app
+                from backend.utils.email_notifier_fixed import EmailNotifierFixed
+                from flask_mail import Mail
+                
+                # Crear notificador temporal
+                mail_instance = Mail(current_app) if current_app else None
+                if mail_instance:
+                    notificador_local = EmailNotifierFixed(mail_instance, db)
+                    notificado = notificador_local.notify_prestamo_activado(prestamo_id)
+                    print(f"📧 Notificación local de activación enviada: {notificado}")
+                else:
+                    print("⚠️ No se pudo crear notificador local para activación")
+                    
+        except Exception as e:
+            print(f"⚠️ Error en notificación de activación: {e}")
+            notificado = False
+            # NO fallar la operación principal por error en notificación
+        
+        # =============================================
+        # FIN SECCIÓN NOTIFICACIONES
+        # =============================================
+        
+        return jsonify({
+            'success': True,
+            'message': 'Préstamo activado. Equipo entregado.' + 
+                      (' El usuario ha sido notificado por email.' if notificado else ''),
+            'notificado': notificado
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error activando préstamo: {str(e)}'}), 500
+
+
+
+@prestamos_bp.route('/<int:prestamo_id>/rechazar', methods=['POST'])
+@require_permission('prestamos')
+def rechazar_prestamo(prestamo_id):
+    """POST /api/prestamos/{id}/rechazar - Rechazar préstamo CON NOTIFICACIÓN"""
+    try:
+        data = request.get_json() or {}
+        motivo = data.get('motivo', '').strip()
+        
+        if not motivo:
+            return jsonify({'success': False, 'message': 'El motivo del rechazo es requerido'}), 400
+        
+        prestamo = db.obtener_uno(
+            "SELECT estado, id_equipo, id_usuario_solicitante FROM prestamos WHERE id = %s", 
+            (prestamo_id,)
+        )
+        
+        if not prestamo:
+            return jsonify({'success': False, 'message': 'Préstamo no encontrado'}), 404
+        
+        if prestamo['estado'] != 'solicitado':
+            return jsonify({
+                'success': False, 
+                'message': f'Solo se pueden rechazar préstamos en estado "solicitado". Estado actual: {prestamo["estado"]}'
+            }), 400
+        
+        user_id = session.get('user_id')
+        
+        # Actualizar préstamo a rechazado
+        db.actualizar('prestamos', {
+            'estado': 'rechazado',
+            'id_usuario_autorizador': user_id,
+            'observaciones': motivo
+        }, 'id = %s', (prestamo_id,))
+        
+        # =============================================
+        # SECCIÓN DE NOTIFICACIONES - MISMA FORMA
+        # =============================================
+        
+        notificado = False
+        
+        try:
+            # OPCIÓN A: Usar current_app si está configurado en app.py
+            from flask import current_app
+            
+            if hasattr(current_app, 'email_notifier'):
+                # Usar el notificador de la app principal
+                notificador = current_app.email_notifier
+                # PASAR EL MOTIVO ADICIONALMENTE para la notificación
+                notificado = notificador.notify_prestamo_rechazado(prestamo_id, motivo)
+                print(f"📧 Notificación de rechazo enviada para préstamo {prestamo_id}: {notificado}")
+            else:
+                # OPCIÓN B: Crear notificador local si no está en current_app
+                from backend.utils.email_notifier_fixed import EmailNotifierFixed
+                from flask_mail import Mail
+                
+                # Crear notificador temporal
+                mail_instance = Mail(current_app) if current_app else None
+                if mail_instance:
+                    notificador_local = EmailNotifierFixed(mail_instance, db)
+                    # PASAR EL MOTIVO ADICIONALMENTE para la notificación
+                    notificado = notificador_local.notify_prestamo_rechazado(prestamo_id, motivo)
+                    print(f"📧 Notificación local de rechazo enviada: {notificado}")
+                else:
+                    print("⚠️ No se pudo crear notificador local para rechazo")
+                    
+        except Exception as e:
+            print(f"⚠️ Error en notificación de rechazo: {e}")
+            notificado = False
+            # NO fallar la operación principal por error en notificación
+        
+        # =============================================
+        # FIN SECCIÓN NOTIFICACIONES
+        # =============================================
+        
+        return jsonify({
+            'success': True,
+            'message': 'Préstamo rechazado.' + 
+                      (' El usuario ha sido notificado por email.' if notificado else ''),
+            'notificado': notificado
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error rechazando préstamo: {str(e)}'}), 500
+
 
 
 @prestamos_bp.route('/<int:prestamo_id>/cancelar', methods=['POST'])
@@ -599,7 +824,6 @@ def cancelar_prestamo(prestamo_id):
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error cancelando préstamo: {str(e)}'}), 500
-
 
 @prestamos_bp.route('/estadisticas', methods=['GET'])
 @require_auth_session

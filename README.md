@@ -55,20 +55,10 @@ source venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
-### 4. Configurar variables de entorno (opcional)
+En caso que no sirva el primero
+pip install Flask Flask-CORS Flask-Mail mysql-connector-python PyJWT bcrypt python-dotenv Pillow opencv-python numpy scikit-learn joblib tensorflow pydub qrcode requests reportlab openpyxl
 
-Crear archivo `.env` en la raíz del proyecto:
-
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=tu_password
-DB_NAME=gil_laboratorios
-SECRET_KEY=tu_clave_secreta
-```
-
-
-### 5. Configurar base de datos MySQL
+### 4. Configurar base de datos MySQL
 
 Crear la base de datos y cargar el esquema:
 
@@ -81,11 +71,21 @@ O desde MySQL Workbench, ejecutar los scripts en orden:
 1. `database/schema.sql`
 2. `database/data.sql`
 
+### 5. Configurar variables de entorno (opcional)
+
+Crear archivo `.env` en la raíz del proyecto:
+
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=tu_password
+DB_NAME=gil_laboratorios
+SECRET_KEY=tu_clave_secreta
+```
 
 
 
-
-### 6. Ejecutar la aplicación
+### 7. Ejecutar la aplicación
 
 ```bash
 python app.py

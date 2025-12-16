@@ -458,7 +458,7 @@ function validarFortaleza() {
         text = '<i class="bi bi-shield-check me-1"></i>Fuerte';
     }
     
-    strengthDiv.innerHTML = <small class="text-${color}">${text}</small>;
+    strengthDiv.innerHTML = `<small class="text-${color}">${text}</small>`;
     validarCoincidencia();
 }
 
@@ -506,7 +506,7 @@ function validarPassword() {
     if (errors.length > 0) {
         let errorHtml = '<div class="alert alert-danger"><ul class="mb-0">';
         errors.forEach(err => {
-            errorHtml += <li><i class="bi bi-exclamation-circle me-1"></i>${err}</li>;
+            errorHtml += `<li><i class="bi bi-exclamation-circle me-1"></i>${err}</li>`;
         });
         errorHtml += '</ul></div>';
         errorsDiv.innerHTML = errorHtml;
