@@ -1,50 +1,38 @@
-
-
-# ============================================
-# SISTEMA GIL - VERSIÓN MÍNIMA
-# Solo lo esencial para funcionar
-# ============================================
-
-# CORE FLASK (Solo lo necesario)
 Flask==2.3.3
-Flask-CORS==4.0.0
+Flask-CORS==6.0.1
 Flask-Mail==1.0.0
 
-# BASE DE DATOS
-mysql-connector-python==8.2.0
+mysql-connector-python==9.5.0
 
-# AUTENTICACIÓN (Tus especificaciones)
+
 PyJWT==2.10.1
-bcrypt==5.0.0  # Mantengo tu versión
+bcrypt==5.0.0
 
-# VARIABLES ENTORNO
+
 python-dotenv==1.2.1
 
-# PROCESAMIENTO IMÁGENES (Tus especificaciones)
+
 Pillow==12.0.0
 opencv-python==4.12.0.88
 numpy==2.2.6
 
-# MACHINE LEARNING (Tus especificaciones)
+
 scikit-learn==1.8.0
 joblib==1.5.2
 tensorflow==2.20.0
 
-# VOZ (Tus especificaciones)
 pydub==0.25.1
 
-# QR (Tus especificaciones)
 qrcode==8.2
 
-# UTILIDADES (Tus especificaciones)
 requests==2.32.5
 
-# ============================================
-# AGREGADOS MÍNIMOS NECESARIOS
-# ============================================
+reportlab==4.4.6
 
-# Para reportes PDF (necesario para /api/reportes/exportar/pdf)
-reportlab==4.1.0
 
-# Para reportes Excel (necesario para /api/reportes/exportar/excel)
-openpyxl==3.1.2
+python-dotenv==1.2.1
+
+
+matplotlib==3.10.8
+SpeechRecognition==3.14.4
+pyttsx3==2.99

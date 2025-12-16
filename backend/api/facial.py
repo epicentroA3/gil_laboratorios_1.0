@@ -178,7 +178,7 @@ def login_facial():
         # Usar campos correctos del schema.sql
         query = """
             SELECT u.id, u.documento, u.nombres, u.apellidos, u.email, 
-                   u.id_rol, u.rostro_data, r.nombre_rol
+                u.id_rol, u.rostro_data, r.nombre_rol
             FROM usuarios u
             LEFT JOIN roles r ON u.id_rol = r.id
             WHERE u.rostro_data IS NOT NULL AND u.estado = 'activo'
