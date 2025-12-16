@@ -89,7 +89,7 @@ class MantenimientoPredictivo:
             LEFT JOIN historial_mantenimiento hm ON e.id = hm.id_equipo AND hm.estado = 'completado'
             WHERE e.estado != 'dado_baja'
             GROUP BY e.id, e.id_categoria, e.fecha_adquisicion, e.vida_util_anos, 
-                     e.valor_adquisicion, e.estado_fisico
+                    e.valor_adquisicion, e.estado_fisico
             HAVING total_mantenimientos > 0 OR total_prestamos > 0 OR e.estado_fisico IN ('malo', 'regular')
         """
         return self.db.ejecutar_query(query) or []

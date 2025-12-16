@@ -55,7 +55,7 @@ class EmailNotifierFixed:
         """Notificación CUANDO SE APRUEBA PRÉSTAMO"""
         try:
             # Email de prueba - usa el tuyo
-            test_email = "farenheit87654321@gmail.com"
+            test_email = "ronal5368@gmail.com"
             
             html = f"""
             <h2>✅ Préstamo Aprobado - Sistema GIL</h2>
@@ -90,7 +90,7 @@ class EmailNotifierFixed:
         """Notifica a ADMINS cuando hay nueva solicitud"""
         try:
             # Email de administrador (usa el tuyo)
-            admin_email = "farenheit87654321@gmail.com"
+            admin_email = "ronal5368@gmail.com"
             
             html = f"""
             <h2>📋 Nueva Solicitud de Préstamo</h2>
