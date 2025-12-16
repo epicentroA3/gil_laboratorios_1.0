@@ -1,6 +1,6 @@
 /* ===========================================
-   COMMON.CSS - Estilos base del sistema GIL
-   Centro Minero SENA
+  COMMON.CSS - Estilos base del sistema GIL
+  Centro Minero SENA
    =========================================== */
 
 :root {
@@ -13,7 +13,7 @@
 }
 
 /* ==========================================
-   SIDEBAR STYLES
+  SIDEBAR STYLES
    ========================================== */
 
 .sidebar {
@@ -165,7 +165,7 @@
 }
 
 /* ==========================================
-   MAIN CONTENT
+    MAIN CONTENT
    ========================================== */
 
 .main-content {
@@ -176,9 +176,9 @@
   flex-direction: column;
 }
 
-/* ==========================================
-   FOOTER STYLES
-   ========================================== */
+/*  ==========================================
+    FOOTER STYLES
+    ========================================== */
 
 .footer-minimal {
   background: white;

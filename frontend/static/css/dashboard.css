@@ -1,10 +1,10 @@
 /* ===========================================
-   DASHBOARD.CSS - Estilos del Dashboard
-   Centro Minero SENA
+    DASHBOARD.CSS - Estilos del Dashboard
+    Centro Minero SENA
    =========================================== */
 
 /* ==========================================
-   STATS CARDS
+    STATS CARDS
    ========================================== */
 
 .stats-card {
@@ -74,7 +74,7 @@
 }
 
 /* ==========================================
-   MODULE HEADER
+    MODULE HEADER
    ========================================== */
 
 .module-header {
@@ -87,7 +87,7 @@
 }
 
 /* ==========================================
-   CHART CONTAINER
+    CHART CONTAINER
    ========================================== */
 
 .chart-container {
@@ -105,7 +105,7 @@
 }
 
 /* ==========================================
-   ACTIVITY LIST
+    ACTIVITY LIST
    ========================================== */
 
 .activity-item {

@@ -695,10 +695,10 @@ class EmailNotifier:
             # Obtener datos de la devolución
             query = """
                 SELECT p.id, p.codigo, p.fecha, p.fecha_devolucion_real,
-                       p.observaciones_devolucion,
-                       e.nombre as equipo_nombre, e.codigo_interno,
-                       CONCAT(u.nombres, ' ', u.apellidos) as usuario,
-                       CONCAT(ur.nombres, ' ', ur.apellidos) as receptor
+                    p.observaciones_devolucion,
+                    e.nombre as equipo_nombre, e.codigo_interno,
+                    CONCAT(u.nombres, ' ', u.apellidos) as usuario,
+                    CONCAT(ur.nombres, ' ', ur.apellidos) as receptor
                 FROM prestamos p
                 JOIN equipos e ON p.id_equipo = e.id
                 JOIN usuarios u ON p.id_usuario_solicitante = u.id

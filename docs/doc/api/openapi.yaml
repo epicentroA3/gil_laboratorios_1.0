@@ -1,0 +1,549 @@
+openapi: 3.0.3
+info:
+  title: Sistema GIL - API REST
+  description: API para Gestión Inteligente de Laboratorios - Centro Minero SENA
+  version: 1.0.0
+  contact:
+    name: Centro Minero de Sogamoso - SENA
+    url:  http://localhost:5000
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url:  http://localhost:5000
+    description: Servidor de desarrollo
+  - url: https://api.centrominero.edu.co/api/v1
+    description: Servidor de producción
+
+tags:
+  - name: Autenticación
+    description: Endpoints para login, registro y gestión de tokens
+  - name: Equipos
+    description: Gestión de equipos de laboratorio
+  - name: Préstamos
+    description: Gestión de préstamos de equipos
+  - name: Usuarios
+    description: Gestión de usuarios del sistema
+  - name: Estadísticas
+    description: Datos estadísticos para dashboards
+  - name: Laboratorios
+    description: Gestión de laboratorios
+  - name: Salud
+    description: Health checks y estado del sistema
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Autenticación
+      summary: Autenticación de usuario
+      description: Autentica un usuario con credenciales y retorna token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Datos inválidos
+        '401':
+          description: Credenciales incorrectas
+        '500':
+          description: Error interno del servidor
+
+  /equipos:
+    get:
+      tags:
+        - Equipos
+      summary: Lista equipos
+      description: Retorna lista de equipos con filtros opcionales
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: estado
+          schema:
+            type: string
+            enum: [disponible, prestado, mantenimiento, reparacion, dado_baja]
+          description: Filtro por estado del equipo
+        - in: query
+          name: laboratorio
+          schema:
+            type: integer
+          description: Filtro por ID de laboratorio
+        - in: query
+          name: categoria
+          schema:
+            type: integer
+          description: Filtro por ID de categoría
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Búsqueda por nombre o código
+      responses:
+        '200':
+          description: Lista de equipos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquiposListResponse'
+        '401':
+          description: No autenticado
+        '403':
+          description: Sin permisos
+        '500':
+          description: Error interno
+
+  /equipos/{id}:
+    get:
+      tags:
+        - Equipos
+      summary: Obtiene detalle de equipo
+      description: Retorna información completa de un equipo específico
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID del equipo
+      responses:
+        '200':
+          description: Detalle del equipo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipoDetailResponse'
+        '401':
+          description: No autenticado
+        '403':
+          description: Sin permisos
+        '404':
+          description: Equipo no encontrado
+        '500':
+          description: Error interno
+
+  /prestamos:
+    get:
+      tags:
+        - Préstamos
+      summary: Lista préstamos
+      description: Retorna lista de préstamos con filtros
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: estado
+          schema:
+            type: string
+            enum: [solicitado, aprobado, rechazado, activo, devuelto, vencido]
+          description: Filtro por estado del préstamo
+      responses:
+        '200':
+          description: Lista de préstamos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrestamosListResponse'
+        '401':
+          description: No autenticado
+        '403':
+          description: Sin permisos
+        '500':
+          description: Error interno
+
+    post:
+      tags:
+        - Préstamos
+      summary: Crea nueva solicitud de préstamo
+      description: Crea una solicitud de préstamo para un equipo disponible
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrestamoCreateRequest'
+      responses:
+        '201':
+          description: Préstamo creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrestamoCreateResponse'
+        '400':
+          description: Datos inválidos o equipo no disponible
+        '401':
+          description: No autenticado
+        '403':
+          description: Sin permisos
+        '500':
+          description: Error interno
+
+  /prestamos/{id}/aprobar:
+    post:
+      tags:
+        - Préstamos
+      summary: Aprueba un préstamo
+      description: Aprueba una solicitud de préstamo pendiente
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID del préstamo
+      responses:
+        '200':
+          description: Préstamo aprobado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Préstamo no puede ser aprobado
+        '401':
+          description: No autenticado
+        '403':
+          description: Sin permisos (nivel insuficiente)
+        '404':
+          description: Préstamo no encontrado
+        '500':
+          description: Error interno
+
+  /health:
+    get:
+      tags:
+        - Salud
+      summary: Health check
+      description: Verifica estado del API y base de datos
+      responses:
+        '200':
+          description: Sistema operativo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Servicio no disponible (BD caída)
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - user_id
+        - password
+      properties:
+        user_id:
+          type: string
+          description: ID de usuario o documento
+          example: "123456789"
+        password:
+          type: string
+          description: Contraseña del usuario
+          example: "P@ssw0rd123!"
+    
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Login exitoso"
+        access_token:
+          type: string
+          description: Token JWT para autenticación
+        user:
+          $ref: '#/components/schemas/UserProfile'
+    
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        documento:
+          type: string
+          example: "123456789"
+        nombre:
+          type: string
+          example: "Juan Pérez"
+        email:
+          type: string
+          example: "juan@ejemplo.com"
+        rol:
+          type: string
+          example: "Administrador"
+        nivel_acceso:
+          type: integer
+          example: 5
+    
+    EquiposListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EquipoBasic'
+        total:
+          type: integer
+          example: 1
+    
+    EquipoBasic:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        codigo_interno:
+          type: string
+          example: "EQP-001"
+        nombre:
+          type: string
+          example: "Microscopio Digital"
+        marca:
+          type: string
+          example: "Olympus"
+        modelo:
+          type: string
+          example: "CX23"
+        estado:
+          type: string
+          example: "disponible"
+        categoria_nombre:
+          type: string
+          example: "Microscopios"
+        laboratorio_nombre:
+          type: string
+          example: "Laboratorio de Química"
+    
+    EquipoDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/EquipoFull'
+    
+    EquipoFull:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        codigo_interno:
+          type: string
+          example: "EQP-001"
+        codigo_qr:
+          type: string
+          example: "QR_CODE_123"
+        nombre:
+          type: string
+          example: "Microscopio Digital"
+        marca:
+          type: string
+          example: "Olympus"
+        modelo:
+          type: string
+          example: "CX23"
+        numero_serie:
+          type: string
+          example: "SN123456"
+        descripcion:
+          type: string
+          example: "Microscopio binocular para laboratorio"
+        especificaciones_tecnicas:
+          type: string
+          example: "Aumento 40x-1000x, LED integrado"
+        valor_adquisicion:
+          type: number
+          format: float
+          example: 2500000.00
+        fecha_adquisicion:
+          type: string
+          format: date
+          example: "2023-05-15"
+        proveedor:
+          type: string
+          example: "Distribuidora Científica S.A."
+        garantia_meses:
+          type: integer
+          example: 24
+        vida_util_anos:
+          type: integer
+          example: 10
+        imagen_url:
+          type: string
+          example: "/uploads/equipos/microscopio.jpg"
+        estado:
+          type: string
+          example: "disponible"
+        estado_fisico:
+          type: string
+          example: "bueno"
+        ubicacion_especifica:
+          type: string
+          example: "Estante A-12"
+        observaciones:
+          type: string
+          example: "Calibrado en mayo 2024"
+        id_categoria:
+          type: integer
+          example: 1
+        id_laboratorio:
+          type: integer
+          example: 1
+        fecha_registro:
+          type: string
+          format: date-time
+          example: "2023-05-20T10:30:00Z"
+        categoria_nombre:
+          type: string
+          example: "Microscopios"
+        laboratorio_nombre:
+          type: string
+          example: "Laboratorio de Química"
+    
+    PrestamosListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrestamoBasic'
+        total:
+          type: integer
+          example: 1
+    
+    PrestamoBasic:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        codigo:
+          type: string
+          example: "PREST-ABC123"
+        fecha:
+          type: string
+          format: date-time
+          example: "2024-01-15T09:30:00Z"
+        fecha_devolucion_programada:
+          type: string
+          format: date-time
+          example: "2024-01-22T17:00:00Z"
+        fecha_devolucion_real:
+          type: string
+          format: date-time
+          nullable: true
+        estado:
+          type: string
+          example: "activo"
+        proposito:
+          type: string
+          example: "Práctica de microbiología"
+        equipo_nombre:
+          type: string
+          example: "Microscopio Digital"
+        equipo_codigo:
+          type: string
+          example: "EQP-001"
+        solicitante:
+          type: string
+          example: "Juan Pérez"
+    
+    PrestamoCreateRequest:
+      type: object
+      required:
+        - id_equipo
+        - proposito
+        - fecha_devolucion_programada
+      properties:
+        id_equipo:
+          type: integer
+          example: 1
+        proposito:
+          type: string
+          example: "Práctica de microbiología"
+        fecha_devolucion_programada:
+          type: string
+          format: date-time
+          example: "2024-01-22T17:00:00Z"
+    
+    PrestamoCreateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Préstamo solicitado exitosamente"
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            codigo:
+              type: string
+              example: "PREST-ABC123"
+    
+    StandardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operación exitosa"
+    
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: string
+          example: "ok"
+        database:
+          type: string
+          example: "ok"
+        version:
+          type: string
+          example: "1.0.0"
+        timestamp:
+          type: string
+          format: date-time
